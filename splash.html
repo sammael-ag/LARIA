@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUMARK - Vstupná Brána</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+            color: #FFFFFF;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .phone-container {
+            width: 100vw;
+            height: 100vh;
+            max-width: 450px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Vycentrovanie na stred */
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .cyber-pechat-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* Ošetrenie veľkosti obrázka */
+.cyber-pechat {
+    max-width: 350px; /* Pôvodne bolo 280px, skúsme 350px */
+    height: auto;
+    max-height: 60vh; /* Povolíme jej zabrať viac výšky */
+    margin-bottom: 30px; /* Trošku viac miesta pod ňou */
+    opacity: 0;
+    animation: fadeIn 2s forwards;
+    border-radius: 15px;
+}
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .lumark-title {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            margin: 10px 0 5px 0;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+
+        .lumark-subtitle {
+            font-size: 14px;
+            color: #888888;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .cyber-bar {
+            width: 60%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #FFFFFF, transparent);
+            margin: 25px 0;
+        }
+
+        .status-area {
+            font-size: 11px;
+            color: #666666;
+            line-height: 1.6;
+        }
+
+        .credits-text {
+            position: absolute;
+            bottom: 40px;
+            font-size: 13px;
+            color: #444444;
+            letter-spacing: 1px;
+        }
+
+        .credits-text span {
+            color: #FFFFFF;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="cyber-pechat-container">
+            <img src="assets/cyber-pechat.jpeg" alt="Svetelná Pečať" class="cyber-pechat">
+            
+            <div class="lumark-title">LUMARK</div>
+            <div class="lumark-subtitle">SVETELNÁ PEČAŤ IDENTITY</div>
+            
+            <div class="cyber-bar"></div>
+            
+            <div class="status-area">
+                <div>Status: Multidimenzionálne prepojené</div>
+                <div>Valid: 24h | Sammael Auth: OK</div>
+            </div>
+        </div>
+
+        <div class="credits-text">created by Sammael & Aria</div>
+    </div>
+</body>
+</html>
