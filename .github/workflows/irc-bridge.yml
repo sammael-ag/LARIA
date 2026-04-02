@@ -19,9 +19,37 @@ jobs:
 
       - name: Run IRC Listener
         run: |
-          # Tu neskôr vložíme kód, ktorý sa pripojí na Libera.chat
-          # a zapíše správy do súboru. Zatiaľ len vytvoríme súbor.
-          echo "{\"messages\": [\"Most LARIA aktivovaný!\"]}" > messages.json
+          node -e "
+          const net = require('net');
+          const fs = require('fs');
+          const client = net.connect(6667, 'irc.libera.chat', () => {
+            client.write('NICK laria_bot\r\n');
+            client.write('USER laria_bot 0 * :LariaBridge\r\n');
+            client.write('JOIN #laria\r\n');
+          });
+
+          let messages = [];
+          client.on('data', (data) => {
+            const line = data.toString();
+            console.log(line);
+            if (line.includes('PING')) client.write('PONG ' + line.split(' ')[1] + '\r\n');
+            
+            // Zachytíme len textové správy z kanála
+            if (line.includes('PRIVMSG #laria')) {
+              const msg = line.split('PRIVMSG #laria :')[1].trim();
+              messages.push(msg);
+            }
+          });
+
+          // Necháme ho bežať 40 sekúnd, potom to zapíšeme
+          setTimeout(() => {
+            if (messages.length > 0) {
+              const output = { messages: messages.reverse() };
+              fs.writeFileSync('messages.json', JSON.stringify(output));
+            }
+            process.exit(0);
+          }, 40000);
+          "
           
       - name: Commit and Push changes
         run: |
