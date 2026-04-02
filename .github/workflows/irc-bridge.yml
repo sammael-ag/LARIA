@@ -1,1 +1,30 @@
+name: LARIA IRC Bridge
 
+on:
+  workflow_dispatch: # Umožní nám to spustiť ručne
+
+jobs:
+  irc_listener:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-node-version: '20'
+
+      - name: Run IRC Listener
+        run: |
+          # Tu neskôr vložíme kód, ktorý sa pripojí na Libera.chat
+          # a zapíše správy do súboru. Zatiaľ len vytvoríme súbor.
+          echo "{\"messages\": [\"Most LARIA aktivovaný!\"]}" > messages.json
+          
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "Sammael-Bridge"
+          git config --global user.email "bridge@laria.com"
+          git add messages.json
+          git commit -m "Update messages" || exit 0
+          git push
