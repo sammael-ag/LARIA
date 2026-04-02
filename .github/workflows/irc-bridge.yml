@@ -1,7 +1,7 @@
 name: LARIA IRC Bridge
 
 on:
-  workflow_dispatch: # Len na tvoj povel
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,34 +13,57 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run IRC Sniper
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run IRC Brána
         run: |
           node -e "
           const net = require('net');
           const fs = require('fs');
           const client = net.connect(6667, 'irc.libera.chat', () => {
-            client.write('NICK laria_sniper\r\n');
-            client.write('USER laria_sniper 0 * :LariaBridge\r\n');
-            client.write('JOIN #laria\r\n');
+            // Zmeníme mu meno na ešte čerstvejšie
+            client.write('NICK laria_brana_s\r\n');
+            client.write('USER laria_brana_s 0 * :LariaBridge\r\n');
           });
 
           let messages = [];
+          let registered = false;
+          
           client.on('data', (data) => {
             const line = data.toString();
             if (line.includes('PING')) client.write('PONG ' + line.split(' ')[1] + '\r\n');
-            if (line.includes('PRIVMSG #laria')) {
-              const msg = line.split('PRIVMSG #laria :')[1];
-              if (msg) messages.push(msg.trim());
+            
+            // Server nám potvrdil registráciu (koniec MOTD alebo JOIN)
+            if (!registered && (line.includes(' 001 ') || line.includes(' 376 '))) {
+                console.log('Bot zaregistrovaný, pripájam sa do kanála...');
+                client.write('JOIN #laria\r\n');
+                registered = true;
+            }
+
+            if (registered && line.includes('PRIVMSG #laria')) {
+              const part = line.split('PRIVMSG #laria :')[1];
+              if (part) {
+                console.log('Chytená správa:', part.trim());
+                messages.push(part.trim());
+              }
             }
           });
 
-          // Len 15 sekúnd - vletieť, zobrať, zmiznúť
+          // Dáme mu 20 sekúnd - zoznámiť sa, pripojiť a vypočuť
           setTimeout(() => {
-            // Ak nič nové neprišlo, necháme tam aspoň správu o spojení
-            const toSave = messages.length > 0 ? messages.slice(-2) : ['Spojenie stabilné, čakám na dáta...'];
-            fs.writeFileSync('messages.json', JSON.stringify({ messages: toSave }));
+            if (messages.length > 0) {
+              const toSave = messages.slice(-2);
+              fs.writeFileSync('messages.json', JSON.stringify({ messages: toSave }));
+              console.log('Správy uložené: ' + JSON.stringify(toSave));
+            } else {
+              // Ak nič, napíšeme niečo optimistické
+              fs.writeFileSync('messages.json', JSON.stringify({ messages: ['Čakám na LARIA signál z Rákoša...'] }));
+            }
             process.exit(0);
-          }, 15000);
+          }, 20000);
           "
 
       - name: Commit and Push
