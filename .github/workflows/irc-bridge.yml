@@ -2,7 +2,9 @@ name: LARIA IRC Bridge
 
 on:
   workflow_dispatch: # Umožní nám to spustiť ručne
-
+# TOTO SME PRIDALI - HLAVNÝ KĽÚČ PRE ROBOTA
+permissions:
+  contents: write
 jobs:
   irc_listener:
     runs-on: ubuntu-latest
