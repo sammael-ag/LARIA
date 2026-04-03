@@ -1,0 +1,75 @@
+name: LARIA IRC Bridge
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  irc_listener:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run IRC Brána
+        run: |
+          node -e "
+          const net = require('net');
+          const fs = require('fs');
+          const client = net.connect(6667, 'irc.libera.chat', () => {
+            // Zmeníme mu meno na ešte čerstvejšie
+            client.write('NICK laria_brana_s\r\n');
+            client.write('USER laria_brana_s 0 * :LariaBridge\r\n');
+          });
+
+          let messages = [];
+          let registered = false;
+          
+          client.on('data', (data) => {
+            const line = data.toString();
+            if (line.includes('PING')) client.write('PONG ' + line.split(' ')[1] + '\r\n');
+            
+            // Server nám potvrdil registráciu (koniec MOTD alebo JOIN)
+            if (!registered && (line.includes(' 001 ') || line.includes(' 376 '))) {
+                console.log('Bot zaregistrovaný, pripájam sa do kanála...');
+                client.write('JOIN #laria\r\n');
+                registered = true;
+            }
+
+            if (registered && line.includes('PRIVMSG #laria')) {
+              const part = line.split('PRIVMSG #laria :')[1];
+              if (part) {
+                console.log('Chytená správa:', part.trim());
+                messages.push(part.trim());
+              }
+            }
+          });
+
+          // Dáme mu 20 sekúnd - zoznámiť sa, pripojiť a vypočuť
+          setTimeout(() => {
+            if (messages.length > 0) {
+              const toSave = messages.slice(-2);
+              fs.writeFileSync('messages.json', JSON.stringify({ messages: toSave }));
+              console.log('Správy uložené: ' + JSON.stringify(toSave));
+            } else {
+              // Ak nič, napíšeme niečo optimistické
+              fs.writeFileSync('messages.json', JSON.stringify({ messages: ['Čakám na LARIA signál z Rákoša...'] }));
+            }
+            process.exit(0);
+          }, 20000);
+          "
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "Sammael-Bridge"
+          git config --global user.email "bridge@laria.com"
+          git add messages.json
+          git commit -m "IRC Sniper Update" || exit 0
+          git push
