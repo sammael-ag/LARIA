@@ -114,18 +114,29 @@
             width: 100%;
         }
 
-        .btn-action {
+        ..btn-action {
     flex: 1;
     display: flex;
-    flex-direction: column; /* Dajme ikonku NAD text napevno pre mobil */
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    padding: 5px 2px;       /* Menej bočného paddingu, viac miesta pre text */
-    min-width: 0;           /* Dôležité: dovolí buttonu sa zmenšiť bez pretečenia */
-    height: auto;           /* Nech sa button natiahne podľa obsahu */
+    padding: 6px 2px;
     border-radius: 12px;
-    font-size: 0.7em;       /* Ak je text dlhý, trošku ho zmenšíme */
-    overflow: hidden;       /* Oreže to, čo by chcelo trčať von */
+    font-weight: bold;
+    transition: 0.2s;
+    
+    /* TOTO SÚ TIE MAGICKÉ RIADKY: */
+    color: #ffffff !important;         /* Nasilu biela farba */
+    text-decoration: none !important;  /* Nasilu zrušiť podčiarknutie */
+    font-size: 0.75em;                 /* Aby sa to pekne vošlo */
+}
+
+/* Pre istotu ošetríme aj stavy, kedy na to klikneš (hover/visited) */
+.btn-action:visited, 
+.btn-action:active, 
+.btn-action:hover {
+    color: #ffffff !important;
+    text-decoration: none !important;
 }
 
 .btn-action span {
@@ -198,7 +209,7 @@
         <div class="popis">${v.popis}</div>
         
         <div class="card-actions-row">
-            <<a href="tel:${v.tel.replace(/\s/g, '')}" class="btn-action" style="background-color: #8bc34a;">
+            <a href="tel:${v.tel.replace(/\s/g, '')}" class="btn-action" style="background-color: #8bc34a;">
                 <span>📞</span>Volať
             </a>
             
