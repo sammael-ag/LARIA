@@ -82,6 +82,14 @@ export default function App() {
         source={{ uri: 'https://sammael-ag.github.io/LARIA/' }} 
         style={{ flex: 1 }}
         startInLoadingState={true}
+          // TOTO PRIDAJ SEM:
+        onShouldStartLoadWithRequest={(request) => {
+          if (request.url.startsWith('tel:') || request.url.startsWith('mailto:') || request.url.startsWith('https://t.me/')) {
+          import('react-native').then(rn => rn.Linking.openURL(request.url));
+           return false; // Zastaví WebView, aby to neotváral ako webovú stránku
+          }
+          return true;
+        }}
       />
     </View>
   );

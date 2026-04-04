@@ -107,42 +107,34 @@
         }
 
         .card-actions-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 4px; /* Malá medzera, aby mali tlačidlá maximum miesta */
-    margin-top: 20px;
-    width: 100%;
-}
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+            margin-top: 15px;
+            width: 100%;
+        }
 
         .btn-action {
-    flex: 1;
-    display: flex;
-    flex-direction: row; /* Základ je: ikonka a text vedľa seba */
-    flex-wrap: wrap;     /* Ak nie je miesto, text skočí pod ikonku */
-    align-items: center;
-    justify-content: center;
-    padding: 8px 4px;
-    min-height: 40px;    /* Zaistí, že button bude mať pekný tvar aj pri zalomení */
-    border-radius: 12px;
-    font-size: 0.75em;
-    font-weight: bold;
-    text-decoration: none;
-    color: white;
-    transition: 0.2s;
-    text-align: center;
-}
+            flex: 1;
+            display: flex;
+            flex-direction: row; /* Ikonka a text vedľa seba */
+            align-items: center;
+            justify-content: center;
+            height: 36px;       /* Pevná, nízka výška pre eleganciu */
+            border-radius: 18px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-decoration: none;
+            color: white;
+            transition: 0.2s;
+            white-space: nowrap; /* Aby sa text zbytočne nelámal */
+        }
 
-/* Štýl pre ikonku vnútri tlačidla */
         .btn-action span {
-    margin-right: 4px;   /* Medzera, keď sú vedľa seba */
-    font-size: 1.1em;
-}
-
-/* Ak sa text zalomí pod ikonku, zrušíme pravý margin a dáme spodný */
-        .btn-action span {
-    display: inline-block;
-}
-                #backToTop {
+            margin-right: 5px; /* Medzera medzi ikonkou a textom */
+            font-size: 1.1em;
+        }
+        #backToTop {
             position: fixed; bottom: 20px; right: 20px;
             background: var(--primary); color: white;
             border: none; padding: 10px 15px; border-radius: 50%;
@@ -208,8 +200,8 @@
         <div class="popis">${v.popis}</div>
         
         <div class="card-actions-row">
-            <a href="tel:${v.tel}" class="btn-action" style="background-color: #8bc34a;">
-                <span>📞</span>Volať
+            <<a href="tel:${v.tel.replace(/\s/g, '')}" class="btn-action" style="background-color: #8bc34a;">
+                <span>📞</span> Volať
             </a>
             
             <a href="https://t.me/Sammael777" target="_blank" class="btn-action" style="background-color: #0088cc;">
