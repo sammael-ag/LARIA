@@ -107,26 +107,42 @@
         }
 
         .card-actions-row {
-            display: flex;
-            gap: 8px;
-            width: 100%;
-        }
+    display: flex;
+    justify-content: space-between;
+    gap: 4px; /* Malá medzera, aby mali tlačidlá maximum miesta */
+    margin-top: 20px;
+    width: 100%;
+}
 
         .btn-action {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 35px;
-            border-radius: 18px;
-            font-size: 0.85em;
-            font-weight: bold;
-            text-decoration: none;
-            color: white;
-            background-color: var(--primary);
-        }
+    flex: 1;
+    display: flex;
+    flex-direction: row; /* Základ je: ikonka a text vedľa seba */
+    flex-wrap: wrap;     /* Ak nie je miesto, text skočí pod ikonku */
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    min-height: 40px;    /* Zaistí, že button bude mať pekný tvar aj pri zalomení */
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: bold;
+    text-decoration: none;
+    color: white;
+    transition: 0.2s;
+    text-align: center;
+}
 
-        #backToTop {
+/* Štýl pre ikonku vnútri tlačidla */
+        .btn-action span {
+    margin-right: 4px;   /* Medzera, keď sú vedľa seba */
+    font-size: 1.1em;
+}
+
+/* Ak sa text zalomí pod ikonku, zrušíme pravý margin a dáme spodný */
+        .btn-action span {
+    display: inline-block;
+}
+                #backToTop {
             position: fixed; bottom: 20px; right: 20px;
             background: var(--primary); color: white;
             border: none; padding: 10px 15px; border-radius: 50%;
@@ -185,21 +201,27 @@
         });
 
         list.innerHTML = filtered.map(v => `
-            <div class="card">
-                <span class="tag">${v.kat}</span>
-                <span class="name">${v.meno}</span>
-                <span class="loc">📍 ${v.lok}</span>
-                <div class="popis">${v.popis}</div>
-                
-                <div class="card-actions-row">
-                    <a href="tel:${v.tel}" class="btn-action">📞 Volať</a>
-                    
-                    <a href="https://t.me/Sammael777" target="_blank" class="btn-action" style="background:#0088cc">💬 Správa</a>
-                    
-                    <a href="${v.galeria}" target="_blank" class="btn-action" style="background:#ea4335">🖼️ Galéria</a>
-                </div>
-            </div>
-        `).join('');
+    <div class="card">
+        <span class="tag">${v.kat}</span>
+        <span class="name">${v.meno}</span>
+        <span class="loc">📍 ${v.lok}</span>
+        <div class="popis">${v.popis}</div>
+        
+        <div class="card-actions-row">
+            <a href="tel:${v.tel}" class="btn-action" style="background-color: #8bc34a;">
+                <span>📞</span>Volať
+            </a>
+            
+            <a href="https://t.me/Sammael777" target="_blank" class="btn-action" style="background-color: #0088cc;">
+                <span>💬</span>Správa
+            </a>
+            
+            <a href="${v.galeria}" target="_blank" class="btn-action" style="background-color: #ea4335;">
+                <span>🖼️</span>Galéria
+            </a>
+        </div>
+    </div>
+`).join('');
     }
 
     function applyFilter() { render(); }
