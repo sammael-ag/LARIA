@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LARIA | Multidimensional Vizitkár</title>
+    <style>
+        /* --- LARIA DESIGN SYSTEM --- */
+        :root { 
+            --laria-gold: #bdae82; /* Jemná farba tvojho žiariča */
+            --bg: #ffffff; 
+            --text: #1a1a1a; 
+            --subtext: #777777;
+            --card-bg: #fcfcfc;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 0; 
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { 
+            max-width: 500px; 
+            margin: auto; 
+            padding: 20px;
+        }
+
+        /* --- HEADER --- */
+        header { 
+            text-align: center; 
+            padding: 40px 0 20px 0; 
+        }
+
+        .laria-logo {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #eee;
+            padding: 5px;
+            margin-bottom: 15px;
+        }
+
+        h1 { 
+            font-size: 24px; 
+            letter-spacing: 5px; 
+            text-transform: uppercase; 
+            margin: 0; 
+            font-weight: 300;
+        }
+
+        .subtitle { 
+            font-size: 10px; 
+            color: var(--subtext); 
+            letter-spacing: 2px; 
+            text-transform: uppercase; 
+            margin-top: 5px;
+        }
+
+        /* --- FILTRE --- */
+        .filter-section {
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #searchInput, #categorySelect {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+            background: #fff;
+            color: var(--text);
+            font-family: monospace;
+        }
+
+        /* --- VIZITKY --- */
+        #list {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: 0.3s;
+            position: relative;
+        }
+
+        .card .tag {
+            font-size: 9px;
+            color: var(--laria-gold);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .card .name {
+            font-size: 1.5em;
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .card .loc {
+            font-size: 0.85em;
+            color: var(--subtext);
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .card .popis {
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: #444;
+            white-space: pre-line;
+            margin-bottom: 20px;
+        }
+
+        /* --- TLAČIDLÁ --- */
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            font-size: 12px;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid #eee;
+            color: var(--text);
+            transition: 0.2s;
+        }
+
+        .btn:hover { background: #000; color: #fff; border-color: #000; }
+
+        footer {
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 10px;
+            color: #ccc;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <img src="laria-icon.png" alt="L" class="laria-logo">
+        <h1>LARIA</h1>
+        <div class="subtitle">Multidimensional Identifier</div>
+    </header>
+
+    <div class="filter-section">
+        <input type="text" id="searchInput" placeholder="Hľadať mesto/okres..." onkeyup="filter()">
+        <select id="categorySelect" onchange="filter()">
+            <option value="all">Všetky kategórie</option>
+            <option value="remesla">Remeslá</option>
+            <option value="sluzby">Služby</option>
+            <option value="duchovno">Duchovný rozvoj</option>
+        </select>
+    </div>
+
+    <div id="list">
+        </div>
+
+    <footer>
+        Created by Sammael & Aria<br>
+        2026 | Frequency Active
+    </footer>
+</div>
+
+<script>
+    // Tu budeme mať tvoje dáta (môžeš ich mať aj v data.json neskôr)
+    const data = [
+        {
+            id: 1,
+            meno: "Sammael Hudec",
+            kat: "remesla",
+            lok: "Rákoš / Revúca",
+            popis: "Tesár a umelecký stolár.\nŠpecializácia na rustic, steampunk a art deco.\nVýroba svetelných žiaričov a orez stromov.",
+            tel: "0900123456"
+        }
+    ];
+
+    function renderCards(items) {
+        const list = document.getElementById('list');
+        list.innerHTML = items.map(item => `
+            <div class="card" data-kat="${item.kat}" data-lok="${item.lok.toLowerCase()}">
+                <span class="tag">${item.kat}</span>
+                <span class="name">${item.meno}</span>
+                <span class="loc">📍 ${item.lok}</span>
+                <div class="popis">${item.popis}</div>
+                <div class="actions">
+                    <a href="tel:${item.tel}" class="btn">Volať</a>
+                    <a href="#" class="btn" onclick="alert('ID: ${item.id}')">Detaily</a>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function filter() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const cat = document.getElementById('categorySelect').value;
+        
+        const filtered = data.filter(item => {
+            const matchSearch = item.lok.toLowerCase().includes(search) || item.meno.toLowerCase().includes(search);
+            const matchCat = cat === 'all' || item.kat === cat;
+            return matchSearch && matchCat;
+        });
+        renderCards(filtered);
+    }
+
+    // Spustenie
+    renderCards(data);
+</script>
+
+</body>
+</html>
