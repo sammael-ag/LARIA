@@ -115,25 +115,23 @@
         }
 
         .btn-action {
-            flex: 1;
-            display: flex;
-            flex-direction: row; /* Ikonka a text vedľa seba */
-            align-items: center;
-            justify-content: center;
-            height: 36px;       /* Pevná, nízka výška pre eleganciu */
-            border-radius: 18px;
-            font-size: 0.8em;
-            font-weight: bold;
-            text-decoration: none;
-            color: white;
-            transition: 0.2s;
-            white-space: nowrap; /* Aby sa text zbytočne nelámal */
-        }
+    flex: 1;
+    display: flex;
+    flex-direction: column; /* Dajme ikonku NAD text napevno pre mobil */
+    align-items: center;
+    justify-content: center;
+    padding: 5px 2px;       /* Menej bočného paddingu, viac miesta pre text */
+    min-width: 0;           /* Dôležité: dovolí buttonu sa zmenšiť bez pretečenia */
+    height: auto;           /* Nech sa button natiahne podľa obsahu */
+    border-radius: 12px;
+    font-size: 0.7em;       /* Ak je text dlhý, trošku ho zmenšíme */
+    overflow: hidden;       /* Oreže to, čo by chcelo trčať von */
+}
 
-        .btn-action span {
-            margin-right: 5px; /* Medzera medzi ikonkou a textom */
-            font-size: 1.1em;
-        }
+.btn-action span {
+    margin: 0;              /* Žiadny bočný margin pri column zobrazení */
+    font-size: 1.1em;
+}
         #backToTop {
             position: fixed; bottom: 20px; right: 20px;
             background: var(--primary); color: white;
