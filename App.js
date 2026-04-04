@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Image, StatusBar, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, Image, StatusBar, ScrollView, Dimensions, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 const { width } = Dimensions.get('window');
@@ -79,14 +79,19 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" hidden={false} />
       <WebView 
-        source={{ uri: 'https://sammael-ag.github.io/LARIA/' }} 
+        source={{ uri: `https://sammael-ag.github.io/LARIA/?v=${Date.now()}` }} 
         style={{ flex: 1 }}
         startInLoadingState={true}
-          // TOTO PRIDAJ SEM:
+        originWhitelist={['*']} // Povolíme všetky protokoly
         onShouldStartLoadWithRequest={(request) => {
-          if (request.url.startsWith('tel:') || request.url.startsWith('mailto:') || request.url.startsWith('https://t.me/')) {
-          import('react-native').then(rn => rn.Linking.openURL(request.url));
-           return false; // Zastaví WebView, aby to neotváral ako webovú stránku
+          // Ak URL začína na tel:, mailto: alebo telegram link
+          if (
+            request.url.startsWith('tel:') || 
+            request.url.startsWith('mailto:') || 
+            request.url.indexOf('t.me') > -1
+          ) {
+            Linking.openURL(request.url).catch(err => console.error('Chyba pri otváraní:', err));
+            return false; // Toto zastaví WebView, aby to nenačítalo ako webovú stránku
           }
           return true;
         }}
