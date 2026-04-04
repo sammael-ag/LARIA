@@ -12,6 +12,13 @@ const COLORS = {
   subtext: '#aaa', // Sivo-béžová (Vizitkár, Auth, Kredity)
 };
 
+// Logika pre LARIA Iskry
+const generateLariaSpark = (userId) => {
+  const timestamp = Date.now();
+  const entropy = Math.random().toString(36).substring(2, 8);
+  return `LARIA-${userId}-${timestamp}-${entropy}`;
+};
+
 export default function App() {
   const [messages, setMessages] = useState(["Systém LARIA: Inicializácia..."]);
 
