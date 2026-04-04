@@ -23,7 +23,7 @@ export default function App() {
         const data = await response.json();
         if (data && data.messages) setMessages(data.messages);
       } catch (error) {
-        setMessages(["Signál z Rákoša aktívny..."]);
+        setMessages(["Signál z Rákoša ERROR"]);
       }
     };
 
