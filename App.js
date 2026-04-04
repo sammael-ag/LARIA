@@ -48,7 +48,7 @@ export default function App() {
         <View style={styles.content}>
           <View style={styles.iconContainer}>
             {/* Skontrolovala som cestu - v tvojom kóde bol icon.png */}
-            <Image source={require('./assets/icon.png')} style={styles.lariaIcon} />
+            <Image source={require('./assets/icon.jpg')} style={styles.lariaIcon} />
           </View>
 
           <Text style={styles.title}>LARIA</Text>
