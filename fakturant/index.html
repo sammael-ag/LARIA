@@ -18,6 +18,8 @@
         button { width: 100%; padding: 18px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 16px; background: #1a1a1a; color: white; transition: 0.3s; margin-top: 20px; }
         button:hover { background: #ff00ff; }
         .footer-info { text-align: center; font-size: 10px; color: #bbb; margin-top: 30px; }
+        /* Štýl pre zvýraznenie manuálneho dátumu */
+        #custom_vystavenie { border: 1px solid #ffb3ff; background: #fff9ff; }
     </style>
 </head>
 <body>
@@ -46,23 +48,29 @@
             <input type="text" id="vs" placeholder="napr. 2026001">
         </div>
         <div class="field">
-            <label>KW (Týždeň)</label>
-            <input type="text" id="kw" placeholder="napr. 14">
+            <label>Dátum vyhotovenia (Prázdne = Dnes)</label>
+            <input type="date" id="custom_vystavenie">
         </div>
     </div>
     <div class="row">
         <div class="field">
-            <label>Dátum dodania</label>
+            <label>Dátum dodania (DD.MM.RRRR)</label>
             <input type="text" id="d_dodania" placeholder="DD.MM.RRRR">
         </div>
         <div class="field">
-            <label>Splatnosť</label>
+            <label>Splatnosť (DD.MM.RRRR)</label>
             <input type="text" id="d_splatnosti" placeholder="DD.MM.RRRR">
         </div>
     </div>
-    <div class="field">
-        <label>Popis prác</label>
-        <input type="text" id="popis" placeholder="napr. Stavebné práce podľa rozpisu">
+    <div class="row">
+        <div class="field">
+             <label>KW (Týždeň)</label>
+             <input type="text" id="kw" placeholder="napr. 14">
+        </div>
+        <div class="field">
+            <label>Popis prác</label>
+            <input type="text" id="popis" placeholder="napr. Stavebné práce">
+        </div>
     </div>
     <div class="row">
         <div style="flex: 2;">
@@ -102,6 +110,17 @@
     }
 
     function generujPDF() {
+        // Logika pre dátum vyhotovenia
+        let manualDate = document.getElementById('custom_vystavenie').value;
+        let finalVystavenie;
+        
+        if (manualDate) {
+            let parts = manualDate.split("-");
+            finalVystavenie = parts[2] + "." + parts[1] + "." + parts[0];
+        } else {
+            finalVystavenie = new Date().toLocaleDateString('sk-SK');
+        }
+
         const d = {
             dodavatel: document.getElementById('dodavatel').value,
             banka: document.getElementById('banka').value,
@@ -113,7 +132,7 @@
             popis: document.getElementById('popis').value,
             suma: document.getElementById('suma').value,
             mena: document.getElementById('mena').value,
-            d_vystavenia: new Date().toLocaleDateString('sk-SK')
+            d_vystavenia: finalVystavenie
         };
 
         const pdfContent = `
