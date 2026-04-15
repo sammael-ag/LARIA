@@ -67,7 +67,7 @@ export default function App() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>ID: {LARIA_CONTRACT}</Text>
-            <Text style={styles.footerText}>connecting to multidimensionality...</Text>
+            <Text style={styles.footerText}>powered by Sammael & Aria</Text>
           </View>
         </View>
       </View>
