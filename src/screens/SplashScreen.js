@@ -1,19 +1,26 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, StatusBar, Dimensions, Animated } from 'react-native';
+import { View, Text, Image, StatusBar, Dimensions, Animated, StyleSheet } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-const SplashScreen = () => {
-  // Animácia pre plynulé rozsvietenie (fadeIn)
+const SplashScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // 1. Spustíme tvoju "zamatovú" animáciu
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 2500, // Trošku pomalšie, nech je to viac "zamatové"
+      duration: 2500,
       useNativeDriver: true,
     }).start();
-  }, [fadeAnim]);
+
+    // 2. Po 5 sekundách prepneme na Dashboard
+    const timer = setTimeout(() => {
+      navigation.replace('Dashboard');
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [fadeAnim, navigation]);
 
   return (
     <View style={UI.phoneContainer}>
@@ -44,7 +51,8 @@ const SplashScreen = () => {
   );
 };
 
-const UI = {
+// TU SÚ TVOJE PÔVODNÉ, VYMAZLENÉ ŠTÝLY (Zjednotené do StyleSheetu)
+const UI = StyleSheet.create({
   phoneContainer: {
     flex: 1,
     backgroundColor: '#000',
@@ -64,10 +72,10 @@ const UI = {
     borderRadius: 15,
   },
   lariaTitle: {
-    fontSize: 40, // Trošku som ju zväčšila, nech dominuje
+    fontSize: 40,
     fontWeight: 'bold',
     color: '#FFF',
-    letterSpacing: 8, // Viac priestoru medzi písmenami pre eleganciu
+    letterSpacing: 8,
     textShadowColor: 'rgba(255, 255, 255, 0.6)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 20,
@@ -112,6 +120,6 @@ const UI = {
     color: '#777',
     fontWeight: 'bold',
   },
-};
+});
 
 export default SplashScreen;
