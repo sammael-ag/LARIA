@@ -1,0 +1,143 @@
+/* --- GLOBÁLNE PREMENNÉ (Tvoja paleta) --- */
+:root {
+  --primary: #8fb339;       /* Tvoja SPDR zelená */
+  --primary-hover: #7a9a30;
+  --bg-light: #fdfdfd;      /* Svetlé pozadie (Vizitkár) */
+  --bg-dark: #000000;       /* Temné pozadie (Laria/Splash) */
+  --text-dark: #2c3e50;     /* Text pre svetlý režim */
+  --text-light: #FFFFFF;    /* Text pre temný režim */
+  --card-bg: #ffffff;
+  --shadow: 0 4px 15px rgba(0,0,0,0.1);
+  --radius: 15px;
+  --cyber-green: #0f0;      /* IRC zelená */
+}
+
+/* --- ZÁKLADNÝ RESET --- */
+body, html {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-light);
+  color: var(--text-dark);
+  box-sizing: border-box;
+}
+
+/* --- OBJEKT: VIZITKA (The SPDR Card) --- */
+.card {
+  background: var(--card-bg);
+  padding: 30px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 600px;
+  margin: 10px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: 0.3s;
+  position: relative;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.card .tag {
+  background: #eef2f3;
+  color: var(--primary);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8em;
+  font-weight: bold;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+.card .name {
+  font-size: 1.4em;
+  font-weight: bold;
+  color: #333;
+  margin-top: 25px;
+  margin-bottom: 5px;
+}
+
+/* --- TLAČIDLÁ A AKCIE (Elegantné a nízke) --- */
+.card-actions-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.btn-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  border-radius: 19px;
+  font-weight: bold;
+  text-decoration: none !important;
+  color: #ffffff !important;
+  font-size: 0.8em;
+  transition: 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-phone { background-color: #8bc34a; }
+.btn-share { background-color: #2ecc71; }
+.btn-email { background-color: #7f8c8d; }
+
+/* --- LARIA SPLASH & CYBER SEKCIU --- */
+.laria-mode {
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.cyber-pechat {
+  max-width: 350px;
+  height: auto;
+  opacity: 0;
+  animation: fadeIn 2s forwards;
+  border-radius: 15px;
+}
+
+.status-area {
+  font-size: 11px;
+  color: var(--cyber-green);
+  line-height: 1.6;
+  background: rgba(0, 40, 0, 0.5);
+  padding: 10px;
+  border-radius: 5px;
+}
+
+/* --- FAKTURANT (Integrovaný štýl) --- */
+.fakturant-container {
+  max-width: 600px;
+  margin: auto;
+  background: white;
+  padding: 30px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.fakturant-btn {
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+.fakturant-btn:hover {
+  background: #ff00ff; /* Tvoj ružový akcent ostáva */
+}
+
+@keyframes fadeIn { to { opacity: 1; } }

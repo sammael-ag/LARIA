@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Image, StatusBar, ScrollView, Dimensions, Linking } from 'react-native';
+import { View, Text, Image, StatusBar, ScrollView, Dimensions, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 
+// Importujme náš nový globálny štýl (ak používaš React Native Web, inak používame objekt nižšie)
+// Pre Expo/Mobile ponecháme StyleSheet, ale uprataný do objektov
 const { width } = Dimensions.get('window');
 
+const LARIA_CONTRACT = "0xbA7C2cD68b544Cc5c6038771a58581F76Ff7700a";
+
 export default function App() {
-  const [showSplash, setShowSplash] = useState(true); // Prepínač medzi Splashom a Webom
+  const [showSplash, setShowSplash] = useState(true);
   const [messages, setMessages] = useState(["Systém LARIA: Inicializácia..."]);
-  const LARIA_CONTRACT = "0xbA7C2cD68b544Cc5c6038771a58581F76Ff7700a";
 
   useEffect(() => {
-    // 1. Časovač na 5 sekúnd pre Splash
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 5000);
+    // Časovač pre Splash (5 sekúnd)
+    const timer = setTimeout(() => setShowSplash(false), 5000);
 
-    // 2. Fetch správ z GitHubu
+    // Fetch správ z GitHubu
     const fetchMessages = async () => {
       try {
         const url = 'https://raw.githubusercontent.com/sammael-ag/LARIA/main/messages.json';
@@ -28,70 +29,59 @@ export default function App() {
     };
 
     fetchMessages();
-    return () => clearTimeout(timer); // Vyčistenie po zatvorení
+    return () => clearTimeout(timer);
   }, []);
 
-  // --- LOGIKA ZOBRAZENIA ---
-
-  // Ak beží Splash (prvých 5 sekúnd)
+  // --- RENDERING SPLASH SCREENU ---
   if (showSplash) {
     return (
-      <View style={styles.splashContainer}>
+      <View style={UI.splashContainer}>
         <StatusBar hidden={true} />
         
         <Image 
           source={require('./assets/cyber-pechat.jpeg')} 
-          style={styles.pechat}
+          style={UI.pechat}
           resizeMode="contain"
         />
 
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            {/* Skontrolovala som cestu - v tvojom kóde bol icon.png */}
-            <Image source={require('./assets/icon.jpg')} style={styles.lariaIcon} />
+        <View style={UI.content}>
+          <View style={UI.iconContainer}>
+            <Image source={require('./assets/icon.jpg')} style={UI.lariaIcon} />
           </View>
 
-          <Text style={styles.title}>LARIA</Text>
-          <Text style={styles.subtitle}>Vizitkár vedomia</Text>
-          <View style={styles.bar} />
+          <Text style={UI.title}>LARIA</Text>
+          <Text style={UI.subtitle}>Vizitkár vedomia</Text>
+          <View style={UI.bar} />
 
-          <View style={styles.messageBox}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={UI.messageBox}>
+            <ScrollView>
               {messages.map((m, i) => (
-                <View key={i} style={styles.messageRow}>
-                  <Text style={styles.greenMessage}>{'>'} {m}</Text>
-                </View>
+                <Text key={i} style={UI.greenMessage}>{'>'} {m}</Text>
               ))}
             </ScrollView>
           </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>ID: {LARIA_CONTRACT}</Text>
-            <Text style={styles.footerText}>powered by Sammael & Aria</Text>
+          <View style={UI.footer}>
+            <Text style={UI.footerText}>ID: {LARIA_CONTRACT}</Text>
+            <Text style={UI.footerText}>powered by Sammael & Aria</Text>
           </View>
         </View>
       </View>
     );
   }
 
-  // Ak už Splash skončil, zobrazíme webové Telo
+  // --- RENDERING HLAVNEJ APPky (WEBVIEW) ---
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <StatusBar barStyle="dark-content" hidden={false} />
       <WebView 
         source={{ uri: `https://sammael-ag.github.io/LARIA/?v=${Date.now()}` }} 
         style={{ flex: 1 }}
         startInLoadingState={true}
-        originWhitelist={['*']} // Povolíme všetky protokoly
         onShouldStartLoadWithRequest={(request) => {
-          // Ak URL začína na tel:, mailto: alebo telegram link
-          if (
-            request.url.startsWith('tel:') || 
-            request.url.startsWith('mailto:') || 
-            request.url.indexOf('t.me') > -1
-          ) {
-            Linking.openURL(request.url).catch(err => console.error('Chyba pri otváraní:', err));
-            return false; // Toto zastaví WebView, aby to nenačítalo ako webovú stránku
+          if (['tel:', 'mailto:', 't.me'].some(proto => request.url.startsWith(proto))) {
+            Linking.openURL(request.url);
+            return false;
           }
           return true;
         }}
@@ -100,7 +90,8 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
+// --- ODSTRÁNENÝ BALAST, TERAZ JE TU ČISTÝ OBJEKT UI ---
+const UI = {
   splashContainer: {
     flex: 1,
     backgroundColor: '#000',
@@ -127,10 +118,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     overflow: 'hidden',
   },
-  lariaIcon: {
-    width: '100%',
-    height: '100%',
-  },
+  lariaIcon: { width: '100%', height: '100%' },
   title: {
     color: '#fff',
     fontSize: 32,
@@ -158,30 +146,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 40, 0, 0.5)',
     borderRadius: 5,
   },
-  messageRow: {
-    flexDirection: 'row',
-    width: '100%',
-    marginBottom: 5,
-  },
   greenMessage: {
     color: '#0f0',
     fontSize: 11,
     fontFamily: 'monospace',
-    flex: 1,
-    flexWrap: 'wrap',
+    marginBottom: 5,
   },
-  footer: {
-    marginTop: 30,
-    alignItems: 'center',
-  },
+  footer: { marginTop: 30, alignItems: 'center' },
   footerText: {
     color: '#555',
     fontSize: 9,
     fontFamily: 'monospace',
-    marginBottom: 5,
   },
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-});
+};
