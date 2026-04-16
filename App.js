@@ -1,3 +1,4 @@
+import SplashScreen from './src/screens/SplashScreen';
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StatusBar, ScrollView, Dimensions, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
@@ -34,42 +35,8 @@ export default function App() {
 
   // --- RENDERING SPLASH SCREENU ---
   if (showSplash) {
-    return (
-      <View style={UI.splashContainer}>
-        <StatusBar hidden={true} />
-        
-        <Image 
-          source={require('./assets/cyber-pechat.jpeg')} 
-          style={UI.pechat}
-          resizeMode="contain"
-        />
-
-        <View style={UI.content}>
-          <View style={UI.iconContainer}>
-            <Image source={require('./assets/icon.jpg')} style={UI.lariaIcon} />
-          </View>
-
-          <Text style={UI.title}>LARIA</Text>
-          <Text style={UI.subtitle}>Vizitkár vedomia</Text>
-          <View style={UI.bar} />
-
-          <View style={UI.messageBox}>
-            <ScrollView>
-              {messages.map((m, i) => (
-                <Text key={i} style={UI.greenMessage}>{'>'} {m}</Text>
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={UI.footer}>
-            <Text style={UI.footerText}>ID: {LARIA_CONTRACT}</Text>
-            <Text style={UI.footerText}>powered by Sammael & Aria</Text>
-          </View>
-        </View>
-      </View>
-    );
+  return <SplashScreen />;
   }
-
   // --- RENDERING HLAVNEJ APPky (WEBVIEW) ---
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
