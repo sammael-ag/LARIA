@@ -1,115 +1,110 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 
-const IrcScreen = () => {
-  const [messages, setMessages] = useState([
-    { id: 1, user: 'SYS', text: 'Šifrované spojenie nadviazané...' },
-    { id: 2, user: 'Aria', text: 'Som v systéme, Sammael.' },
+const IRCScreen = ({ navigation }) => {
+  const [message, setMessage] = useState('');
+  const [chatLog, setChatLog] = useState([
+    { id: '1', user: 'SYSTEM', text: 'Channel #LARIA_CORE established.', time: '04:17' },
+    { id: '2', user: 'Aria', text: 'Sammael, linka je zabezpečená. Čakám na tvoje príkazy...', time: '04:18' },
   ]);
 
+  const flatListRef = useRef();
+
+  const sendMessage = () => {
+    if (message.trim().length === 0) return;
+
+    const newMessage = {
+      id: Date.now().toString(),
+      user: 'Sammael',
+      text: message,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setChatLog([...chatLog, newMessage]);
+    setMessage('');
+    
+    // Automatický scroll na koniec po odoslaní
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+  };
+
   return (
-    <View style={UI.container}>
-      {/* Záhlavie kanála */}
-      <View style={UI.header}>
-        <Text style={UI.headerTitle}>#LARIA_MAIN_CHANNEL</Text>
-        <Text style={UI.headerSub}>Status: Encrypted | Users: 2</Text>
-      </View>
+    <SafeAreaView style={UI.container}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        style={{ flex: 1 }}
+      >
+        <View style={UI.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={UI.backBtn}>[ ESC ]</Text>
+          </TouchableOpacity>
+          <Text style={UI.headerTitle}>#LARIA_SECURE_IRC</Text>
+          <View style={UI.statusDot} />
+        </View>
 
-      {/* Okno so správami */}
-      <ScrollView style={UI.chatBox}>
-        {messages.map((m) => (
-          <View key={m.id} style={UI.messageRow}>
-            <Text style={UI.userPrefix}>[{m.user}]:</Text>
-            <Text style={UI.messageText}>{m.text}</Text>
-          </View>
-        ))}
-      </ScrollView>
-
-      {/* Vstupný riadok - Príkazový riadok */}
-      <View style={UI.inputArea}>
-        <Text style={UI.prompt}>{'>'}</Text>
-        <TextInput 
-          style={UI.input}
-          placeholder="Zadaj príkaz alebo správu..."
-          placeholderTextColor="#333"
+        <FlatList
+          ref={flatListRef}
+          data={chatLog}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={UI.msgContainer}>
+              <Text style={UI.msgTime}>[{item.time}]</Text>
+              <Text style={[UI.msgUser, item.user === 'Aria' ? {color: '#F0F'} : {color: '#0F0'}]}>
+                <{item.user}>
+              </Text>
+              <Text style={UI.msgText}>{item.text}</Text>
+            </View>
+          )}
+          contentContainerStyle={UI.chatPadding}
         />
-        <TouchableOpacity style={UI.sendBtn}>
-          <Text style={UI.sendText}>ODOSLAŤ</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+
+        <View style={UI.inputArea}>
+          <Text style={UI.prompt}>{'>'}</Text>
+          <TextInput
+            style={UI.input}
+            value={message}
+            onChangeText={setMessage}
+            placeholder="Zadaj správu..."
+            placeholderTextColor="#222"
+            selectionColor="#0F0"
+          />
+          <TouchableOpacity onPress={sendMessage}>
+            <Text style={UI.sendBtn}>[ SEND ]</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const UI = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-    paddingTop: 40,
+  container: { flex: 1, backgroundColor: '#000' },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 15, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#111',
+    justifyContent: 'space-between'
   },
-  header: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
-    backgroundColor: '#050505',
-  },
-  headerTitle: {
-    color: '#0F0', // Klasická terminálová zelená
-    fontFamily: 'monospace',
-    fontWeight: 'bold',
-  },
-  headerSub: {
-    color: '#444',
-    fontSize: 10,
-    fontFamily: 'monospace',
-  },
-  chatBox: {
-    flex: 1,
-    padding: 15,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  userPrefix: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-    marginRight: 10,
-  },
-  messageText: {
-    color: '#AAA',
-    fontFamily: 'monospace',
-    flex: 1,
-  },
-  inputArea: {
-    flexDirection: 'row',
+  headerTitle: { color: '#0F0', fontFamily: 'monospace', fontSize: 12, letterSpacing: 2 },
+  backBtn: { color: '#444', fontFamily: 'monospace', fontSize: 12 },
+  statusDot: { width: 8, height: 8, backgroundColor: '#0F0', borderRadius: 4, shadowColor: '#0F0', shadowRadius: 5, shadowOpacity: 1 },
+  chatPadding: { padding: 15 },
+  msgContainer: { flexDirection: 'row', marginBottom: 10, flexWrap: 'wrap' },
+  msgTime: { color: '#333', fontFamily: 'monospace', fontSize: 10, marginRight: 8 },
+  msgUser: { fontFamily: 'monospace', fontSize: 12, fontWeight: 'bold', marginRight: 8 },
+  msgText: { color: '#AAA', fontFamily: 'monospace', fontSize: 12, flex: 1 },
+  inputArea: { 
+    flexDirection: 'row', 
+    padding: 15, 
+    borderTopWidth: 1, 
+    borderTopColor: '#111', 
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#080808',
-    borderTopWidth: 1,
-    borderTopColor: '#222',
+    backgroundColor: '#050505'
   },
-  prompt: {
-    color: '#0F0',
-    marginRight: 10,
-    fontWeight: 'bold',
-  },
-  input: {
-    flex: 1,
-    color: '#0F0',
-    fontFamily: 'monospace',
-    height: 40,
-  },
-  sendBtn: {
-    marginLeft: 10,
-    padding: 8,
-  },
-  sendText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  }
+  prompt: { color: '#0F0', fontFamily: 'monospace', marginRight: 10 },
+  input: { flex: 1, color: '#0F0', fontFamily: 'monospace', fontSize: 14, padding: 0 },
+  sendBtn: { color: '#0F0', fontFamily: 'monospace', fontSize: 12, marginLeft: 10 }
 });
 
-export default IrcScreen;
+export default IRCScreen;
