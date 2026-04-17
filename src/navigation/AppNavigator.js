@@ -2,7 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
 
-// Importujeme tvoje miestnosti (Screens)
+// 1. Importujeme tvoje miestnosti (Screens) - Cesty musia byť presné!
 import SplashScreen from '../screens/SplashScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import IrcScreen from '../screens/IrcScreen';
@@ -18,8 +18,9 @@ const AppNavigator = () => {
       <Stack.Navigator 
         initialRouteName="Splash"
         screenOptions={{
-          headerShown: false, // Chceme čistý cyberpunk bez horných líšt
-          animation: 'fade',  // Jemný prechod ako v tvojich žiaričoch
+          headerShown: false, // Čistý cyberpunk dizajn bez systémových líšt
+          animation: 'fade',  // "Zamatový" prechod medzi screenmi
+          contentStyle: { backgroundColor: '#000' } // Poistka, aby pod animáciou nepreblikla biela
         }}
       >
         <Stack.Screen name="Splash" component={SplashScreen} />

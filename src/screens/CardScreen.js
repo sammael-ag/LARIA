@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Linking } from 'react-native';
+
+// OPRAVENÁ ADRESA IMPORTU: ideme o priečinok vyššie a do styles/styles
+import { G } from '../styles/styles'; 
 
 const CardScreen = ({ route, navigation }) => {
-  // 1. LOGIKA: Zistíme, či pozeráme na seba alebo na niekoho iného
   const { contact } = route.params || {};
   const isOwner = !contact;
 
-  // 2. DÁTA: Tvoje fixné údaje alebo údaje z vybraného kontaktu
   const item = isOwner ? {
     id: 1,
     kat: "MASTER CARPENTER",
@@ -31,109 +32,80 @@ const CardScreen = ({ route, navigation }) => {
   };
 
   return (
-    <SafeAreaView style={UI.container}>
-      <ScrollView contentContainerStyle={UI.scrollContent}>
+    <SafeAreaView style={G.bg}>
+      <ScrollView contentContainerStyle={G.scrollContent}>
         
-        {/* TVOJA HLAVNÁ KARTA */}
-        <View style={UI.card}>
-          <Text style={UI.tag}>{item.kat}</Text>
-          <Text style={UI.name}>{item.meno}</Text>
-          <Text style={UI.loc}>📍 {item.lok}</Text>
+        {/* HLAVNÁ KARTA */}
+        <View style={G.card}>
+          <Text style={G.tag}>{item.kat}</Text>
+          <Text style={[G.textWhite, { fontSize: 24, fontWeight: 'bold', marginBottom: 5 }]}>{item.meno}</Text>
+          <Text style={G.textDim}>📍 {item.lok}</Text>
           
-          <View style={UI.divider} />
+          <View style={G.divider} />
           
-          <Text style={UI.cat}>{item.popis}</Text>
+          <Text style={[G.textMain, { fontStyle: 'italic', lineHeight: 22, marginBottom: 30 }]}>
+            {item.popis}
+          </Text>
           
-          {/* KONTAKTNÉ TLAČIDLÁ - vždy viditeľné */}
-          <View style={UI.actionRow}>
+          {/* KONTAKTNÉ TLAČIDLÁ */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25, gap: 10 }}>
             <TouchableOpacity 
-              style={[UI.btnAction, UI.btnPhone]} 
+              style={G.btnAction} 
               onPress={() => item.tel && Linking.openURL(`tel:${item.tel.replace(/\s/g, '')}`)}
             >
-              <Text style={UI.btnText}>📞 Volať</Text>
+              <Text style={G.btnText}>📞 Volať</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[UI.btnAction, UI.btnShare]} 
+              style={G.btnAction} 
               onPress={() => alert('Zdieľanie vizitky pripravené')}
             >
-              <Text style={UI.btnText}>🔗 Zdieľať</Text>
+              <Text style={G.btnText}>🔗 Zdieľať</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[UI.btnAction, UI.btnEmail]} 
+              style={G.btnAction} 
               onPress={() => item.email && Linking.openURL(`mailto:${item.email}`)}
             >
-              <Text style={UI.btnText}>✉️ Email</Text>
+              <Text style={G.btnText}>✉️ Email</Text>
             </TouchableOpacity>
           </View>
           
-          {/* SOCIÁLNE SIETE - viditeľné vždy, keď sú v dátach */}
-          <View style={UI.socialLinks}>
-            {item.fb && <Text style={[UI.socialLink, {color: '#1877F2'}]} onPress={() => Linking.openURL(item.fb)}>Facebook</Text>}
-            {item.tg && <Text style={[UI.socialLink, {color: '#0088cc'}]} onPress={() => Linking.openURL(item.tg)}>Telegram</Text>}
-            {item.gal && <Text style={[UI.socialLink, {color: '#ea4335'}]} onPress={() => Linking.openURL(item.gal)}>🖼️ Galéria</Text>}
+          {/* SOCIÁLNE SIETE */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: '#222', paddingTop: 20 }}>
+            {item.fb && <Text style={[G.textDim, { fontWeight: 'bold', textDecorationLine: 'underline', color: '#1877F2' }]} onPress={() => Linking.openURL(item.fb)}>Facebook</Text>}
+            {item.tg && <Text style={[G.textDim, { fontWeight: 'bold', textDecorationLine: 'underline', color: '#0088cc' }]} onPress={() => Linking.openURL(item.tg)}>Telegram</Text>}
+            {item.gal && <Text style={[G.textDim, { fontWeight: 'bold', textDecorationLine: 'underline', color: '#ea4335' }]} onPress={() => Linking.openURL(item.gal)}>🖼️ Galéria</Text>}
           </View>
         </View>
 
-        {/* LOGICKÉ TLAČIDLÁ POD KARTOU */}
-        <View style={UI.bottomActions}>
+        {/* AKCIE POD KARTOU */}
+        <View style={{ width: '100%', marginTop: 25 }}>
           {isOwner ? (
-            <TouchableOpacity style={UI.editButton} onPress={() => alert('Režim úpravy identity')}>
-              <Text style={UI.editButtonText}>[ UPRAVIŤ MOJU PEČAŤ ]</Text>
+            <TouchableOpacity 
+              style={{ padding: 15, alignItems: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: '#333', borderRadius: 10 }} 
+              onPress={() => alert('Režim úpravy identity')}
+            >
+              <Text style={G.textDim}>[ UPRAVIŤ MOJU PEČAŤ ]</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
-              style={UI.ircButton} 
+              style={G.ircButton} 
               onPress={() => navigation.navigate('IRC')}
             >
-              <Text style={UI.ircButtonText}>NADVIAZAŤ IRC SPOJENIE</Text>
+              <Text style={G.ircButtonText}>NADVIAZAŤ IRC SPOJENIE</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {/* SPÄŤ TLAČIDLO */}
-        <TouchableOpacity style={UI.backButton} onPress={() => navigation.goBack()}>
-          <Text style={UI.backText}>[ SPÄŤ DO ATELIÉRU ]</Text>
+        <TouchableOpacity style={{ marginTop: 30, padding: 20 }} onPress={() => navigation.goBack()}>
+          <Text style={[G.textDim, { letterSpacing: 2 }]}>[ SPÄŤ DO ATELIÉRU ]</Text>
         </TouchableOpacity>
 
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const UI = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  scrollContent: { padding: 20, alignItems: 'center', paddingTop: 60 },
-  card: { 
-    backgroundColor: '#111', 
-    width: '100%', 
-    padding: 25, 
-    borderRadius: 20, 
-    borderWidth: 1, 
-    borderColor: '#333',
-    elevation: 10,
-    shadowColor: '#0F0',
-    shadowOpacity: 0.1,
-    shadowRadius: 20
-  },
-  tag: { color: '#0F0', fontSize: 10, letterSpacing: 2, marginBottom: 10, fontWeight: 'bold' },
-  name: { color: '#FFF', fontSize: 24, fontWeight: 'bold', marginBottom: 5, fontFamily: 'monospace' },
-  loc: { color: '#888', fontSize: 12, marginBottom: 20 },
-  divider: { height: 1, backgroundColor: '#222', marginBottom: 20 },
-  cat: { color: '#AAA', fontSize: 14, lineHeight: 22, marginBottom: 30, fontStyle: 'italic' },
-  actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25, gap: 10 },
-  btnAction: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#222', borderWidth: 1, borderColor: '#444' },
-  btnText: { color: '#FFF', fontSize: 11, fontWeight: 'bold' },
-  socialLinks: { flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: '#222', paddingTop: 20 },
-  socialLink: { fontSize: 12, fontWeight: 'bold', textDecorationLine: 'underline' },
-  bottomActions: { width: '100%', marginTop: 25 },
-  editButton: { padding: 15, alignItems: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: '#333', borderRadius: 10 },
-  editButtonText: { color: '#444', fontFamily: 'monospace', fontSize: 12 },
-  ircButton: { backgroundColor: '#0F0', padding: 18, borderRadius: 12, alignItems: 'center' },
-  ircButtonText: { color: '#000', fontWeight: 'bold', letterSpacing: 1, fontSize: 14, fontFamily: 'monospace' },
-  backButton: { marginTop: 30, padding: 20 },
-  backText: { color: '#444', fontSize: 12, letterSpacing: 2, fontFamily: 'monospace' }
-});
 
 export default CardScreen;

@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, TextInput } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
+// Oprava DEPRECATED varovania: importujeme z contextu
+import { SafeAreaView } from 'react-native-safe-area-context'; 
+
+// Importujeme náš centrálny sklad
+import { G } from '../styles/styles'; 
 
 const ContactsScreen = ({ navigation }) => {
-  // Cvičné dáta - tvoja budúca sieť
   const [search, setSearch] = useState('');
   const [contacts] = useState([
     { id: '1', name: 'Jano - Kováč', cat: 'Umelecké kováčstvo', loc: 'Revúca' },
@@ -10,7 +14,6 @@ const ContactsScreen = ({ navigation }) => {
     { id: '3', name: 'Maroš - Včelár', cat: 'Bio med', loc: 'Trebišov' },
   ]);
 
-  // Filter podľa hľadania
   const filteredContacts = contacts.filter(c => 
     c.name.toLowerCase().includes(search.toLowerCase()) || 
     c.cat.toLowerCase().includes(search.toLowerCase())
@@ -18,34 +21,50 @@ const ContactsScreen = ({ navigation }) => {
 
   const renderItem = ({ item }) => (
     <TouchableOpacity 
-      style={UI.contactItem} 
+      style={[G.card, { padding: 18, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }]} 
       onPress={() => navigation.navigate('Card', { contact: item, mode: 'view' })}
     >
-      <View style={UI.contactInfo}>
-        <Text style={UI.contactName}>{item.name}</Text>
-        <Text style={UI.contactCat}>{item.cat} • {item.loc}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[G.textWhite, { fontSize: 16, fontWeight: 'bold' }]}>{item.name}</Text>
+        {/* OPRAVA: Text spojený do jedného celku pomocou šablóny (backticks) */}
+        <Text style={[G.textDim, { marginTop: 4 }]}>
+          {`${item.cat} • ${item.loc}`}
+        </Text>
       </View>
-      <Text style={UI.arrow}>[ {'>'} ]</Text>
+      <Text style={G.textDim}>{`[ > ]`}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={UI.container}>
-      <View style={UI.header}>
+    <SafeAreaView style={G.bgDashboard}>
+      {/* JEDNOTNÁ HLAVIČKA */}
+      <View style={G.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={UI.backBtn}>[ SPÄŤ ]</Text>
+          <Text style={G.textDim}>[ SPÄŤ ]</Text>
         </TouchableOpacity>
-        <Text style={UI.title}>KONTAKTY</Text>
+        <Text style={G.headerTitle}>KONTAKTY</Text>
+        <View style={{ width: 40 }} /> 
       </View>
 
-      {/* Vyhľadávanie - tvoja kľúčová požiadavka z noci */}
-      <View style={UI.searchArea}>
+      {/* VYHĽADÁVANIE */}
+      <View style={{ paddingHorizontal: 25, marginBottom: 20 }}>
         <TextInput 
-          style={UI.searchInput}
+          style={{ 
+            backgroundColor: '#0A0A0A', 
+            borderWidth: 1, 
+            borderColor: '#222', 
+            borderRadius: 8, 
+            padding: 12, 
+            color: '#0F0', 
+            fontFamily: 'monospace',
+            fontSize: 14
+          }}
           placeholder="Hľadať v sieti..."
-          placeholderTextColor="#333"
+          placeholderTextColor="#444"
           value={search}
           onChangeText={setSearch}
+          // Aria tip: vypneme autocorrect pre čistejšie hľadanie
+          autoCorrect={false}
         />
       </View>
 
@@ -53,51 +72,15 @@ const ContactsScreen = ({ navigation }) => {
         data={filteredContacts}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={UI.listContent}
-        ListEmptyComponent={<Text style={UI.emptyText}>Žiadne spojenia v dosahu.</Text>}
+        contentContainerStyle={{ paddingHorizontal: 25 }}
+        ListEmptyComponent={
+          <Text style={[G.textDim, { textAlign: 'center', marginTop: 50 }]}>
+            Žiadne spojenia v dosahu.
+          </Text>
+        }
       />
     </SafeAreaView>
   );
 };
-
-const UI = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#050505' },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 25, 
-    paddingTop: 50,
-    justifyContent: 'space-between'
-  },
-  title: { color: '#FFF', fontSize: 16, fontWeight: 'bold', letterSpacing: 3, fontFamily: 'monospace' },
-  backBtn: { color: '#444', fontSize: 12, fontFamily: 'monospace' },
-  searchArea: { paddingHorizontal: 25, marginBottom: 20 },
-  searchInput: { 
-    backgroundColor: '#0A0A0A', 
-    borderWidth: 1, 
-    borderColor: '#111', 
-    borderRadius: 8, 
-    padding: 12, 
-    color: '#0F0', 
-    fontFamily: 'monospace',
-    fontSize: 14
-  },
-  listContent: { paddingHorizontal: 25 },
-  contactItem: { 
-    backgroundColor: '#0A0A0A', 
-    padding: 18, 
-    borderRadius: 12, 
-    marginBottom: 10, 
-    flexDirection: 'row', 
-    alignItems: 'center',
-    borderWidth: 1, 
-    borderColor: '#111' 
-  },
-  contactInfo: { flex: 1 },
-  contactName: { color: '#AAA', fontSize: 16, fontWeight: 'bold', fontFamily: 'monospace' },
-  contactCat: { color: '#444', fontSize: 11, marginTop: 4, fontFamily: 'monospace' },
-  arrow: { color: '#222', fontSize: 12, fontFamily: 'monospace' },
-  emptyText: { color: '#222', textAlign: 'center', marginTop: 50, fontFamily: 'monospace' }
-});
 
 export default ContactsScreen;

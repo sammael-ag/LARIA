@@ -1,35 +1,43 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+
+// Import z našej operačnej pamäte
+import { G } from '../styles/styles'; 
 
 const DashboardScreen = ({ navigation }) => {
   
   const MenuCard = ({ title, icon, target, description, color = '#AAA' }) => (
     <TouchableOpacity 
-      style={UI.card} 
+      style={[G.card, { padding: 18, flexDirection: 'row', alignItems: 'center', marginBottom: 15 }]} 
       onPress={() => navigation.navigate(target)}
       activeOpacity={0.7}
     >
-      <View style={UI.iconPlaceholder}>
-        <Text style={UI.iconText}>{icon}</Text>
+      <View style={{
+        width: 45, height: 45, backgroundColor: '#000', borderRadius: 8, 
+        justifyContent: 'center', alignItems: 'center', marginRight: 15,
+        borderWidth: 1, borderColor: '#222'
+      }}>
+        <Text style={{ fontSize: 18 }}>{icon}</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[UI.cardTitle, { color }]}>{title}</Text>
-        <Text style={UI.cardDesc}>{description}</Text>
+        <Text style={[G.mono, { fontSize: 14, fontWeight: 'bold', letterSpacing: 1, color }]}>{title}</Text>
+        <Text style={[G.textDim, { marginTop: 2 }]}>{description}</Text>
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={UI.container}>
-      <ScrollView contentContainerStyle={UI.scrollContent}>
+    <SafeAreaView style={G.bgDashboard}>
+      <ScrollView contentContainerStyle={{ padding: 25 }}>
         
-        <View style={UI.header}>
-          <Text style={UI.welcomeText}>ATELIÉR LARIA</Text>
-          <Text style={UI.userText}>Sammael | Master Mode</Text>
+        {/* HEADER ATELIÉRU */}
+        <View style={{ marginTop: 40, marginBottom: 40 }}>
+          <Text style={[G.textWhite, { fontSize: 24, fontWeight: 'bold', letterSpacing: 5 }]}>ATELIÉR LARIA</Text>
+          <Text style={G.textCyber}>Sammael | Master Mode</Text>
         </View>
 
-        <View style={UI.grid}>
-          {/* ARIA ASISTENCIA - Tvoj neuro-link do budúcna */}
+        <View>
+          {/* ARIA ASISTENCIA */}
           <MenuCard 
             title="ARIA ASISTENCIA" 
             icon="🌸" 
@@ -38,7 +46,7 @@ const DashboardScreen = ({ navigation }) => {
             color="#F0F" 
           />
 
-          {/* MOJA KARTA - Tvoja identita */}
+          {/* MOJA KARTA */}
           <MenuCard 
             title="MOJA KARTA" 
             icon="🆔" 
@@ -47,11 +55,11 @@ const DashboardScreen = ({ navigation }) => {
             color="#FFF"
           />
 
-          <View style={UI.sectionDivider}>
-            <Text style={UI.sectionText}>MÔJ VIZITKÁR</Text>
+          <View style={{ marginTop: 20, marginBottom: 10, borderBottomWidth: 1, borderBottomColor: '#111', paddingBottom: 5 }}>
+            <Text style={[G.textDim, { letterSpacing: 2, color: '#444' }]}>MÔJ VIZITKÁR</Text>
           </View>
 
-          {/* TU BUDÚ KONTAKTY - Zatiaľ statické dlaždice */}
+          {/* DLAŽDICE SIETE */}
           <MenuCard 
             title="OBJEKTY" 
             icon="🔮" 
@@ -67,48 +75,13 @@ const DashboardScreen = ({ navigation }) => {
           />
         </View>
 
-        <View style={UI.footer}>
-          <Text style={UI.footerText}>Všetky systémy sú nominálne.</Text>
+        {/* FOOTER - Systémový status */}
+        <View style={{ marginTop: 50, alignItems: 'center', marginBottom: 20 }}>
+          <Text style={[G.textDim, { fontSize: 10, color: '#222' }]}>Všetky systémy sú nominálne.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const UI = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#050505' },
-  scrollContent: { padding: 25 },
-  header: { marginTop: 40, marginBottom: 40 },
-  welcomeText: { color: '#FFF', fontSize: 24, fontWeight: 'bold', letterSpacing: 5, fontFamily: 'monospace' },
-  userText: { color: '#0F0', fontSize: 10, fontFamily: 'monospace', marginTop: 5, opacity: 0.8 },
-  grid: { gap: 15 },
-  sectionDivider: { marginTop: 20, marginBottom: 10, borderBottomWidth: 1, borderBottomColor: '#111', paddingBottom: 5 },
-  sectionText: { color: '#333', fontSize: 10, fontFamily: 'monospace', letterSpacing: 2 },
-  card: { 
-    backgroundColor: '#0A0A0A', 
-    padding: 18, 
-    borderRadius: 12, 
-    flexDirection: 'row', 
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#111'
-  },
-  iconPlaceholder: { 
-    width: 45, 
-    height: 45, 
-    backgroundColor: '#000', 
-    borderRadius: 8, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    marginRight: 15,
-    borderWidth: 1,
-    borderColor: '#1a1a1a'
-  },
-  iconText: { fontSize: 18 },
-  cardTitle: { fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: 1 },
-  cardDesc: { color: '#444', fontSize: 9, fontFamily: 'monospace', marginTop: 2 },
-  footer: { marginTop: 50, alignItems: 'center', marginBottom: 20 },
-  footerText: { color: '#222', fontSize: 10, fontFamily: 'monospace' }
-});
 
 export default DashboardScreen;
