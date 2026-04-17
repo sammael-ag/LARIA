@@ -30,8 +30,9 @@ const IRCScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={UI.container}>
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : null} // Androidu často stačí null, ak má v Manifeste 'adjustResize'
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} 
         style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} // Malý kúsok, aby nebol úplne nalepený
       >
         <View style={UI.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -97,20 +98,22 @@ const UI = StyleSheet.create({
   inputArea: { 
     flexDirection: 'row', 
     paddingHorizontal: 15, 
-    paddingVertical: 10,
+    paddingVertical: 12, 
     borderTopWidth: 1, 
     borderTopColor: '#111', 
-    alignItems: 'flex-end', // Zarovná text na spodok, ak sa riadok nafúkne
+    alignItems: 'center',
     backgroundColor: '#050505',
-    // ODSTRÁNILI SME minHeight - necháme to na systém
+    // Tento riadok je kľúčový - zabezpečí, že sa to neodreže:
+    marginBottom: Platform.OS === 'android' ? 0 : 0, 
   },
   input: { 
     flex: 1, 
     color: '#0F0', 
     fontFamily: 'monospace', 
-    // ODSTRÁNILI SME fontSize - systém tam dosadí tvoje globálne nastavenie
-    paddingVertical: 8,
+    fontSize: 16, 
+    paddingVertical: 10,
     marginRight: 5,
+    maxHeight: 100, // Aby sa ti riadok nenafúkol cez pol obrazovky
   },
   prompt: { color: '#0F0', fontFamily: 'monospace', marginRight: 10 },
   input: { flex: 1, color: '#0F0', fontFamily: 'monospace', fontSize: 14, padding: 0 },
