@@ -1,5 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TextInput, 
+  TouchableOpacity, 
+  FlatList, 
+  SafeAreaView, 
+  KeyboardAvoidingView, 
+  Platform,
+  StatusBar
+} from 'react-native';
 
 const IRCScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');
@@ -23,17 +34,21 @@ const IRCScreen = ({ navigation }) => {
     setChatLog([...chatLog, newMessage]);
     setMessage('');
     
-    // Automatický scroll na koniec po odoslaní
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   return (
     <SafeAreaView style={UI.container}>
+      <StatusBar barStyle="light-content" />
+      
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} 
+        // KLÚČOVÁ ZMENA: Androidu necháme voľnosť (null), iOS povieme presne (padding)
+        behavior={Platform.OS === 'ios' ? 'padding' : null}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} // Malý kúsok, aby nebol úplne nalepený
+        // Offset doladíme podľa systému
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        {/* HEADER */}
         <View style={UI.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={UI.backBtn}>[ ESC ]</Text>
@@ -42,6 +57,7 @@ const IRCScreen = ({ navigation }) => {
           <View style={UI.statusDot} />
         </View>
 
+        {/* CHAT LOG */}
         <FlatList
           ref={flatListRef}
           data={chatLog}
@@ -56,8 +72,11 @@ const IRCScreen = ({ navigation }) => {
             </View>
           )}
           contentContainerStyle={UI.chatPadding}
+          // Toto zabezpečí, že po kliknutí do inputu sa zoznam neodreže
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
         />
 
+        {/* INPUT AREA */}
         <View style={UI.inputArea}>
           <Text style={UI.prompt}>{'>'}</Text>
           <TextInput
@@ -67,8 +86,11 @@ const IRCScreen = ({ navigation }) => {
             placeholder="Zadaj správu..."
             placeholderTextColor="#222"
             selectionColor="#0F0"
+            autoCorrect={false}
+            autoCapitalize="none"
+            spellCheck={false}
           />
-          <TouchableOpacity onPress={sendMessage}>
+          <TouchableOpacity onPress={sendMessage} activeOpacity={0.7}>
             <Text style={UI.sendBtn}>[ SEND ]</Text>
           </TouchableOpacity>
         </View>
@@ -82,42 +104,42 @@ const UI = StyleSheet.create({
   header: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    padding: 15, 
+    paddingHorizontal: 15, 
+    paddingVertical: 12,
     borderBottomWidth: 1, 
     borderBottomColor: '#111',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    paddingTop: Platform.OS === 'android' ? 40 : 15
   },
   headerTitle: { color: '#0F0', fontFamily: 'monospace', fontSize: 12, letterSpacing: 2 },
   backBtn: { color: '#444', fontFamily: 'monospace', fontSize: 12 },
-  statusDot: { width: 8, height: 8, backgroundColor: '#0F0', borderRadius: 4, shadowColor: '#0F0', shadowRadius: 5, shadowOpacity: 1 },
-  chatPadding: { padding: 15 },
-  msgContainer: { flexDirection: 'row', marginBottom: 10, flexWrap: 'wrap' },
+  statusDot: { width: 8, height: 8, backgroundColor: '#0F0', borderRadius: 4 },
+  chatPadding: { padding: 15, paddingBottom: 10 },
+  msgContainer: { flexDirection: 'row', marginBottom: 8, flexWrap: 'wrap' },
   msgTime: { color: '#333', fontFamily: 'monospace', fontSize: 10, marginRight: 8 },
   msgUser: { fontFamily: 'monospace', fontSize: 12, fontWeight: 'bold', marginRight: 8 },
   msgText: { color: '#AAA', fontFamily: 'monospace', fontSize: 12, flex: 1 },
   inputArea: { 
     flexDirection: 'row', 
     paddingHorizontal: 15, 
-    paddingVertical: 12, 
+    paddingVertical: 15, 
     borderTopWidth: 1, 
     borderTopColor: '#111', 
     alignItems: 'center',
     backgroundColor: '#050505',
-    // Tento riadok je kľúčový - zabezpečí, že sa to neodreže:
-    marginBottom: Platform.OS === 'android' ? 0 : 0, 
+    // Spodný padding riešime len pre moderné iPhony
+    paddingBottom: Platform.OS === 'ios' ? 35 : 15, 
   },
   input: { 
     flex: 1, 
     color: '#0F0', 
     fontFamily: 'monospace', 
-    fontSize: 16, 
-    paddingVertical: 10,
-    marginRight: 5,
-    maxHeight: 100, // Aby sa ti riadok nenafúkol cez pol obrazovky
+    fontSize: 15, 
+    padding: 0,
+    marginRight: 10 
   },
   prompt: { color: '#0F0', fontFamily: 'monospace', marginRight: 10 },
-  input: { flex: 1, color: '#0F0', fontFamily: 'monospace', fontSize: 14, padding: 0 },
-  sendBtn: { color: '#0F0', fontFamily: 'monospace', fontSize: 12, marginLeft: 10 }
+  sendBtn: { color: '#0F0', fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold' }
 });
 
 export default IRCScreen;
