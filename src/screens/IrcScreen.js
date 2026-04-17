@@ -49,7 +49,7 @@ const IRCScreen = ({ navigation }) => {
             <View style={UI.msgContainer}>
               <Text style={UI.msgTime}>[{item.time}]</Text>
               <Text style={[UI.msgUser, item.user === 'Aria' ? {color: '#F0F'} : {color: '#0F0'}]}>
-                <{item.user}>
+                    {"<"}{item.user}{">"}
               </Text>
               <Text style={UI.msgText}>{item.text}</Text>
             </View>
