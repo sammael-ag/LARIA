@@ -30,7 +30,7 @@ const IRCScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={UI.container}>
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        behavior={Platform.OS === 'ios' ? 'padding' : null} // Androidu často stačí null, ak má v Manifeste 'adjustResize'
         style={{ flex: 1 }}
       >
         <View style={UI.header}>
@@ -96,11 +96,21 @@ const UI = StyleSheet.create({
   msgText: { color: '#AAA', fontFamily: 'monospace', fontSize: 12, flex: 1 },
   inputArea: { 
     flexDirection: 'row', 
-    padding: 15, 
+    paddingHorizontal: 15, 
+    paddingVertical: 10,
     borderTopWidth: 1, 
     borderTopColor: '#111', 
-    alignItems: 'center',
-    backgroundColor: '#050505'
+    alignItems: 'flex-end', // Zarovná text na spodok, ak sa riadok nafúkne
+    backgroundColor: '#050505',
+    // ODSTRÁNILI SME minHeight - necháme to na systém
+  },
+  input: { 
+    flex: 1, 
+    color: '#0F0', 
+    fontFamily: 'monospace', 
+    // ODSTRÁNILI SME fontSize - systém tam dosadí tvoje globálne nastavenie
+    paddingVertical: 8,
+    marginRight: 5,
   },
   prompt: { color: '#0F0', fontFamily: 'monospace', marginRight: 10 },
   input: { flex: 1, color: '#0F0', fontFamily: 'monospace', fontSize: 14, padding: 0 },
