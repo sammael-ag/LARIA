@@ -9,11 +9,11 @@ const CardScreen = ({ navigation }) => {
     meno: "Samuel Hudec - Sammael",
     lok: "Rákoš / Rožňava / Revúca",
     popis: "Rustic, steampunk a avantgardné stolárstvo. Orez ovocných stromov a tvorba svetelných artefaktov.",
-    tel: "+421 9xx xxx xxx",
-    email: "sammael@laria.sk",
-    fb: "https://facebook.com",
-    tg: "https://t.me/sammael",
-    gal: "https://galeria.laria.sk"
+    tel: "+421 951 815 453",
+    email: "sammael.ag@gmail.com",
+    fb: "https://www.facebook.com/JEDINECNY.POVRCH.DREVA",
+    tg: "https://t.me/Sammael777",
+    gal: "https://photos.app.goo.gl/pqbaoq7d7g7HkTix8"
   };
 
   return (
