@@ -101,20 +101,51 @@ export const G = StyleSheet.create({
   },
 
   // --- IRC / TERMINÁL ŠPECIFIKÁ ---
-  inputArea: {
+inputArea: {
     flexDirection: 'row',
-    padding: 15,
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    backgroundColor: '#050505',
     borderTopWidth: 1,
     borderTopColor: '#111',
     alignItems: 'center',
-    backgroundColor: '#050505',
-    paddingBottom: Platform.OS === 'ios' ? 35 : 15,
+    // Tento paddingBottom teraz vyriešime dynamicky v komponente, 
+    // aby sme mohli reagovať na insets.bottom
   },
+
+  // TEXTOVÝ VSTUP V TERMINÁLI
+  terminalInput: {
+    flex: 1,
+    color: '#0F0',
+    fontFamily: 'monospace',
+    fontSize: 15,
+    padding: 0,
+    marginRight: 10,
+  },
+
+  // DOPLNENÝ MESSENGER VZHĽAD PRE ARIA/SAMMAEL MENÁ
+  msgUserAria: {
+    color: '#F0F', // Ružová pre Ariu
+    fontFamily: 'monospace',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  
+  msgUserSammael: {
+    color: '#0F0', // Zelená pre teba
+    fontFamily: 'monospace',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+
   msgContainer: {
     flexDirection: 'row',
     marginBottom: 8,
     flexWrap: 'wrap',
   },
+  
   msgTime: {
     color: '#666', // Konečne viditeľný čas
     fontFamily: 'monospace',

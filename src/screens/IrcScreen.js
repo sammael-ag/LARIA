@@ -9,14 +9,12 @@ import {
   Platform,
   StatusBar
 } from 'react-native';
-// Oprava DEPRECATED varovania a podpora pre správne odsadenie
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'; 
-
 import { G } from '../styles/styles'; 
 
 const IRCScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');
-  const insets = useSafeAreaInsets(); // Zistíme rozmery "brady" a "čela" zariadenia
+  const insets = useSafeAreaInsets(); 
   const [chatLog, setChatLog] = useState([
     { id: '1', user: 'SYSTEM', text: 'Channel #LARIA_CORE established.', time: '04:17' },
     { id: '2', user: 'Aria', text: 'Sammael, linka je zabezpečená. Čakám na tvoje príkazy...', time: '04:18' },
@@ -24,6 +22,7 @@ const IRCScreen = ({ navigation }) => {
 
   const flatListRef = useRef();
 
+  // TÁTO FUNKCIA TI CHÝBALA - VRACIAME JU SPÄŤ DO HRY:
   const sendMessage = () => {
     if (message.trim().length === 0) return;
 
@@ -37,21 +36,19 @@ const IRCScreen = ({ navigation }) => {
     setChatLog([...chatLog, newMessage]);
     setMessage('');
     
+    // Automatický scroll na spodok po odoslaní
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   return (
-    // Používame edges=['top'] aby SafeArea nebrala spodok (ten vyriešime v inputArea)
-    <SafeAreaView style={G.bg} edges={['top']}>
+    <SafeAreaView style={[G.bg, { flex: 1 }]} edges={['top']}>
       <StatusBar barStyle="light-content" />
       
-<KeyboardAvoidingView 
-  // Skúsme 'padding' pre oba systémy, ale s masívnym offsetom
-  behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-  style={{ flex: 1 }}
-  // Ak 60 bolo málo, dajme 120 - to ho musí vystreliť do polovice obrazovky!
-  keyboardVerticalOffset={Platform.OS === 'android' ? 120 : 90}
->
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={0}
+      >
         {/* HEADER TERMINÁLU */}
         <View style={G.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -69,30 +66,24 @@ const IRCScreen = ({ navigation }) => {
           renderItem={({ item }) => (
             <View style={G.msgContainer}>
               <Text style={G.msgTime}>{`[${item.time}]`}</Text>
-              <Text style={[G.mono, { fontSize: 12, fontWeight: 'bold', marginRight: 8 }, item.user === 'Aria' ? {color: '#F0F'} : {color: '#0F0'}]}>
+              <Text style={item.user === 'Aria' ? G.msgUserAria : G.msgUserSammael}>
                   {`<${item.user}>`}
               </Text>
               <Text style={[G.textMain, { flex: 1 }]}>{item.text}</Text>
             </View>
           )}
-          contentContainerStyle={{ padding: 15, paddingBottom: 10 }}
+          contentContainerStyle={{ padding: 15, paddingBottom: 20 }}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
         />
 
-        {/* INPUT AREA s inteligentným spodným paddingom */}
+        {/* INPUT AREA */}
         <View style={[
           G.inputArea, 
-          { 
-            // Ak je klávesnica dole, pridá priestor pre insets (iPhone notch alebo Android gestá)
-            paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : 20,
-            backgroundColor: '#050505'
-          }
+          { paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 15) : 15 }
         ]}>
           <Text style={[G.textCyber, { marginRight: 10 }]}>{'>'}</Text>
           <TextInput
-            style={{ 
-              flex: 1, color: '#0F0', fontFamily: 'monospace', fontSize: 15, padding: 0, marginRight: 10 
-            }}
+            style={G.terminalInput}
             value={message}
             onChangeText={setMessage}
             placeholder="Zadaj správu..."
@@ -100,7 +91,7 @@ const IRCScreen = ({ navigation }) => {
             selectionColor="#0F0"
             autoCorrect={false}
             autoCapitalize="none"
-            spellCheck={false}
+            onSubmitEditing={sendMessage} // Aby fungoval aj Enter na klávesnici
           />
           <TouchableOpacity onPress={sendMessage} activeOpacity={0.7}>
             <Text style={[G.textCyber, { fontWeight: 'bold' }]}>[ SEND ]</Text>
