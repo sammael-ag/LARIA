@@ -183,5 +183,23 @@ inputArea: {
     textShadowColor: 'rgba(255, 255, 255, 0.6)',
     textShadowRadius: 20,
     fontFamily: 'monospace',
-  }
+  },
+  // Globálny štýl pre zadávanie textu (Editor, Search, IRC input)
+  terminalInput: {
+    backgroundColor: '#111',       // Tmavé pozadie dielne
+    borderWidth: 1,
+    borderColor: '#333',          // Nenápadný rám
+    color: '#CCC',                // Príjemná svetlosivá (žiadna jedovatá zelená)
+    padding: 12,
+    fontSize: 16,
+    borderRadius: 8,              // Trochu zaoblené, nech to nereže
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Strojové písmo
+    marginBottom: 10,
+    marginTop: 5,
+  },
+  // Štýl pre placeholder (text, ktorý tam je, kým nezačneš písať)
+  placeholderColor: '#555',       // Tmavšia sivá, aby nezavadzala
+  
+  // Farba kurzora a výberu textu
+  selectionColor: '#0F0',         // Tu si tú zelenú necháme, ako malý svetelný záblesk
 });

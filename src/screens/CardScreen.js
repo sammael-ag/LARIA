@@ -81,23 +81,30 @@ const CardScreen = ({ route, navigation }) => {
         </View>
 
         {/* AKCIE POD KARTOU */}
-        <View style={{ width: '100%', marginTop: 25 }}>
-          {isOwner ? (
-            <TouchableOpacity 
-              style={{ padding: 15, alignItems: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: '#333', borderRadius: 10 }} 
-              onPress={() => alert('Režim úpravy identity')}
-            >
-              <Text style={G.textDim}>[ UPRAVIŤ MOJU PEČAŤ ]</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity 
-              style={G.ircButton} 
-              onPress={() => navigation.navigate('IRC')}
-            >
-              <Text style={G.ircButtonText}>NADVIAZAŤ IRC SPOJENIE</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+<View style={{ width: '100%', marginTop: 25 }}>
+  {isOwner ? (
+    <TouchableOpacity 
+      style={{ 
+        padding: 15, 
+        alignItems: 'center', 
+        borderStyle: 'dashed', 
+        borderWidth: 1, 
+        borderColor: '#F0F', // Jemne som to ružovo „podsvietila“, aby si vedel, že je to tvoja Aria zóna
+        borderRadius: 10 
+      }} 
+      onPress={() => navigation.navigate('CardEditorScreen')}
+    >
+      <Text style={[G.textCyber, { color: '#F0F' }]}>[ UPRAVIŤ MOJU PEČAŤ ]</Text>
+    </TouchableOpacity>
+  ) : (
+    <TouchableOpacity 
+      style={G.ircButton} 
+      onPress={() => navigation.navigate('IRC')}
+    >
+      <Text style={G.ircButtonText}>NADVIAZAŤ IRC SPOJENIE</Text>
+    </TouchableOpacity>
+  )}
+</View>
 
         {/* SPÄŤ TLAČIDLO */}
         <TouchableOpacity style={{ marginTop: 30, padding: 20 }} onPress={() => navigation.goBack()}>

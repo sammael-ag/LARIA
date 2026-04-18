@@ -9,6 +9,7 @@ import IrcScreen from '../screens/IrcScreen';
 import CardScreen from '../screens/CardScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ContactsScreen from '../screens/ContactsScreen';
+import CardEditorScreen from '../screens/CardEditorScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -41,6 +42,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Card" component={CardScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Contacts" component={ContactsScreen} />
+        <Stack.Screen name="CardEditorScreen" component={CardEditorScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
