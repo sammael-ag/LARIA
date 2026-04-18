@@ -45,13 +45,13 @@ const IRCScreen = ({ navigation }) => {
     <SafeAreaView style={G.bg} edges={['top']}>
       <StatusBar barStyle="light-content" />
       
-      <KeyboardAvoidingView 
-        // HLAVNÁ OPRAVA: Pre Android používame 'height', pre iOS 'padding'
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-        // Offset doladený podľa insets
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
+<KeyboardAvoidingView 
+  // Skúsme 'padding' pre oba systémy, ale s masívnym offsetom
+  behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+  style={{ flex: 1 }}
+  // Ak 60 bolo málo, dajme 120 - to ho musí vystreliť do polovice obrazovky!
+  keyboardVerticalOffset={Platform.OS === 'android' ? 120 : 90}
+>
         {/* HEADER TERMINÁLU */}
         <View style={G.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>

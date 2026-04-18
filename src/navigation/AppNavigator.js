@@ -1,8 +1,8 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 
-// 1. Importujeme tvoje miestnosti (Screens) - Cesty musia byť presné!
+// Importujeme tvoje miestnosti (Screens)
 import SplashScreen from '../screens/SplashScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import IrcScreen from '../screens/IrcScreen';
@@ -12,15 +12,27 @@ import ContactsScreen from '../screens/ContactsScreen';
 
 const Stack = createNativeStackNavigator();
 
+// DEFINE TÉMY: Toto je tvoj štít proti bielemu blesku
+const LariaTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: '#000000', // Základná farba pod všetkými obrazovkami
+    card: '#000000',       // Farba hlavičiek (ak by sme ich použili)
+    text: '#FFFFFF',       // Predvolená farba textu
+    border: '#111111',     // Farba deliacich čiar v systéme
+  },
+};
+
 const AppNavigator = () => {
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={LariaTheme}>
       <Stack.Navigator 
         initialRouteName="Splash"
         screenOptions={{
-          headerShown: false, // Čistý cyberpunk dizajn bez systémových líšt
-          animation: 'fade',  // "Zamatový" prechod medzi screenmi
-          contentStyle: { backgroundColor: '#000' } // Poistka, aby pod animáciou nepreblikla biela
+          headerShown: false, // Čistý cyberpunk bez líšt
+          animation: 'fade',  // Plynulý prechod
+          contentStyle: { backgroundColor: '#000000' } // Poistka priamo v Stacku
         }}
       >
         <Stack.Screen name="Splash" component={SplashScreen} />
