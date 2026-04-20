@@ -1,22 +1,23 @@
-/* styles/styles.css */
+/* --- LARIA MATRIX ARCHITEKTÚRA --- */
 
-/* --- ZÁKLADNÉ ARCHITEKTONICKÉ PRVKY --- */
 :root {
     --bg-main: #000;
     --bg-dashboard: #050505;
     --text-main: #DDD;
     --text-dim: #888;
     --text-cyber: #0F0; /* SPDR Green */
-    --aria-pink: #F0F; /* Ružová pre mňa */
+    --aria-pink: #F0F;  /* Ružová pre mňa */
     --border-dark: #333;
     --border-soft: #222;
+    --max-sirka-vizitky: 500px; /* Zlatá miera pre zarovnanie */
 }
 
 body {
     background-color: var(--bg-main);
     margin: 0;
     padding: 0;
-    font-family: 'Courier New', Courier, monospace; /* Ekvivalent monospace */
+    font-family: 'Courier New', Courier, monospace;
+    color: var(--text-main);
 }
 
 .bg-dashboard {
@@ -29,181 +30,29 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 60px;
+    padding-top: 20px; /* Upravené pre lepší flow s headerom */
 }
 
-/* --- TEXTOVÉ ŠTANDARDY --- */
-.text-main {
-    color: var(--text-main);
-    font-size: 14px;
-}
-
-.text-dim {
-    color: var(--text-dim);
-    font-size: 11px;
-}
-
-.text-cyber {
-    color: var(--text-cyber);
-}
-
-.text-white {
-    color: #FFF;
-}
-
-/* --- OBJEKT: KARTA / VIZITKA --- */
-.card {
-    background-color: #111;
-    width: 100%;
-    max-width: 500px; /* Aby na webe nebola cez celú obrazovku */
-    padding: 25px;
-    border-radius: 20px;
-    border: 1px solid var(--border-dark);
-    box-shadow: 0 10px 20px rgba(0, 255, 0, 0.1); /* shadowColor #0F0 */
-    box-sizing: border-box;
-}
-
-.tag {
-    color: var(--text-cyber);
-    font-size: 10px;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
-    font-weight: bold;
-    text-transform: uppercase;
-}
-
-.divider {
-    height: 1px;
-    background-color: var(--border-soft);
-    margin: 20px 0;
-    width: 100%;
-}
-
-/* --- TLAČIDLÁ A INTERAKCIA --- */
-.btn-action {
-    padding: 12px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #222;
-    border: 1px solid #444;
-    cursor: pointer;
-}
-
-.btn-text {
-    color: #FFF;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-.irc-button {
-    background-color: var(--text-cyber);
-    padding: 18px;
-    border-radius: 12px;
-    text-align: center;
-    width: 100%;
-    border: none;
-    cursor: pointer;
-}
-
-.irc-button-text {
-    color: #000;
-    font-weight: bold;
-    letter-spacing: 1px;
-}
-
-/* --- TERMINÁL / MESSENGER --- */
-.terminal-input {
-    background-color: #111;
-    border: 1px solid var(--border-dark);
-    color: #CCC;
-    padding: 12px;
-    font-size: 16px;
-    border-radius: 8px;
-    font-family: monospace;
-    width: 100%;
-    box-sizing: border-box;
-    margin-bottom: 10px;
-}
-
-.terminal-input::placeholder {
-    color: #555; /* placeholderColor */
-}
-
-/* MENÁ V CHATE */
-.msg-user-aria {
-    color: var(--aria-pink);
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.msg-user-sammael {
-    color: var(--text-cyber);
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.msg-time {
-    color: #666;
-    font-size: 10px;
-}
-
-/* --- HLAVIČKY --- */
+/* --- HLAVIČKA A STATUS --- */
 .header {
     display: flex;
+    width: 100%;
+    max-width: var(--max-sirka-vizitky);
     flex-direction: row;
     align-items: center;
     padding: 20px;
     justify-content: space-between;
+    box-sizing: border-box;
+    margin: 0 auto;
 }
 
 .header-title {
     color: var(--text-cyber);
-    font-size: 12px;
+    font-size: 14px;
     letter-spacing: 2px;
-}
-
-/* --- SPLASH --- */
-.laria-title {
-    font-size: 40px;
     font-weight: bold;
-    color: #FFF;
-    letter-spacing: 8px;
-    text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
-}
-.filter-container {
-    width: 100%;
-    max-width: 500px;
-    margin: 0 auto 30px auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 0 15px;
-    box-sizing: border-box;
 }
 
-/* Úprava pre select, aby v tme vyzeral dobre */
-select.terminal-input {
-    appearance: none; /* Odstráni systémovú šípku, ak chceš vlastnú */
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%230F0' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 15px center;
-    padding-right: 40px;
-}/* --- DOPLNOK PRE GRID A LAYOUT --- */
-
-.laria-grid {
-    display: grid;
-    /* Na mobile jeden stĺpec, na tablete/webe dva alebo tri podľa šírky */
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
-    width: 100%;
-    max-width: 1000px; /* Aby sa to na ultraširokom monitore nerozletelo */
-    margin-top: 20px;
-}
-
-/* Status light animácia (nech to trochu žije) */
 .status-indicator {
     width: 10px;
     height: 10px;
@@ -219,11 +68,135 @@ select.terminal-input {
     100% { opacity: 1; }
 }
 
-/* Oprava pre tlačidlo 'Hore' */
+/* --- FILTRE A SEARCH (Zarovnané na stred) --- */
+.filter-container {
+    width: 100%;
+    max-width: var(--max-sirka-vizitky);
+    margin: 0 auto 20px auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+.terminal-input {
+    background-color: #111;
+    border: 1px solid var(--border-dark);
+    color: #CCC;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    font-family: monospace;
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.terminal-input:focus {
+    border-color: var(--text-cyber);
+}
+
+select.terminal-input {
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%230F0' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    padding-right: 40px;
+}
+
+/* --- GRID A KARTY --- */
+.laria-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 1000px; /* Ponechané pre širšie zobrazenie ak treba */
+    margin-top: 10px;
+}
+
+.card {
+    background-color: #111;
+    width: 100%;
+    max-width: var(--max-sirka-vizitky); /* Rovnaká šírka ako searchbar */
+    padding: 25px;
+    border-radius: 20px;
+    border: 1px solid var(--border-dark);
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.05);
+    box-sizing: border-box;
+    position: relative;
+}
+
+.card-meno {
+    color: #FFF;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+/* --- TYPOGRAFIA A DROBNOSTI --- */
+.tag {
+    color: var(--text-cyber);
+    font-size: 10px;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.text-main { color: var(--text-main); font-size: 14px; }
+.text-dim { color: var(--text-dim); font-size: 12px; }
+.text-cyber { color: var(--text-cyber); }
+
+.divider {
+    height: 1px;
+    background-color: var(--border-soft);
+    margin: 20px 0;
+    width: 100%;
+}
+
+/* --- TLAČIDLÁ --- */
+.btn-action {
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    cursor: pointer;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.btn-action:hover {
+    border-color: var(--text-cyber);
+    background-color: #222;
+}
+
+.btn-text {
+    color: #FFF;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+/* --- BACK TO TOP --- */
 #backToTop {
     display: none; 
     position: fixed;
     bottom: 20px;
     right: 20px;
     z-index: 99;
+    width: 50px;
+    height: 50px;
+    border-radius: 25px;
+    background-color: var(--text-cyber);
+    color: #000;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
 }
