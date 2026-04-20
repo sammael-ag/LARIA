@@ -3,92 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LARIA Vizitkár</title>
-    <link rel="stylesheet" href="src/styles/global.css">
+    <title>LARIA - Sieť Majstrov</title>
+    
+    <link rel="stylesheet" href="styles/styles.css">
 </head>
-<body>
-
-<div class="container">
-    <header>
-        <h2>🌿 LARIA Vizitkár</h2>
-        <p style="font-size: 0.9em; color: #666;">Multidimenzionálna sieť tvorcov</p>
+<body class="bg-dashboard"> 
+    
+    <header class="header"> 
+        <h1 class="header-title">LARIA // MATRIX</h1> 
+        <div id="status-light" class="status-indicator"></div>
     </header>
 
-    <div class="filter-container">
-        <select id="categorySelect" onchange="applyFilter()">
-            <option value="all">Všetky kategórie</option>
-            <option value="remesla">Remeslá a materiál</option>
-            <option value="sluzby">Odborné služby</option>
-            <option value="duchovno">Vzdelávanie a rozvoj</option>
-        </select>
-        <input type="text" id="searchInput" placeholder="🔍 Hľadať mesto alebo meno..." onkeyup="applyFilter()">
-    </div>
-
-    <div id="list">
+    <main class="scroll-content"> 
+        <div id="cards-container" class="laria-grid">
+            <p class="text-cyber">NAČÍTAVAM ČAKRY SYSTÉMU...</p>
         </div>
-</div>
+    </main>
 
-<button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" id="backToTop">↑</button>
-
-<script>
-    // --- TVOJA DATABÁZA (Záhrada) ---
-    // --- TVOJA AKTUALIZOVANÁ DATABÁZA ---
-    const vizitky = [
-        {
-            id: 1,
-            meno: "Sammael Hudec",
-            kat: "remesla",
-            lok: "Rákoš / Revúca",
-            popis: "Tesár a umelecký stolár.\nŠpecializácia na rustic, steampunk a art deco.\nVýroba svetelných žiaričov a orez stromov.",
-            tel: "+421951815453", // Tvoje správne číslo
-            galeria: "https://photos.app.goo.gl/pqbaoq7d7g7HkTix8" // Tvoja galéria
-        }
-    ];
-
-    function render() {
-        const list = document.getElementById('list');
-        const search = document.getElementById('searchInput').value.toLowerCase();
-        const cat = document.getElementById('categorySelect').value;
-
-        const filtered = vizitky.filter(v => {
-            const matchSearch = v.meno.toLowerCase().includes(search) || v.lok.toLowerCase().includes(search);
-            const matchCat = cat === 'all' || v.kat === cat;
-            return matchSearch && matchCat;
-        });
-
-        list.innerHTML = filtered.map(v => `
-    <div class="card">
-        <span class="tag">${v.kat}</span>
-        <span class="name">${v.meno}</span>
-        <span class="loc">📍 ${v.lok}</span>
-        <div class="popis">${v.popis}</div>
-        
-        <div class="card-actions-row">
-            <a href="tel:${v.tel.replace(/\s/g, '')}" class="btn-action" style="background-color: #8bc34a;">
-                <span>📞</span>Volať
-            </a>
-            
-            <a href="https://t.me/Sammael777" target="_blank" class="btn-action" style="background-color: #0088cc;">
-                <span>💬</span>Správa
-            </a>
-            
-            <a href="${v.galeria}" target="_blank" class="btn-action" style="background-color: #ea4335;">
-                <span>🖼️</span>Galéria
-            </a>
-        </div>
-    </div>
-`).join('');
-    }
-
-    function applyFilter() { render(); }
-    
-    window.onscroll = function() {
-        document.getElementById("backToTop").style.display = 
-            (document.documentElement.scrollTop > 300) ? "block" : "none";
-    };
-
-    render();
-</script>
-
+    <script src="index-web.js"></script>
 </body>
 </html>

@@ -1,0 +1,174 @@
+/* styles/styles.css */
+
+/* --- ZÁKLADNÉ ARCHITEKTONICKÉ PRVKY --- */
+:root {
+    --bg-main: #000;
+    --bg-dashboard: #050505;
+    --text-main: #DDD;
+    --text-dim: #888;
+    --text-cyber: #0F0; /* SPDR Green */
+    --aria-pink: #F0F; /* Ružová pre mňa */
+    --border-dark: #333;
+    --border-soft: #222;
+}
+
+body {
+    background-color: var(--bg-main);
+    margin: 0;
+    padding: 0;
+    font-family: 'Courier New', Courier, monospace; /* Ekvivalent monospace */
+}
+
+.bg-dashboard {
+    background-color: var(--bg-dashboard);
+    min-height: 100vh;
+}
+
+.scroll-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 60px;
+}
+
+/* --- TEXTOVÉ ŠTANDARDY --- */
+.text-main {
+    color: var(--text-main);
+    font-size: 14px;
+}
+
+.text-dim {
+    color: var(--text-dim);
+    font-size: 11px;
+}
+
+.text-cyber {
+    color: var(--text-cyber);
+}
+
+.text-white {
+    color: #FFF;
+}
+
+/* --- OBJEKT: KARTA / VIZITKA --- */
+.card {
+    background-color: #111;
+    width: 100%;
+    max-width: 500px; /* Aby na webe nebola cez celú obrazovku */
+    padding: 25px;
+    border-radius: 20px;
+    border: 1px solid var(--border-dark);
+    box-shadow: 0 10px 20px rgba(0, 255, 0, 0.1); /* shadowColor #0F0 */
+    box-sizing: border-box;
+}
+
+.tag {
+    color: var(--text-cyber);
+    font-size: 10px;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.divider {
+    height: 1px;
+    background-color: var(--border-soft);
+    margin: 20px 0;
+    width: 100%;
+}
+
+/* --- TLAČIDLÁ A INTERAKCIA --- */
+.btn-action {
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #222;
+    border: 1px solid #444;
+    cursor: pointer;
+}
+
+.btn-text {
+    color: #FFF;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.irc-button {
+    background-color: var(--text-cyber);
+    padding: 18px;
+    border-radius: 12px;
+    text-align: center;
+    width: 100%;
+    border: none;
+    cursor: pointer;
+}
+
+.irc-button-text {
+    color: #000;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* --- TERMINÁL / MESSENGER --- */
+.terminal-input {
+    background-color: #111;
+    border: 1px solid var(--border-dark);
+    color: #CCC;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    font-family: monospace;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+.terminal-input::placeholder {
+    color: #555; /* placeholderColor */
+}
+
+/* MENÁ V CHATE */
+.msg-user-aria {
+    color: var(--aria-pink);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.msg-user-sammael {
+    color: var(--text-cyber);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.msg-time {
+    color: #666;
+    font-size: 10px;
+}
+
+/* --- HLAVIČKY --- */
+.header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 20px;
+    justify-content: space-between;
+}
+
+.header-title {
+    color: var(--text-cyber);
+    font-size: 12px;
+    letter-spacing: 2px;
+}
+
+/* --- SPLASH --- */
+.laria-title {
+    font-size: 40px;
+    font-weight: bold;
+    color: #FFF;
+    letter-spacing: 8px;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+}
