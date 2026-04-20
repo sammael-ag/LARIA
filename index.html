@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LARIA - Sieť Majstrov</title>
-    
     <link rel="stylesheet" href="styles/styles.css">
 </head>
 <body class="bg-dashboard"> 
@@ -14,11 +13,40 @@
         <div id="status-light" class="status-indicator"></div>
     </header>
 
-    <main class="scroll-content"> 
+    <main class="scroll-content">
+        <div class="filter-container">
+            <select id="categorySelect" class="terminal-input" onchange="filterByCategory()">
+                <option value="vsetko">Všetky kategórie</option>
+                <option value="obziva">Obživa a poživatiny</option>
+                <option value="remesla">Remeslá a materiál</option>
+                <option value="sluzby">Odborné služby</option>
+                <option value="vzdelavanie">Vzdelávanie a rozvoj</option>
+                <option value="knihy">Knihy</option>
+                <option value="zdravie">Zdravie a zdravotnícke pomôcky</option>
+                <option value="oblecenie">Oblečenie a doplnky</option>
+                <option value="auto">Auto-moto</option>
+                <option value="volno">Zážitkové aktivity a voľný čas</option>
+                <option value="elektro">Elektro - čierna/biela technika</option>
+                <option value="rodina">Deti a rodina</option>
+                <option value="ubytovanie">Ubytovanie a prenájom</option>
+                <option value="zahrada">Záhrada a gazdovstvo</option>
+                <option value="nabytok">Nábytok a zariadenie domácnosti</option>
+                <option value="kultura">Kultúra a umenie</option>
+                <option value="osobne">Osobné služby</option>
+                <option value="tvorba">Ručné práce a tvorba</option>
+                <option value="ine">Iné</option>
+            </select>
+
+            <input type="text" id="searchInput" class="terminal-input" 
+                   onkeyup="searchLocation()" placeholder="🔍 Hľadať v systéme...">
+        </div>
+
         <div id="cards-container" class="laria-grid">
             <p class="text-cyber">NAČÍTAVAM ČAKRY SYSTÉMU...</p>
         </div>
     </main>
+
+    <button onclick="scrollToTop()" id="backToTop" class="irc-button" style="position: fixed; bottom: 20px; right: 20px; width: 50px; display: none;">↑</button>
 
     <script src="index-web.js"></script>
 </body>
