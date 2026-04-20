@@ -7,32 +7,67 @@ import {
   ScrollView, 
   StatusBar,
   Alert,
-  Switch
+  Switch,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { G } from '../styles/styles'; // Naše globálne centrum krásy
-import { fetchGMatrix } from '../services/GMatrixService'; 
+import { G } from '../styles/styles'; 
+import { saveToGMatrix } from '../services/GMatrixService'; 
 
 const CardEditorScreen = ({ navigation }) => {
-  // Lokálny stav so všetkými poliami vizitky pre majstra
+  const [loading, setLoading] = useState(false);
+
+  // Lokálny stav so VŠETKÝMI poliami (už aj s tel)
   const [cardData, setCardData] = useState({
+    sha: 'LARIA-SAMMAEL-777', 
     kat: 'MASTER CARPENTER',
     meno: 'Samuel Hudec - Sammael',
     lok: 'Rákoš / Rožňava / Revúca',
     popis: 'Rustic, steampunk a avantgardné stolárstvo. Orez ovocných stromov a tvorba svetelných artefaktov.',
-    tel: '+421 951 815 453',
+    tel: '+421 951 815 453', // TUTO JE!
     email: 'sammael.ag@gmail.com',
     fb: 'https://www.facebook.com/JEDINECNY.POVRCH.DREVA',
     tg: 'https://t.me/Sammael777',
     gal: 'https://photos.app.goo.gl/pqbaoq7d7g7HkTix8',
-    isPublic: false // Náš prepínač: Súkromie (false) vs Kyslík/Web (true) 
+    irc: '', 
+    poznamka: 'Uložené cez LARIA App',
+    isPublic: false 
   });
 
-  const handleSave = () => {
-    // Tu sa neskôr v LARIA ENGINE udeje tá krypto-mágia a zápis do tabuľky 
-    const rezim = cardData.isPublic ? "VEREJNÝ (Kód s kyslíkom)" : "SÚKROMNÝ (Zatvorené dvere)";
-    Alert.alert("Pečať vytesaná", `Tvoja digitálna identita bola úspešne aktualizovaná v režime: ${rezim}.`);
-    navigation.goBack();
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      // Príprava balíka pre bota
+      const dataPreBot = {
+        sha: cardData.sha,
+        meno: cardData.meno,
+        kategoria: cardData.kat,
+        lokalita: cardData.lok,
+        popis: cardData.popis,
+        tel: cardData.tel,   // Pridané do balíka
+        email: cardData.email,
+        fb: cardData.fb,
+        tg: cardData.tg,
+        gal: cardData.gal,
+        isPublic: cardData.isPublic,
+        irc: cardData.irc,
+        poznamka: cardData.poznamka
+      };
+
+      const result = await saveToGMatrix(dataPreBot);
+
+      if (result && result.success) {
+        Alert.alert("Pečať vytesaná", "Tvoja identita bola úspešne odoslaná do Matrixu.");
+        navigation.goBack();
+      } else {
+        throw new Error("Bot neodpovedá správne");
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Chyba spojenia", "Nepodarilo sa nadviazať kontakt s Matrixom.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,7 +76,7 @@ const CardEditorScreen = ({ navigation }) => {
       
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         
-        {/* HEADER - s indikátorom režimu podľa farby */}
+        {/* HEADER */}
         <View style={G.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={G.textDim}>[ ZRUŠIŤ ]</Text>
@@ -55,7 +90,7 @@ const CardEditorScreen = ({ navigation }) => {
           }} />
         </View>
 
-        {/* PRÍSTUPOVÝ REŽIM - "ŠATY PRE KÓD" */}
+        {/* REŽIM SÚKROMIA */}
         <View style={{ 
           backgroundColor: '#111', 
           padding: 15, 
@@ -68,7 +103,7 @@ const CardEditorScreen = ({ navigation }) => {
             <View>
               <Text style={[G.textCyber, { marginBottom: 0 }]}>REŽIM SÚKROMIA</Text>
               <Text style={{ color: '#666', fontSize: 10 }}>
-                {cardData.isPublic ? 'VEREJNÉ - Viditeľné na webe' : 'SÚKROMNÉ - Iba cez NFC/QR v appke'}
+                {cardData.isPublic ? 'VEREJNÉ - Vysielanie na web' : 'SÚKROMNÉ - Iba lokálne'}
               </Text>
             </View>
             <Switch 
@@ -87,8 +122,6 @@ const CardEditorScreen = ({ navigation }) => {
           style={G.terminalInput}
           value={cardData.kat}
           onChangeText={(val) => setCardData({...cardData, kat: val.toUpperCase()})}
-          placeholder="Napr. MASTER CARPENTER"
-          placeholderTextColor={G.placeholderColor}
         />
 
         <Text style={G.textCyber}>MENO A TITUL</Text>
@@ -96,8 +129,6 @@ const CardEditorScreen = ({ navigation }) => {
           style={G.terminalInput}
           value={cardData.meno}
           onChangeText={(val) => setCardData({...cardData, meno: val})}
-          placeholder="Tvoje meno"
-          placeholderTextColor={G.placeholderColor}
         />
 
         <Text style={G.textCyber}>PÔSOBISKO (LOKALITY)</Text>
@@ -105,8 +136,6 @@ const CardEditorScreen = ({ navigation }) => {
           style={G.terminalInput}
           value={cardData.lok}
           onChangeText={(val) => setCardData({...cardData, lok: val})}
-          placeholder="Okresy / Mestá"
-          placeholderTextColor={G.placeholderColor}
         />
 
         <Text style={G.textCyber}>VÍZIA A POPIS PRÁCE</Text>
@@ -116,8 +145,6 @@ const CardEditorScreen = ({ navigation }) => {
           numberOfLines={4}
           value={cardData.popis}
           onChangeText={(val) => setCardData({...cardData, popis: val})}
-          placeholder="Čo tvoríš?"
-          placeholderTextColor={G.placeholderColor}
         />
 
         <View style={G.divider} />
@@ -129,7 +156,7 @@ const CardEditorScreen = ({ navigation }) => {
           value={cardData.tel}
           onChangeText={(val) => setCardData({...cardData, tel: val})}
           placeholder="+421..."
-          placeholderTextColor={G.placeholderColor}
+          placeholderTextColor="#444"
         />
 
         <Text style={G.textCyber}>E-MAIL</Text>
@@ -139,8 +166,14 @@ const CardEditorScreen = ({ navigation }) => {
           autoCapitalize="none"
           value={cardData.email}
           onChangeText={(val) => setCardData({...cardData, email: val})}
-          placeholder="tvoj@email.com"
-          placeholderTextColor={G.placeholderColor}
+        />
+
+        <Text style={G.textCyber}>FACEBOOK (LINK)</Text>
+        <TextInput 
+          style={G.terminalInput}
+          autoCapitalize="none"
+          value={cardData.fb}
+          onChangeText={(val) => setCardData({...cardData, fb: val})}
         />
 
         <Text style={G.textCyber}>TELEGRAM (URL/NICK)</Text>
@@ -149,31 +182,33 @@ const CardEditorScreen = ({ navigation }) => {
           autoCapitalize="none"
           value={cardData.tg}
           onChangeText={(val) => setCardData({...cardData, tg: val})}
-          placeholder="https://t.me/..."
-          placeholderTextColor={G.placeholderColor}
         />
 
-        <Text style={G.textCyber}>G-ALBUM (LINK NA PORTFÓLIO)</Text>
+        <Text style={G.textCyber}>G-ALBUM (PORTFÓLIO)</Text>
         <TextInput 
           style={G.terminalInput}
           autoCapitalize="none"
           value={cardData.gal}
           onChangeText={(val) => setCardData({...cardData, gal: val})}
-          placeholder="Link na tvoje fotky"
-          placeholderTextColor={G.placeholderColor}
         />
 
-        {/* ULOŽENIE - Tlačidlo mení štýl podľa režimu súkromia */}
+        {/* TLAČIDLO ULOŽENIA */}
         <TouchableOpacity 
           style={[G.ircButton, { 
             marginTop: 30, 
-            borderColor: cardData.isPublic ? '#0FF' : '#F0F' 
+            borderColor: cardData.isPublic ? '#0FF' : '#F0F',
+            opacity: loading ? 0.5 : 1
           }]} 
           onPress={handleSave}
+          disabled={loading}
         >
-          <Text style={[G.ircButtonText, { color: cardData.isPublic ? '#0FF' : '#F0F' }]}>
-            [ {cardData.isPublic ? 'VYSIELAŤ DO SVETA' : 'ZAPEČATIŤ V SÚKROMÍ'} ]
-          </Text>
+          {loading ? (
+            <ActivityIndicator color={cardData.isPublic ? '#0FF' : '#F0F'} />
+          ) : (
+            <Text style={[G.ircButtonText, { color: cardData.isPublic ? '#0FF' : '#F0F' }]}>
+              [ {cardData.isPublic ? 'VYSIELAŤ DO MATRIXU' : 'ZAPEČATIŤ IDENTITU'} ]
+            </Text>
+          )}
         </TouchableOpacity>
 
       </ScrollView>
