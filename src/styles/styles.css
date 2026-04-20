@@ -191,4 +191,39 @@ select.terminal-input {
     background-repeat: no-repeat;
     background-position: right 15px center;
     padding-right: 40px;
+}/* --- DOPLNOK PRE GRID A LAYOUT --- */
+
+.laria-grid {
+    display: grid;
+    /* Na mobile jeden stĺpec, na tablete/webe dva alebo tri podľa šírky */
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 1000px; /* Aby sa to na ultraširokom monitore nerozletelo */
+    margin-top: 20px;
+}
+
+/* Status light animácia (nech to trochu žije) */
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    background-color: var(--text-cyber);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--text-cyber);
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+/* Oprava pre tlačidlo 'Hore' */
+#backToTop {
+    display: none; 
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 99;
 }
