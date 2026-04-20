@@ -1,15 +1,14 @@
-import { fetchGMatrix } from './services/GMatrixService';
 /**
- * LARIA WEB ENGINE - DYNAMICKÉ ČAKRY & FILTRÁCIA
- * Tento skript obsluhuje Náš web (index.html)
+ * LARIA WEB ENGINE - DYNAMICKÉ ČAKRY (LIVE VERSION)
  */
 
-// --- 1. DÁTA (Zatiaľ statické, pripravené na G-Table) ---
+const READ_URL = "https://script.google.com/macros/s/AKfycbwYrkLCil1BmJhP7nMgBeJnhqDBe5nTDWhlErjHolLjG-zJjit3sKA_69E-IBEM1vtY/exec";
+
 let allData = []; 
 let currentCategory = 'vsetko';
 
-// --- 2. TVOJA OVERENÁ LOGIKA (Extrahovaná) ---
-const removeAccents = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+// --- 1. POMOCNÉ FUNKCIE (Logika & Formátovanie) ---
+const removeAccents = (str) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
 
 const aktivujOdkazy = (text) => {
     if (!text) return "";
@@ -21,7 +20,39 @@ const aktivujOdkazy = (text) => {
     return upravenyText.replace(wwwPattern, '$1<a href="http://$2" target="_blank" rel="noopener noreferrer" class="text-cyber">$2</a>');
 };
 
-// --- 3. RENDEROVANIE KARIET (Tento šat sme ladili) ---
+// --- 2. NAČÍTANIE DÁT Z MATRIXU ---
+async function loadDataFromGSheets() {
+    console.log("Skenujem Matrix...");
+    try {
+        const response = await fetch(READ_URL);
+        const rawData = await response.json();
+        
+        // Mapovanie dát z tabuľky (podľa tvojho poradia A-N)
+        // Predpokladáme, že prvý riadok sú hlavičky, tak ho preskočíme ak treba
+        allData = rawData.map((row, index) => ({
+            id: row[0], // SHA ako unikátne ID
+            datum: row[1],
+            meno: row[2],
+            kat: row[3],
+            lok: row[4],
+            popis: row[5],
+            tel: row[6] ? row[6].toString() : "",
+            email: row[7],
+            fb: row[8],
+            tg: row[9],
+            gal: row[10],
+            isPublic: row[11]
+        })).filter(item => item.isPublic === true || item.isPublic === "TRUE"); // Zobrazíme len tie s "kyslíkom"
+
+        applyFilter();
+    } catch (e) {
+        console.error("Chyba spojenia s Matrixom:", e);
+        const container = document.getElementById('cards-container');
+        if (container) container.innerHTML = '<p class="text-dim">Spojenie s Matrixom bolo prerušené...</p>';
+    }
+}
+
+// --- 3. RENDEROVANIE KARIET ---
 function renderCards(data) {
     const container = document.getElementById('cards-container');
     if (!container) return;
@@ -38,7 +69,6 @@ function renderCards(data) {
         card.className = 'card';
         card.id = `card-${item.id}`;
 
-        // Tu spájame tvoj vizuál z styles.css s dátami
         card.innerHTML = `
             <span class="tag">${item.kat}</span>
             <div class="card-meno text-white">${item.meno}</div>
@@ -46,11 +76,11 @@ function renderCards(data) {
             <div class="text-main" style="margin-bottom: 20px; white-space: pre-line;">${aktivujOdkazy(item.popis)}</div>
             
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <a href="tel:${item.tel.replace(/\s/g, '')}" class="btn-action" style="flex: 1; border-color: #0F0; color: #0F0;">[ VOLAŤ ]</a>
-                <button onclick="copyShareLink(${item.id})" class="btn-action" style="flex: 1;">[ ZDIEĽAŤ ]</button>
+                <a href="tel:${item.tel.replace(/\s/g, '')}" class="btn-action" style="flex: 1; border-color: #0F0; color: #0F0; text-decoration: none; text-align: center; line-height: 2.2;">[ VOLAŤ ]</a>
+                <button onclick="copyShareLink('${item.id}')" class="btn-action" style="flex: 1;">[ ZDIEĽAŤ ]</button>
             </div>
 
-            <div style="display: flex; gap: 15px; justify-content: center;">
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
                 ${item.tg ? `<a href="${item.tg}" target="_blank" class="text-cyber" style="font-size: 0.8rem;">TELEGRAM</a>` : ''}
                 ${item.fb ? `<a href="${item.fb}" target="_blank" class="text-cyber" style="font-size: 0.8rem;">FACEBOOK</a>` : ''}
                 ${item.gal ? `<a href="${item.gal}" target="_blank" class="text-cyber" style="font-size: 0.8rem;">GALÉRIA</a>` : ''}
@@ -60,7 +90,7 @@ function renderCards(data) {
     });
 }
 
-// --- 4. FILTRÁCIA (Aplikovanie tvojho mozgu) ---
+// --- 4. FILTRÁCIA ---
 function applyFilter() {
     const searchInput = document.getElementById('searchInput');
     const term = searchInput ? searchInput.value : '';
@@ -83,8 +113,5 @@ window.copyShareLink = (id) => {
 
 // --- 6. ŠTART SYSTÉMU ---
 window.onload = async () => {
-    // Sem neskôr vložíme ten fetch z Google Tabuľky
-    // Zatiaľ simulujeme prázdne pole alebo testovacie dáta
-    console.log("LARIA WEB ENGINE READY");
-    // loadDataFromGSheets(); // To bude naša ďalšia výzva!
+    await loadDataFromGSheets();
 };

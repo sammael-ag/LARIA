@@ -17,14 +17,13 @@ import { saveToGMatrix } from '../services/GMatrixService';
 const CardEditorScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
-  // Lokálny stav so VŠETKÝMI poliami (už aj s tel)
   const [cardData, setCardData] = useState({
     sha: 'LARIA-SAMMAEL-777', 
     kat: 'MASTER CARPENTER',
     meno: 'Samuel Hudec - Sammael',
     lok: 'Rákoš / Rožňava / Revúca',
     popis: 'Rustic, steampunk a avantgardné stolárstvo. Orez ovocných stromov a tvorba svetelných artefaktov.',
-    tel: '+421 951 815 453', // TUTO JE!
+    tel: '+421 951 815 453',
     email: 'sammael.ag@gmail.com',
     fb: 'https://www.facebook.com/JEDINECNY.POVRCH.DREVA',
     tg: 'https://t.me/Sammael777',
@@ -37,14 +36,18 @@ const CardEditorScreen = ({ navigation }) => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Príprava balíka pre bota
+      // --- FILTER TELEFÓNU ---
+      // toString() zaistí, že pracujeme s textom
+      // replace(/\s/g, '') odstráni všetky medzery (globálne)
+      const cleanTel = cardData.tel ? cardData.tel.toString().replace(/\s/g, '') : '';
+
       const dataPreBot = {
         sha: cardData.sha,
         meno: cardData.meno,
         kategoria: cardData.kat,
         lokalita: cardData.lok,
         popis: cardData.popis,
-        tel: cardData.tel,   // Pridané do balíka
+        tel: cleanTel,   // Posielame už vyčistené číslo
         email: cardData.email,
         fb: cardData.fb,
         tg: cardData.tg,
