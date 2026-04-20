@@ -6,13 +6,14 @@ import {
   TouchableOpacity, 
   ScrollView, 
   StatusBar,
-  Alert
+  Alert,
+  Switch
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { G } from '../styles/styles'; 
+import { G } from '../styles/styles'; // Naše globálne centrum krásy 
 
 const CardEditorScreen = ({ navigation }) => {
-  // Lokálny stav presne podľa polí v CardScreen 
+  // Lokálny stav so všetkými poliami vizitky pre majstra
   const [cardData, setCardData] = useState({
     kat: 'MASTER CARPENTER',
     meno: 'Samuel Hudec - Sammael',
@@ -22,12 +23,14 @@ const CardEditorScreen = ({ navigation }) => {
     email: 'sammael.ag@gmail.com',
     fb: 'https://www.facebook.com/JEDINECNY.POVRCH.DREVA',
     tg: 'https://t.me/Sammael777',
-    gal: 'https://photos.app.goo.gl/pqbaoq7d7g7HkTix8'
+    gal: 'https://photos.app.goo.gl/pqbaoq7d7g7HkTix8',
+    isPublic: false // Náš prepínač: Súkromie (false) vs Kyslík/Web (true) 
   });
 
   const handleSave = () => {
-    // Tu sa neskôr napojí ukladanie do krypto-peňaženky alebo úložiska
-    Alert.alert("Pečať vytesaná", "Tvoja digitálna identita bola úspešne aktualizovaná.");
+    // Tu sa neskôr v LARIA ENGINE udeje tá krypto-mágia a zápis do tabuľky 
+    const rezim = cardData.isPublic ? "VEREJNÝ (Kód s kyslíkom)" : "SÚKROMNÝ (Zatvorené dvere)";
+    Alert.alert("Pečať vytesaná", `Tvoja digitálna identita bola úspešne aktualizovaná v režime: ${rezim}.`);
     navigation.goBack();
   };
 
@@ -37,16 +40,47 @@ const CardEditorScreen = ({ navigation }) => {
       
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         
-        {/* HEADER */}
+        {/* HEADER - s indikátorom režimu podľa farby */}
         <View style={G.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={G.textDim}>[ ZRUŠIŤ ]</Text>
           </TouchableOpacity>
           <Text style={G.headerTitle}>TESANIE IDENTITY</Text>
-          <View style={{ width: 8, height: 8, backgroundColor: '#F0F', borderRadius: 4 }} />
+          <View style={{ 
+            width: 8, 
+            height: 8, 
+            backgroundColor: cardData.isPublic ? '#0FF' : '#F0F', 
+            borderRadius: 4 
+          }} />
         </View>
 
-        {/* KATEGÓRIA / ZAMERANIE */}
+        {/* PRÍSTUPOVÝ REŽIM - "ŠATY PRE KÓD" */}
+        <View style={{ 
+          backgroundColor: '#111', 
+          padding: 15, 
+          borderRadius: 5, 
+          marginBottom: 20, 
+          borderLeftWidth: 3, 
+          borderLeftColor: cardData.isPublic ? '#0FF' : '#F0F' 
+        }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={[G.textCyber, { marginBottom: 0 }]}>REŽIM SÚKROMIA</Text>
+              <Text style={{ color: '#666', fontSize: 10 }}>
+                {cardData.isPublic ? 'VEREJNÉ - Viditeľné na webe' : 'SÚKROMNÉ - Iba cez NFC/QR v appke'}
+              </Text>
+            </View>
+            <Switch 
+              trackColor={{ false: "#333", true: "#055" }}
+              thumbColor={cardData.isPublic ? "#0FF" : "#999"}
+              onValueChange={(val) => setCardData({...cardData, isPublic: val})}
+              value={cardData.isPublic}
+            />
+          </View>
+        </View>
+
+        {/* --- EDITOR POLÍ --- */}
+        
         <Text style={G.textCyber}>KATEGÓRIA (TAG)</Text>
         <TextInput 
           style={G.terminalInput}
@@ -54,10 +88,8 @@ const CardEditorScreen = ({ navigation }) => {
           onChangeText={(val) => setCardData({...cardData, kat: val.toUpperCase()})}
           placeholder="Napr. MASTER CARPENTER"
           placeholderTextColor={G.placeholderColor}
-          selectionColor={G.selectionColor}
         />
 
-        {/* MENO */}
         <Text style={G.textCyber}>MENO A TITUL</Text>
         <TextInput 
           style={G.terminalInput}
@@ -65,10 +97,8 @@ const CardEditorScreen = ({ navigation }) => {
           onChangeText={(val) => setCardData({...cardData, meno: val})}
           placeholder="Tvoje meno"
           placeholderTextColor={G.placeholderColor}
-          selectionColor={G.selectionColor}
         />
 
-        {/* LOKALITY */}
         <Text style={G.textCyber}>PÔSOBISKO (LOKALITY)</Text>
         <TextInput 
           style={G.terminalInput}
@@ -76,11 +106,9 @@ const CardEditorScreen = ({ navigation }) => {
           onChangeText={(val) => setCardData({...cardData, lok: val})}
           placeholder="Okresy / Mestá"
           placeholderTextColor={G.placeholderColor}
-          selectionColor={G.selectionColor}
         />
 
-        {/* POPIS PRÁCE */}
-        <Text style={G.textCyber}>VÍZIA A POPIS</Text>
+        <Text style={G.textCyber}>VÍZIA A POPIS PRÁCE</Text>
         <TextInput 
           style={[G.terminalInput, { height: 100, textAlignVertical: 'top' }]}
           multiline
@@ -89,12 +117,10 @@ const CardEditorScreen = ({ navigation }) => {
           onChangeText={(val) => setCardData({...cardData, popis: val})}
           placeholder="Čo tvoríš?"
           placeholderTextColor={G.placeholderColor}
-          selectionColor={G.selectionColor}
         />
 
         <View style={G.divider} />
 
-        {/* KONTAKTY */}
         <Text style={G.textCyber}>TELEFÓN</Text>
         <TextInput 
           style={G.terminalInput}
@@ -103,7 +129,6 @@ const CardEditorScreen = ({ navigation }) => {
           onChangeText={(val) => setCardData({...cardData, tel: val})}
           placeholder="+421..."
           placeholderTextColor={G.placeholderColor}
-          selectionColor={G.selectionColor}
         />
 
         <Text style={G.textCyber}>E-MAIL</Text>
@@ -115,10 +140,9 @@ const CardEditorScreen = ({ navigation }) => {
           onChangeText={(val) => setCardData({...cardData, email: val})}
           placeholder="tvoj@email.com"
           placeholderTextColor={G.placeholderColor}
-          selectionColor={G.selectionColor}
         />
 
-        <Text style={G.textCyber}>TELEGRAM (NICK)</Text>
+        <Text style={G.textCyber}>TELEGRAM (URL/NICK)</Text>
         <TextInput 
           style={G.terminalInput}
           autoCapitalize="none"
@@ -126,37 +150,29 @@ const CardEditorScreen = ({ navigation }) => {
           onChangeText={(val) => setCardData({...cardData, tg: val})}
           placeholder="https://t.me/..."
           placeholderTextColor={G.placeholderColor}
-          selectionColor={G.selectionColor}
         />
 
-        <Text style={G.textCyber}>FACEBOOK (URL)</Text>
-        <TextInput 
-          style={G.terminalInput}
-          autoCapitalize="none"
-          value={cardData.fb}
-          onChangeText={(val) => setCardData({...cardData, fb: val})}
-          placeholder="Odkaz na profil/stránku"
-          placeholderTextColor={G.placeholderColor}
-          selectionColor={G.selectionColor}
-        />
-
-        <Text style={G.textCyber}>G-ALBUM (PORTFÓLIO)</Text>
+        <Text style={G.textCyber}>G-ALBUM (LINK NA PORTFÓLIO)</Text>
         <TextInput 
           style={G.terminalInput}
           autoCapitalize="none"
           value={cardData.gal}
           onChangeText={(val) => setCardData({...cardData, gal: val})}
-          placeholder="Odkaz na tvoje diela"
+          placeholder="Link na tvoje fotky"
           placeholderTextColor={G.placeholderColor}
-          selectionColor={G.selectionColor}
         />
 
-        {/* ULOŽENIE */}
+        {/* ULOŽENIE - Tlačidlo mení štýl podľa režimu súkromia */}
         <TouchableOpacity 
-          style={G.ircButton} 
+          style={[G.ircButton, { 
+            marginTop: 30, 
+            borderColor: cardData.isPublic ? '#0FF' : '#F0F' 
+          }]} 
           onPress={handleSave}
         >
-          <Text style={G.ircButtonText}>[ ZAPEČATIŤ IDENTITU ]</Text>
+          <Text style={[G.ircButtonText, { color: cardData.isPublic ? '#0FF' : '#F0F' }]}>
+            [ {cardData.isPublic ? 'VYSIELAŤ DO SVETA' : 'ZAPEČATIŤ V SÚKROMÍ'} ]
+          </Text>
         </TouchableOpacity>
 
       </ScrollView>
