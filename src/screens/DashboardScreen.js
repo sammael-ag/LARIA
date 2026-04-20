@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { fetchGMatrix } from '../services/GMatrixService';
 
 // Import z našej operačnej pamäte
 import { G } from '../styles/styles'; 

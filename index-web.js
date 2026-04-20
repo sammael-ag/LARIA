@@ -1,3 +1,4 @@
+import { fetchGMatrix } from './services/GMatrixService';
 /**
  * LARIA WEB ENGINE - DYNAMICKÉ ČAKRY & FILTRÁCIA
  * Tento skript obsluhuje Náš web (index.html)

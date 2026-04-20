@@ -10,7 +10,8 @@ import {
   Switch
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { G } from '../styles/styles'; // Naše globálne centrum krásy 
+import { G } from '../styles/styles'; // Naše globálne centrum krásy
+import { fetchGMatrix } from '../services/GMatrixService'; 
 
 const CardEditorScreen = ({ navigation }) => {
   // Lokálny stav so všetkými poliami vizitky pre majstra

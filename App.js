@@ -5,6 +5,7 @@ import * as SystemUI from 'expo-system-ui'; // Importujeme systémové UI
 import * as NavigationBar from 'expo-navigation-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
+import { fetchGMatrix } from './services/GMatrixService';
 
 export default function App() {
   useEffect(() => {

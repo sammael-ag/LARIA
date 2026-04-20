@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
 // Oprava DEPRECATED varovania: importujeme z contextu
-import { SafeAreaView } from 'react-native-safe-area-context'; 
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { fetchGMatrix } from '../services/GMatrixService';
 
 // Importujeme náš centrálny sklad
 import { G } from '../styles/styles'; 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StatusBar, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { fetchGMatrix } from '../services/GMatrixService';
 
 // Import z našej operačnej pamäte (LARIA/styles/styles.js)
 import { G } from '../styles/styles'; 

@@ -1,4 +1,5 @@
 import { StyleSheet, Platform, Dimensions } from 'react-native';
+import { fetchGMatrix } from '../services/GMatrixService';
 
 const { width } = Dimensions.get('window');
 

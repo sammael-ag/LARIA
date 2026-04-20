@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, StatusBar, Dimensions, Animated } from 'react-native';
+import { fetchGMatrix } from '../services/GMatrixService';
 
 // Import z našej spoločnej operačnej pamäte (LARIA/styles/styles.js)
 import { G } from '../styles/styles'; 

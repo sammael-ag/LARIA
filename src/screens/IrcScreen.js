@@ -10,7 +10,8 @@ import {
   StatusBar
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'; 
-import { G } from '../styles/styles'; 
+import { G } from '../styles/styles';
+import { fetchGMatrix } from '../services/GMatrixService';
 
 const IRCScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');

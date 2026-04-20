@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Switch, ScrollView } from 'react-native';
+import { fetchGMatrix } from '../services/GMatrixService';
 
 // Import z našej spoločnej operačnej pamäte
 import { G } from '../styles/styles'; 
