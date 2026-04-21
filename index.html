@@ -15,7 +15,7 @@
 
     <main class="scroll-content">
         <div class="filter-container">
-            <select id="categorySelect" class="terminal-input" onchange="filterByCategory()">
+            <select id="categorySelect" class="terminal-input" onchange="window.currentCategory=this.value; applyFilter();">
                 <option value="vsetko">Všetky kategórie</option>
                 <option value="obziva">Obživa a poživatiny</option>
                 <option value="remesla">Remeslá a materiál</option>
@@ -38,7 +38,7 @@
             </select>
 
             <input type="text" id="searchInput" class="terminal-input" 
-                   onkeyup="searchLocation()" placeholder="🔍 Hľadať v systéme...">
+                   oninput="applyFilter()" placeholder="🔍 Hľadať v systéme...">
         </div>
 
         <div id="cards-container" class="laria-grid">
@@ -46,7 +46,7 @@
         </div>
     </main>
 
-    <button onclick="scrollToTop()" id="backToTop" class="irc-button" style="position: fixed; bottom: 20px; right: 20px; width: 50px; display: none;">↑</button>
+    <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" id="backToTop" class="irc-button" style="position: fixed; bottom: 20px; right: 20px; width: 50px; display: none;">↑</button>
 
     <script src="index-web.js"></script>
 </body>
