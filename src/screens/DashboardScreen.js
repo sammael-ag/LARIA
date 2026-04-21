@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchGMatrix } from '../services/GMatrixService';
 
-// Import z našej operačnej pamäte
+// Import z našej operačnej pamäte (LARIA/styles/styles.js)
 import { G } from '../styles/styles'; 
 
 const DashboardScreen = ({ navigation }) => {
@@ -48,7 +48,7 @@ const DashboardScreen = ({ navigation }) => {
             color="#F0F" 
           />
 
-          {/* MOJA KARTA */}
+          {/* MOJA KARTA - Identita */}
           <MenuCard 
             title="MOJA KARTA" 
             icon="🆔" 
@@ -61,14 +61,16 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={[G.textDim, { letterSpacing: 2, color: '#444' }]}>MÔJ VIZITKÁR</Text>
           </View>
 
-          {/* DLAŽDICE SIETE */}
+          {/* LARIA WEB - Vstup do siete */}
           <MenuCard 
-            title="OBJEKTY" 
-            icon="🔮" 
-            target="Settings" 
-            description="Artefakty a žiariče"
+            title="LARIA WEB" 
+            icon="🌐" 
+            target="Web" 
+            description="Prehliadka majstrov a artefaktov"
+            color="#0FF" 
           />
           
+          {/* KONTAKTY - Uložené spojenia */}
           <MenuCard 
             title="KONTAKTY" 
             icon="📇" 

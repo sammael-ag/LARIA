@@ -1,30 +1,21 @@
 import React from 'react';
-import { View, StatusBar, Linking } from 'react-native';
+import { View, StatusBar } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { fetchGMatrix } from '../services/GMatrixService';
-
-// Import z našej operačnej pamäte (LARIA/styles/styles.js)
 import { G } from '../styles/styles'; 
 
 const MainScreen = () => {
   return (
     <View style={G.bg}>
-      {/* Kybernetický status bar - svetlé ikony na tmavom pozadí */}
-      <StatusBar barStyle="light-content" hidden={false} backgroundColor="#000" />
+      {/* Status bar ostáva v tme, nech nekazí estetiku */}
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
       
       <WebView 
-        // Cache-busting cez timestamp, aby si vždy videl najnovšiu verziu webu
+        // Vždy čerstvé dáta cez timestamp
         source={{ uri: `https://sammael-ag.github.io/LARIA/?v=${Date.now()}` }} 
-        style={{ flex: 1, backgroundColor: '#000' }} // Webview pozadie ladené do tmy
+        style={{ flex: 1, backgroundColor: '#000' }}
         startInLoadingState={true}
-        onShouldStartLoadWithRequest={(request) => {
-          // Logika pre externé linky (telefón, mail, telegram)
-          if (['tel:', 'mailto:', 't.me'].some(proto => request.url.startsWith(proto))) {
-            Linking.openURL(request.url);
-            return false;
-          }
-          return true;
-        }}
+        // Tu môžeme neskôr pridať komunikáciu medzi Webom a Appkou (injectJavaScript)
+        // Keď užívateľ v appke klikne na "Pridať", web pošle signál do tvojho LARIA chainu
       />
     </View>
   );
