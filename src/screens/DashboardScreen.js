@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchGMatrix } from '../services/GMatrixService';
 
@@ -8,6 +8,15 @@ import { G } from '../styles/styles';
 
 const DashboardScreen = ({ navigation }) => {
   
+// Appka si vytiahne adresu z .env súboru
+const OWNER_ADDRESS = process.env.EXPO_PUBLIC_OWNER_ADDRESS;
+
+// Neskôr tu bude adresa z pripojenej peňaženky
+const userAddress = "0x000..."; // Sem potom zapojíme Wallet login
+
+// Porovnanie
+const isOwner = userAddress.toLowerCase() === OWNER_ADDRESS?.toLowerCase();
+
   const MenuCard = ({ title, icon, target, description, color = '#AAA' }) => (
     <TouchableOpacity 
       style={[G.card, { padding: 18, flexDirection: 'row', alignItems: 'center', marginBottom: 15 }]} 
@@ -30,15 +39,46 @@ const DashboardScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={G.bgDashboard}>
+      
+      {/* DIZAJNÉRSKA LINKA - Tvoj tajný podpis / Adresa */}
+      <View style={{ pointerEvents: 'none', alignItems: 'center', marginTop: 5 }}>
+        <Text 
+          numberOfLines={1} 
+          ellipsizeMode="clip"
+          style={{
+            fontSize: 7,
+            color: '#222', // Veľmi tmavá sivá, splýva s pozadím
+            letterSpacing: 2,
+            width: '100%',
+            textAlign: 'center',
+            opacity: 0.5,
+            fontFamily: 'monospace'
+          }}
+        >
+          {userAddress}
+        </Text>
+      </View>
+
       <ScrollView contentContainerStyle={{ padding: 25 }}>
         
         {/* HEADER ATELIÉRU */}
-        <View style={{ marginTop: 40, marginBottom: 40 }}>
+        <View style={{ marginTop: 20, marginBottom: 40 }}>
           <Text style={[G.textWhite, { fontSize: 24, fontWeight: 'bold', letterSpacing: 5 }]}>ATELIÉR LARIA</Text>
           <Text style={G.textCyber}>Sammael | Master Mode</Text>
         </View>
 
         <View>
+          {/* ADMIN PANEL - Viditeľný len pre teba (Majiteľa) */}
+          {isOwner && (
+            <MenuCard 
+              title="ADMIN PANEL" 
+              icon="⚙️" 
+              target="Admin" 
+              description="Vstup do centrálneho velína"
+              color="#F1C40F" // Zlatá pre tvoj velín
+            />
+          )}
+
           {/* ARIA ASISTENCIA */}
           <MenuCard 
             title="ARIA ASISTENCIA" 
