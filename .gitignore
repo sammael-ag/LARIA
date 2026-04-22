@@ -1,41 +1,31 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Node modules
+/node_modules
 
-# dependencies
-node_modules/
+# Compilation output
+/dist
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
+# pnpm deploy output
+/bundle
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+# Hardhat Build Artifacts
+/artifacts
 
-# Metro
-.metro-health-check*
+# Hardhat compilation (v2) support directory
+/cache
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Typechain output
+/types
 
-# macOS
-.DS_Store
-*.pem
+# Environment files
+.env
+.env.*
+!.env.example
 
-# local env files
-.env*.local
+# Hardhat coverage reports
+/coverage
 
-# typescript
-*.tsbuildinfo
+# Gas snapshot files
+/.gas-snapshot
 
-# generated native folders
-/ios
-/android
+# Snapshot cheatcodes output
+/snapshots
