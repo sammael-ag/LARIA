@@ -12,6 +12,8 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/native": "^7.2.2",
     "@react-navigation/native-stack": "^7.14.11",
+    "@reown/appkit-wagmi-react-native": "^2.0.3",
+    "@tanstack/react-query": "^5.99.2",
     "expo": "~54.0.33",
     "expo-navigation-bar": "~5.0.10",
     "expo-status-bar": "~3.0.9",
@@ -21,13 +23,14 @@
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-tcp-socket": "^6.4.1",
-    "react-native-webview": "13.15.0"
+    "react-native-webview": "13.15.0",
+    "wagmi": "^2.19.5"
   },
   "private": true,
   "devDependencies": {
-    "@nomicfoundation/hardhat-ignition": "^3.1.2",
+    "@nomicfoundation/hardhat-ignition": "^0.15.16",
     "@nomicfoundation/hardhat-toolbox": "^7.0.0",
-    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.4",
+    "@nomicfoundation/hardhat-toolbox-viem": "^4.1.2",
     "@openzeppelin/contracts": "^5.6.1",
     "@types/node": "^22.19.17",
     "@types/react": "~19.1.10",
