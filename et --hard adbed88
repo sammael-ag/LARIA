@@ -1,0 +1,64 @@
+[33m647ddc5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{0}: reset: moving to HEAD~1
+[33madbed88[m[33m ([m[1;31morigin/main[m[33m)[m HEAD@{1}: reset: moving to origin/main
+[33madbed88[m[33m ([m[1;31morigin/main[m[33m)[m HEAD@{2}: commit: hrubé pospajanie krypto komponentov
+[33m647ddc5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{3}: commit: krypto mágia pre prihlásenie
+[33me3c1cec[m HEAD@{4}: commit: priprava na sha prihlasovanie
+[33m25508f5[m HEAD@{5}: commit: pridanie Smartcontract - LARIA Gateway
+[33m027b483[m HEAD@{6}: commit: dokončenie webviev
+[33m26e8977[m HEAD@{7}: commit: logika pre pridanie vizitky
+[33mf13ae64[m HEAD@{8}: commit: spojazdnenie webviev v appke
+[33m19bf33f[m HEAD@{9}: commit: štýly pre kartu
+[33mcd2945f[m HEAD@{10}: commit: zobrazenie uložených dát na webe
+[33mf38a81a[m HEAD@{11}: commit: oprava cesty v Appjs
+[33mffc9341[m HEAD@{12}: commit: prvá časť mágie - ukladanie vizitiek
+[33m7e7f683[m HEAD@{13}: commit: prvé káble do matrixu - import do .js súborov
+[33m403eaae[m HEAD@{14}: commit:  oprava ciest
+[33m937833d[m HEAD@{15}: commit: doplnenie css
+[33m77c7411[m HEAD@{16}: commit: druhý prelôep
+[33mb5581a1[m HEAD@{17}: commit: preklep v index.html
+[33mf985999[m HEAD@{18}: commit: pridanie vyhľadávania na web
+[33mfe3f4c2[m HEAD@{19}: commit: hrubá príprava webu
+[33m260b8fa[m HEAD@{20}: commit: prepínač súkromia v Card Editore
+[33m06f67f3[m HEAD@{21}: commit: build CardEditor
+[33mb5f9eeb[m HEAD@{22}: commit: vyliečenie imputarea pomocou značky na vrchu klávesnice
+[33mc5dff90[m HEAD@{23}: commit: ladenie ircscreen a navigationbar 2
+[33me2d7f29[m HEAD@{24}: commit: ladenie navigatinbar
+[33m2322f1c[m HEAD@{25}: commit: druhá veľká čistka štýlov, vznik styles_js
+[33m7c231be[m HEAD@{26}: commit: building appky
+[33m382b33b[m HEAD@{27}: commit: doladenie keyboard a imput
+[33m0e11a9f[m HEAD@{28}: commit: úprava klávesnice
+[33m71813bd[m HEAD@{29}: commit: oprava preklepov v irc screen
+[33m350bded[m HEAD@{30}: commit: irc screen
+[33maed4bfd[m HEAD@{31}: commit: real data vo vizitke
+[33m82d6365[m HEAD@{32}: commit: modelovanie karty - vizitky
+[33m052451e[m HEAD@{33}: commit: rozbehanie dashboardu
+[33md91fcea[m HEAD@{34}: commit: časované prrepnutie splash/dashboard
+[33m39b0429[m HEAD@{35}: commit: pridanie navigatora
+[33m8057593[m HEAD@{36}: commit: Hrubá stavba LARIA: Dashboard, IRC, Card a Settings objekty osadené
+[33m7e5515e[m HEAD@{37}: commit: dokončenie objektovej prestavby
+[33mb91f42c[m HEAD@{38}: commit: prvá vyčistená verzia App.js
+[33m925faad[m HEAD@{39}: commit: prerábka css na objektový model
+[33ma7843cc[m HEAD@{40}: commit: pridanie struktury src a zakladnych suborov
+[33m12a621f[m HEAD@{41}: pull origin main: Merge made by the 'ort' strategy.
+[33m72f5cd1[m HEAD@{42}: commit: základ pre objekty
+[33mf76d3bb[m HEAD@{43}: commit: oprava nedokonalej predošlej úpravy
+[33mae9ef75[m HEAD@{44}: commit: ďalśie ladenie tlačidiel
+[33mea3e144[m HEAD@{45}: commit: úprava css buttonov
+[33m4b0d22f[m HEAD@{46}: commit: oprava funkcie volania
+[33m33965d4[m HEAD@{47}: commit: aktivácia telefónovania a zníženie buttonov
+[33mee866ac[m HEAD@{48}: commit: úprava css pre dolné buttony
+[33m2ce5ba8[m HEAD@{49}: commit: nádpis
+[33m80753ee[m HEAD@{50}: commit: ladenie vizitky
+[33mab9ad99[m HEAD@{51}: commit: pridanie g galérie
+[33m273e448[m HEAD@{52}: commit: ladenie html v index.html
+[33m0719c34[m HEAD@{53}: commit: oprava error hlášky
+[33m56f0b09[m HEAD@{54}: commit: oprava mena ikony
+[33m7a9ef38[m HEAD@{55}: commit: prechod zo splash na telo stránky
+[33mfacf204[m HEAD@{56}: commit: telo appky
+[33mafdbb5e[m HEAD@{57}: commit: prepis prvej zelenej správy
+[33m99a445a[m HEAD@{58}: commit: Integrácia LARIA DNA - prvé iskry svetla
+[33m1f096de[m HEAD@{59}: commit (merge): Merge branch 'main' of https://github.com/sammael-ag/LARIA
+[33m485f903[m HEAD@{60}: commit: pridanie nastroja LARIA fakturant
+[33mb19e6f9[m HEAD@{61}: Branch: renamed refs/heads/master to refs/heads/main
+[33mb19e6f9[m HEAD@{63}: commit: Prvý nádych LARIE
+[33me72de84[m HEAD@{64}: commit (initial): Initial commit
