@@ -1,27 +1,30 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// --- GLOBÁLNE ŠTÝLY A KONTEXT ---
 import { G } from '../styles/styles'; 
+import { useLaria } from '../context/LariaContext';
 
 const CardScreen = ({ route, navigation }) => {
+  const { vault } = useLaria();
   const { contact } = route.params || {};
   const isOwner = !contact;
   
-  // Obojsmerná logika PINu a overenia
   const [isVerified, setIsVerified] = useState(isOwner || (contact && contact.isVerified));
   const [isPinned, setIsPinned] = useState(contact?.pinned || false);
 
-  // Dátová štruktúra: Tvoja karta vs. Vizitka zo siete
   const item = isOwner ? {
     kat: "MASTER CARPENTER",
-    meno: "Samuel Hudec - Sammael",
+    meno: vault.identity.name,
     lok: "Rákoš / Rožňava / Revúca",
     popis: "Rustic, steampunk a avantgardné stolárstvo. Orez ovocných stromov a tvorba svetelných artefaktov.",
-    tel: "+421 951 815 453",
-    email: "sammael.ag@gmail.com",
-    fb: "https://www.facebook.com/JEDINECNY.POVRCH.DREVA",
-    tg: "https://t.me/Sammael777",
-    gal: "https://photos.app.goo.gl/pqbaoq7d7g7HkTix8"
+    tel: vault.identity.tel,
+    email: vault.identity.email,
+    fb: vault.identity.fb,
+    tg: vault.identity.tg,
+    gal: vault.identity.gal,
+    sha: vault.identity.sha
   } : {
     kat: contact.cat?.toUpperCase() || "KONTAKT",
     meno: contact.name,
@@ -31,31 +34,24 @@ const CardScreen = ({ route, navigation }) => {
     email: isVerified ? (contact.email || "info@laria.sk") : "ZAMKNUTÉ (Smart Contract)",
     fb: contact.fb || null,
     tg: contact.tg || null,
-    gal: contact.gal || null
-  };
-
-  // Obojsmerný prepínač PINu
-  const handlePin = () => {
-    setIsPinned(!isPinned);
-    // Tu v ďalšom kroku dopíšeme AsyncStorage pre trvalé uloženie stavu
+    gal: contact.gal || null,
+    sha: contact.id
   };
 
   return (
     <SafeAreaView style={G.bg}>
       <ScrollView contentContainerStyle={G.scrollContent}>
         
-        {/* HLAVNÁ KARTA S DYNAMICKÝM OKRAJOM */}
+        {/* HLAVNÁ KARTA */}
         <View style={[
           G.card, 
-          isPinned && { borderColor: '#0FF', borderWidth: 1, shadowColor: '#0FF', shadowOpacity: 0.5, shadowRadius: 10 }
+          isPinned && { borderColor: '#0FF', shadowColor: '#0FF' } // Lokálna úprava pre pripnutý stav
         ]}>
           
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Text style={G.tag}>{item.kat}</Text>
-            
-            {/* Obojstranné PIN tlačidlo len pre cudzie vizitky */}
             {!isOwner && (
-              <TouchableOpacity onPress={handlePin} style={{ padding: 5 }}>
+              <TouchableOpacity onPress={() => setIsPinned(!isPinned)} style={{ padding: 5 }}>
                 <Text style={{ fontSize: 22 }}>{isPinned ? '📍' : '📌'}</Text>
               </TouchableOpacity>
             )}
@@ -70,7 +66,7 @@ const CardScreen = ({ route, navigation }) => {
             {item.popis}
           </Text>
           
-          {/* KONTAKTY - Blokované, kým nie je Smart Contract */}
+          {/* TLAČIDLÁ AKCIÍ */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25, gap: 10 }}>
             <TouchableOpacity 
               style={[G.btnAction, !isVerified && { opacity: 0.2 }]} 
@@ -82,7 +78,7 @@ const CardScreen = ({ route, navigation }) => {
 
             <TouchableOpacity 
               style={G.btnAction} 
-              onPress={() => Alert.alert('Laria ID', `Unikátny kľúč: ${contact?.id || 'MASTER_SOUL'}`)}
+              onPress={() => Alert.alert('Laria ID', `Unikátny kľúč: ${item.sha || 'MASTER_SOUL'}`)}
             >
               <Text style={G.btnText}>🔗 ID</Text>
             </TouchableOpacity>
@@ -96,7 +92,7 @@ const CardScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
           
-          {/* SOCIÁLNE SIETE A GALÉRIA */}
+          {/* SOCIÁLNE SIETE */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: '#222', paddingTop: 20 }}>
             {item.fb && <Text style={[G.textDim, { fontWeight: 'bold', color: '#1877F2' }]} onPress={() => Linking.openURL(item.fb)}>FB</Text>}
             {item.tg && <Text style={[G.textDim, { fontWeight: 'bold', color: '#0088cc' }]} onPress={() => Linking.openURL(item.tg)}>TG</Text>}
@@ -104,18 +100,18 @@ const CardScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* AKCIA POD KARTOU */}
+        {/* SPODNÁ AKCIA */}
         <View style={{ width: '100%', marginTop: 25 }}>
           {isOwner ? (
             <TouchableOpacity 
               style={{ padding: 15, alignItems: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: '#F0F', borderRadius: 10 }} 
-              onPress={() => navigation.navigate('CardEditorScreen')}
+              onPress={() => navigation.navigate('CardEditor')}
             >
               <Text style={[G.textCyber, { color: '#F0F' }]}>[ UPRAVIŤ MOJU PEČAŤ ]</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
-              style={[G.ircButton, !isVerified && { backgroundColor: '#111', borderColor: '#333' }]} 
+              style={[G.ircButton, !isVerified && { borderColor: '#333' }]} 
               onPress={() => navigation.navigate('IRC')}
             >
               <Text style={G.ircButtonText}>
@@ -126,7 +122,7 @@ const CardScreen = ({ route, navigation }) => {
         </View>
 
         <TouchableOpacity style={{ marginTop: 40, padding: 10, alignItems: 'center' }} onPress={() => navigation.goBack()}>
-          <Text style={[G.textDim, { letterSpacing: 3, fontSize: 12 }]}>[ NÁVRAT DO SYSTÉMU ]</Text>
+          <Text style={[G.textDim, { letterSpacing: 3 }]}>[ NÁVRAT DO SYSTÉMU ]</Text>
         </TouchableOpacity>
 
       </ScrollView>

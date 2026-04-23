@@ -1,10 +1,9 @@
 import { StyleSheet, Platform, Dimensions } from 'react-native';
-import { fetchGMatrix } from '../services/GMatrixService';
 
 const { width } = Dimensions.get('window');
 
 export const G = StyleSheet.create({
-  // --- ZÁKLADNÉ ARCHITEKTONICKÉ PRVKY ---
+  // --- ZÁKLADNÁ ARCHITEKTÚRA ---
   bg: {
     flex: 1,
     backgroundColor: '#000',
@@ -16,33 +15,36 @@ export const G = StyleSheet.create({
   scrollContent: {
     padding: 20,
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'android' ? 45 : 20,
   },
 
-  // --- TEXTOVÉ ŠTANDARDY (Koniec neviditeľných písmen) ---
+  // --- TEXTOVÉ ŠTANDARDY ---
   mono: {
     fontFamily: 'monospace',
   },
   textMain: {
-    color: '#DDD', // Svetlá sivá (dobre čitateľná)
+    color: '#DDD', 
     fontFamily: 'monospace',
     fontSize: 14,
   },
   textDim: {
-    color: '#888', // Viditeľná sivá pre popisy
+    color: '#666', 
     fontFamily: 'monospace',
     fontSize: 11,
-  },
-  textCyber: {
-    color: '#0F0', // SPDR Green
-    fontFamily: 'monospace',
   },
   textWhite: {
     color: '#FFF',
     fontFamily: 'monospace',
   },
+  textCyber: {
+    color: '#0F0',
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
 
-  // --- OBJEKT: KARTA / VIZITKA ---
+  // --- OBJEKT: KARTA / VIZITKA (Ten tvoj obľúbený look) ---
   card: {
     backgroundColor: '#111',
     width: '100%',
@@ -50,6 +52,7 @@ export const G = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#333',
+    // Tieňovanie pre hĺbku
     shadowColor: '#0F0',
     shadowOpacity: 0.1,
     shadowRadius: 20,
@@ -88,119 +91,53 @@ export const G = StyleSheet.create({
     fontFamily: 'monospace',
   },
   ircButton: {
-    backgroundColor: '#0F0',
+    borderWidth: 1,
+    borderColor: '#0F0',
     padding: 18,
     borderRadius: 12,
     alignItems: 'center',
     width: '100%',
+    backgroundColor: 'transparent',
   },
   ircButtonText: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-    letterSpacing: 1,
-  },
-
-  // --- IRC / TERMINÁL ŠPECIFIKÁ ---
-inputArea: {
-    flexDirection: 'row',
-    paddingHorizontal: 15,
-    paddingTop: 10,
-    backgroundColor: '#050505',
-    borderTopWidth: 1,
-    borderTopColor: '#111',
-    alignItems: 'center',
-    // Tento paddingBottom teraz vyriešime dynamicky v komponente, 
-    // aby sme mohli reagovať na insets.bottom
-  },
-
-  // TEXTOVÝ VSTUP V TERMINÁLI
-  terminalInput: {
-    flex: 1,
     color: '#0F0',
+    fontWeight: 'bold',
     fontFamily: 'monospace',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+
+  // --- FORMULÁROVÉ VSTUPY (Editor) ---
+  terminalInput: {
+    backgroundColor: '#080808',     
+    borderWidth: 1,
+    borderColor: '#222',          
+    color: '#CCC',                
+    padding: 12,
     fontSize: 15,
-    padding: 0,
-    marginRight: 10,
+    borderRadius: 6,              
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginBottom: 15,
+    marginTop: 5,
   },
 
-  // DOPLNENÝ MESSENGER VZHĽAD PRE ARIA/SAMMAEL MENÁ
-  msgUserAria: {
-    color: '#F0F', // Ružová pre Ariu
-    fontFamily: 'monospace',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginRight: 8,
-  },
-  
-  msgUserSammael: {
-    color: '#0F0', // Zelená pre teba
-    fontFamily: 'monospace',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginRight: 8,
-  },
-
-  msgContainer: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    flexWrap: 'wrap',
-  },
-  
-  msgTime: {
-    color: '#666', // Konečne viditeľný čas
-    fontFamily: 'monospace',
-    fontSize: 10,
-    marginRight: 8,
-  },
-
-  // --- HLAVIČKY (Zjednotené) ---
+  // --- HLAVIČKY ---
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: Platform.OS === 'android' ? 45 : 20,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     justifyContent: 'space-between',
   },
   headerTitle: {
-    color: '#0F0',
+    color: '#FFF',
     fontFamily: 'monospace',
-    fontSize: 12,
-    letterSpacing: 2,
+    fontSize: 14,
+    letterSpacing: 3,
+    fontWeight: 'bold',
   },
 
-  // --- SPLASH ŠPECIÁL ---
-  pechat: {
-    width: width * 0.8,
-    height: width * 0.8,
-    borderRadius: 15,
-    marginBottom: 30,
-  },
-  lariaTitle: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#FFF',
-    letterSpacing: 8,
-    textShadowColor: 'rgba(255, 255, 255, 0.6)',
-    textShadowRadius: 20,
-    fontFamily: 'monospace',
-  },
-  // Globálny štýl pre zadávanie textu (Editor, Search, IRC input)
-  terminalInput: {
-    backgroundColor: '#111',       // Tmavé pozadie dielne
-    borderWidth: 1,
-    borderColor: '#333',          // Nenápadný rám
-    color: '#CCC',                // Príjemná svetlosivá (žiadna jedovatá zelená)
-    padding: 12,
-    fontSize: 16,
-    borderRadius: 8,              // Trochu zaoblené, nech to nereže
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Strojové písmo
-    marginBottom: 10,
-    marginTop: 5,
-  },
-  // Štýl pre placeholder (text, ktorý tam je, kým nezačneš písať)
-  placeholderColor: '#555',       // Tmavšia sivá, aby nezavadzala
-  
-  // Farba kurzora a výberu textu
-  selectionColor: '#0F0',         // Tu si tú zelenú necháme, ako malý svetelný záblesk
+  // Pomocné konštanty
+  placeholderColor: '#444',
+  selectionColor: '#0F0',
 });
