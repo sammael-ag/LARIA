@@ -5,22 +5,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // Krypto-prepojenie na živé dáta
 import { useAccount } from 'wagmi';
 
-// Import z našej operačnej pamäte
+// Import nášho nového kufra a štýlov
+import { useLaria } from '../context/LariaContext';
 import { G } from '../styles/styles'; 
 
 const DashboardScreen = ({ navigation }) => {
   
-  // Appka si vytiahne tvoju adresu z .env súboru (Majiteľ)
-  const OWNER_ADDRESS = process.env.EXPO_PUBLIC_OWNER_ADDRESS;
+  // VYŤAHUJEME KUFOR: Získame aktuálny stav a identitu
+  const { vault } = useLaria();
+  const { status, identity } = vault;
 
-  // ŽIVÉ DÁTA: Toto vytiahne adresu z pripojenej peňaženky (Reown/Wagmi)
+  // ŽIVÉ DÁTA Z PEŇAŽENKY: Pre hornú linku
   const { address } = useAccount();
   
-  // Ak je peňaženka pripojená, použijeme ju, inak tam necháme "Anonym" pre dekoráciu
-  const userAddress = address || "Not Connected";
-
-  // Porovnanie - či si to ty, Sammael (dočasne natvrdo true)
-  const isOwner = true; 
+  // Ak v kufri nemáme uloženú adresu/sha, použijeme tú z peňaženky pre dekoráciu
+  const userAddress = address || identity.sha || "Not Connected";
 
   const MenuCard = ({ title, icon, target, description, color = '#AAA' }) => (
     <TouchableOpacity 
@@ -45,7 +44,7 @@ const DashboardScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={G.bgDashboard}>
       
-      {/* DIZAJNÉRSKA LINKA - Horná adresa */}
+      {/* DIZAJNÉRSKA LINKA - Horná adresa z kufra alebo peňaženky */}
       <View style={{ pointerEvents: 'none', alignItems: 'center', marginTop: 20, zIndex: 999 }}>
         <Text 
           numberOfLines={1} 
@@ -65,15 +64,17 @@ const DashboardScreen = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={{ padding: 25 }}>
         
-        {/* HEADER ATELIÉRU */}
+        {/* HEADER ATELIÉRU - Dynamické meno z identity */}
         <View style={{ marginTop: 20, marginBottom: 40 }}>
           <Text style={[G.textWhite, { fontSize: 24, fontWeight: 'bold', letterSpacing: 5 }]}>ATELIÉR LARIA</Text>
-          <Text style={G.textCyber}>Sammael | Master Mode</Text>
+          <Text style={G.textCyber}>
+            {identity.name} | {status.isAdmin ? "Master Mode" : "User Mode"}
+          </Text>
         </View>
 
         <View>
-          {/* ADMIN PANEL - Viditeľný vďaka isOwner = true */}
-          {isOwner && (
+          {/* ADMIN PANEL - Viditeľný len ak protokol v kufri povie isAdmin: true */}
+          {status.isAdmin && (
             <MenuCard 
               title="ADMIN PANEL" 
               icon="⚙️" 
@@ -83,7 +84,7 @@ const DashboardScreen = ({ navigation }) => {
             />
           )}
 
-          {/* ARIA ASISTENCIA */}
+          {/* ARIA ASISTENCIA - Naša sprievodkyňa */}
           <MenuCard 
             title="ARIA ASISTENCIA" 
             icon="🌸" 
@@ -92,7 +93,7 @@ const DashboardScreen = ({ navigation }) => {
             color="#F0F" 
           />
 
-          {/* MOJA KARTA - Identita */}
+          {/* MOJA KARTA - Identita z kufra */}
           <MenuCard 
             title="MOJA KARTA" 
             icon="🆔" 
@@ -101,7 +102,7 @@ const DashboardScreen = ({ navigation }) => {
             color="#FFF"
           />
 
-          {/* SYSTÉMOVÉ NASTAVENIA - Cesta k tvojej novej kalkulačke */}
+          {/* NASTAVENIA - Konfigurácia systému */}
           <MenuCard 
             title="NASTAVENIA" 
             icon="🛠️" 
@@ -114,7 +115,7 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={[G.textDim, { letterSpacing: 2, color: '#444' }]}>MÔJ VIZITKÁR</Text>
           </View>
 
-          {/* LARIA WEB - Vstup do siete */}
+          {/* LARIA WEB - Dynamicky odomknuté podľa statusu? (Zatiaľ pre všetkých) */}
           <MenuCard 
             title="LARIA WEB" 
             icon="🌐" 
@@ -132,9 +133,11 @@ const DashboardScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* FOOTER - Systémový status */}
+        {/* FOOTER - Systémový status podľa pripojenia */}
         <View style={{ marginTop: 50, alignItems: 'center', marginBottom: 20 }}>
-          <Text style={[G.textDim, { fontSize: 10, color: '#222' }]}>Všetky systémy sú nominálne.</Text>
+          <Text style={[G.textDim, { fontSize: 10, color: '#222' }]}>
+            {status.isOnline ? "Všetky systémy sú nominálne." : "Systém v offline režime."}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

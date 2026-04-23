@@ -30,13 +30,18 @@ export const loadFromVault = async (key) => {
 
 // 3. ROZHODOVACÍ PROTOKOL (Tento mení tvoje statusy)
 export const runLariaProtocol = (identity) => {
+  // Overenie Admina - porovnáme tvoje SHA s tajným kľúčom v .env
+  const MASTER_KEY = process.env.EXPO_PUBLIC_OWNER_SHA;
+  const isAdmin = identity.sha && identity.sha === MASTER_KEY;
+
   const status = {
     isOnline: !!identity.sha, // Ak má SHA, je ONLINE
     isIrcOnline: !!identity.irc,
     hasNFC: !!identity.nfc,
     isParanoid: !identity.email && !!identity.sha, // Ak má SHA ale nemá email
     isGoogleFull: !!identity.email && !!identity.gTab, // Ak má email aj tabuľku
-    isChainNode: !!identity.gTab && !!identity.email // Podmienka pre uzol
+    isChainNode: !!identity.gTab && !!identity.email, // Podmienka pre uzol
+    isAdmin: !!isAdmin // Dynamicky vypočítané oprávnenie
   };
 
   return status;
