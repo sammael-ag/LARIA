@@ -1,7 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
-import { fetchGMatrix } from '../services/GMatrixService';
 
 // Importujeme tvoje miestnosti (Screens)
 import SplashScreen from '../screens/SplashScreen';
@@ -15,27 +14,27 @@ import MainScreen from '../screens/MainScreen';
 
 const Stack = createNativeStackNavigator();
 
-// DEFINE TÉMY: Toto je tvoj štít proti bielemu blesku
+// Tvoj špecifický vizuálny štýl - tma, z ktorej vychádza svetlo
 const LariaTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: '#000000', // Základná farba pod všetkými obrazovkami
-    card: '#000000',       // Farba hlavičiek (ak by sme ich použili)
-    text: '#FFFFFF',       // Predvolená farba textu
-    border: '#111111',     // Farba deliacich čiar v systéme
+    background: '#000000',
+    card: '#000000',
+    text: '#FFFFFF',
+    border: '#111111',
   },
 };
 
 const AppNavigator = () => {
   return (
     <NavigationContainer theme={LariaTheme}>
-      <Stack.Navigator 
+      <Stack.Navigator
         initialRouteName="Splash"
         screenOptions={{
-          headerShown: false, // Čistý cyberpunk bez líšt
-          animation: 'fade',  // Plynulý prechod
-          contentStyle: { backgroundColor: '#000000' } // Poistka priamo v Stacku
+          headerShown: false,
+          animation: 'fade',
+          contentStyle: { backgroundColor: '#000000' }
         }}
       >
         <Stack.Screen name="Splash" component={SplashScreen} />

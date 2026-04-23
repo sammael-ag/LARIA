@@ -1,21 +1,26 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fetchGMatrix } from '../services/GMatrixService';
 
-// Import z našej operačnej pamäte (LARIA/styles/styles.js)
+// Krypto-prepojenie na živé dáta
+import { useAccount } from 'wagmi';
+
+// Import z našej operačnej pamäte
 import { G } from '../styles/styles'; 
 
 const DashboardScreen = ({ navigation }) => {
   
-// Appka si vytiahne adresu z .env súboru
-const OWNER_ADDRESS = process.env.EXPO_PUBLIC_OWNER_ADDRESS;
+  // Appka si vytiahne tvoju adresu z .env súboru (Majiteľ)
+  const OWNER_ADDRESS = process.env.EXPO_PUBLIC_OWNER_ADDRESS;
 
-// Neskôr tu bude adresa z pripojenej peňaženky
-const userAddress = "0x000..."; // Sem potom zapojíme Wallet login
+  // ŽIVÉ DÁTA: Toto vytiahne adresu z pripojenej peňaženky (Reown/Wagmi)
+  const { address } = useAccount();
+  
+  // Ak je peňaženka pripojená, použijeme ju, inak tam necháme "Anonym" pre dekoráciu
+  const userAddress = address || "Not Connected";
 
-// Porovnanie
-const isOwner = userAddress.toLowerCase() === OWNER_ADDRESS?.toLowerCase();
+  // Porovnanie - či si to ty, Sammael
+  const isOwner = address?.toLowerCase() === OWNER_ADDRESS?.toLowerCase();
 
   const MenuCard = ({ title, icon, target, description, color = '#AAA' }) => (
     <TouchableOpacity 
@@ -40,14 +45,14 @@ const isOwner = userAddress.toLowerCase() === OWNER_ADDRESS?.toLowerCase();
   return (
     <SafeAreaView style={G.bgDashboard}>
       
-      {/* DIZAJNÉRSKA LINKA - Tvoj tajný podpis / Adresa */}
+      {/* DIZAJNÉRSKA LINKA - Tvoj tajný podpis / Živá adresa */}
       <View style={{ pointerEvents: 'none', alignItems: 'center', marginTop: 5 }}>
         <Text 
           numberOfLines={1} 
           ellipsizeMode="clip"
           style={{
             fontSize: 7,
-            color: '#222', // Veľmi tmavá sivá, splýva s pozadím
+            color: '#222', 
             letterSpacing: 2,
             width: '100%',
             textAlign: 'center',
@@ -68,14 +73,14 @@ const isOwner = userAddress.toLowerCase() === OWNER_ADDRESS?.toLowerCase();
         </View>
 
         <View>
-          {/* ADMIN PANEL - Viditeľný len pre teba (Majiteľa) */}
+          {/* ADMIN PANEL - Viditeľný len ak sa adresa zhoduje s tvojou v .env */}
           {isOwner && (
             <MenuCard 
               title="ADMIN PANEL" 
               icon="⚙️" 
-              target="Admin" 
+              target="Settings" // Sem si potom dáš admin screen
               description="Vstup do centrálneho velína"
-              color="#F1C40F" // Zlatá pre tvoj velín
+              color="#F1C40F" 
             />
           )}
 
