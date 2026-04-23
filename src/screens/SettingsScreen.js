@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Switch, ScrollView } from 'react-native';
-import { fetchGMatrix } from '../services/GMatrixService';
+import { View, Text, Switch, ScrollView, TouchableOpacity } from 'react-native';
 
 // Import z našej spoločnej operačnej pamäte
 import { G } from '../styles/styles'; 
@@ -56,8 +55,40 @@ const SettingsScreen = () => {
         <Text style={[G.textCyber, { fontSize: 11, marginBottom: 10, opacity: 0.8 }]}>Digital Soul Signature: Verified</Text>
       </View>
 
+      {/* SEKCIA WALLET & TOKENY (Teraz už na správnom mieste) */}
+      <View style={[G.card, { padding: 20, borderTopWidth: 2, borderTopColor: '#0FF', marginBottom: 40 }]}>
+        <Text style={[G.mono, { color: '#0FF', marginBottom: 15 }]}>SYSTEM ASSETS</Text>
+        
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+          <Text style={G.textDim}>LARIA Balance:</Text>
+          <Text style={G.textWhite}>1,250 LARIA</Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+          <Text style={G.textDim}>Valuation:</Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={G.textWhite}>0.45 ETH</Text>
+            <Text style={[G.textDim, { fontSize: 10 }]}>≈ 1,120 EUR / 880 ROD</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity 
+          style={{ 
+            backgroundColor: '#111', 
+            padding: 15, 
+            borderRadius: 5, 
+            borderWidth: 1, 
+            borderColor: '#333',
+            alignItems: 'center' 
+          }}
+          onPress={() => console.log("Otváram terminál...")}
+        >
+          <Text style={[G.mono, { color: '#FFF' }]}>OPEN TERMINAL WALLET</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* FOOTER */}
-      <View style={{ marginTop: 20, alignItems: 'center', paddingBottom: 50 }}>
+      <View style={{ alignItems: 'center', paddingBottom: 50 }}>
         <Text style={{ color: '#222', fontSize: 9, fontFamily: 'monospace' }}>LARIA OS | Rákoš Build 2026</Text>
       </View>
     </ScrollView>

@@ -19,8 +19,8 @@ const DashboardScreen = ({ navigation }) => {
   // Ak je peňaženka pripojená, použijeme ju, inak tam necháme "Anonym" pre dekoráciu
   const userAddress = address || "Not Connected";
 
-  // Porovnanie - či si to ty, Sammael
-  const isOwner = address?.toLowerCase() === OWNER_ADDRESS?.toLowerCase();
+  // Porovnanie - či si to ty, Sammael (dočasne natvrdo true)
+  const isOwner = true; 
 
   const MenuCard = ({ title, icon, target, description, color = '#AAA' }) => (
     <TouchableOpacity 
@@ -45,18 +45,17 @@ const DashboardScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={G.bgDashboard}>
       
-      {/* DIZAJNÉRSKA LINKA - Tvoj tajný podpis / Živá adresa */}
-      <View style={{ pointerEvents: 'none', alignItems: 'center', marginTop: 5 }}>
+      {/* DIZAJNÉRSKA LINKA - Horná adresa */}
+      <View style={{ pointerEvents: 'none', alignItems: 'center', marginTop: 20, zIndex: 999 }}>
         <Text 
           numberOfLines={1} 
           ellipsizeMode="clip"
           style={{
-            fontSize: 7,
-            color: '#222', 
+            fontSize: 8,
+            color: '#DDD', 
             letterSpacing: 2,
             width: '100%',
             textAlign: 'center',
-            opacity: 0.5,
             fontFamily: 'monospace'
           }}
         >
@@ -73,12 +72,12 @@ const DashboardScreen = ({ navigation }) => {
         </View>
 
         <View>
-          {/* ADMIN PANEL - Viditeľný len ak sa adresa zhoduje s tvojou v .env */}
+          {/* ADMIN PANEL - Viditeľný vďaka isOwner = true */}
           {isOwner && (
             <MenuCard 
               title="ADMIN PANEL" 
               icon="⚙️" 
-              target="Settings" // Sem si potom dáš admin screen
+              target="Settings" 
               description="Vstup do centrálneho velína"
               color="#F1C40F" 
             />
@@ -100,6 +99,15 @@ const DashboardScreen = ({ navigation }) => {
             target="Card" 
             description="Digitálna pečať identity"
             color="#FFF"
+          />
+
+          {/* SYSTÉMOVÉ NASTAVENIA - Cesta k tvojej novej kalkulačke */}
+          <MenuCard 
+            title="NASTAVENIA" 
+            icon="🛠️" 
+            target="Settings" 
+            description="Konfigurácia jadra a assetov"
+            color="#555"
           />
 
           <View style={{ marginTop: 20, marginBottom: 10, borderBottomWidth: 1, borderBottomColor: '#111', paddingBottom: 5 }}>
