@@ -3,6 +3,7 @@ import '@walletconnect/react-native-compat';
 // Importujeme všetko ako objekt, aby sme sa vyhli undefined funkciám
 import * as ReownLib from '@reown/appkit-wagmi-react-native';
 import { base } from 'wagmi/chains';
+import { useKrypto } from '../../context/KryptoContext';
 
 const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
 

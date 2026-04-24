@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 // --- GLOBÁLNE ŠTÝLY A KONTEXT ---
 import { G } from '../styles/styles'; 
-import { useLaria } from '../context/LariaContext';
+import { useLaria } from '../../context/LariaContext';
 
 const CardScreen = ({ route, navigation }) => {
   const { vault } = useLaria();

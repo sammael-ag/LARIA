@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Switch, ScrollView, TouchableOpacity } from 'react-native';
+import { useKrypto } from '../../context/KryptoContext';
 
 // Import z našej spoločnej operačnej pamäte
 import { G } from '../styles/styles'; 

@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAccount } from 'wagmi';
 
 // Import nášho nového kufra a štýlov
-import { useLaria } from '../context/LariaContext';
+import { useLaria } from '../../context/LariaContext';
 import { G } from '../styles/styles'; 
 
 const DashboardScreen = ({ navigation }) => {
