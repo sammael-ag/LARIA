@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Krypto-prepojenie na živé dáta
@@ -18,8 +18,10 @@ const DashboardScreen = ({ navigation }) => {
   // ŽIVÉ DÁTA Z PEŇAŽENKY: Pre hornú linku
   const { address } = useAccount();
   
-  // Ak v kufri nemáme uloženú adresu/sha, použijeme tú z peňaženky pre dekoráciu
-  const userAddress = address || identity.sha || "Not Connected";
+  // LOGIKA PRE HORNÚ LINKU: 
+  // Ak je pripojená peňaženka, má prednosť. Ak nie, skúsime SHA z Matrixu. 
+  // Ak ešte Matrix nevrátil SHA, ukážeme aspoň ID zariadenia.
+  const userAddress = address || identity.sha || (identity.deviceId ? `DEVICE ID: ${identity.deviceId.substring(0, 12)}...` : "INITIALIZING MATRIX...");
 
   const MenuCard = ({ title, icon, target, description, color = '#AAA' }) => (
     <TouchableOpacity 
@@ -44,18 +46,20 @@ const DashboardScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={G.bgDashboard}>
       
-      {/* DIZAJNÉRSKA LINKA - Horná adresa z kufra alebo peňaženky */}
-      <View style={{ pointerEvents: 'none', alignItems: 'center', marginTop: 20, zIndex: 999 }}>
+      {/* DIZAJNÉRSKA LINKA - Horná adresa alebo SHA */}
+      <View style={{ pointerEvents: 'none', alignItems: 'center', marginTop: 20, zIndex: 999, paddingHorizontal: 15 }}>
         <Text 
           numberOfLines={1} 
-          ellipsizeMode="clip"
+          ellipsizeMode="middle"
           style={{
             fontSize: 8,
-            color: '#DDD', 
+            color: status.isAdmin ? '#0FF' : '#555', 
             letterSpacing: 2,
             width: '100%',
             textAlign: 'center',
-            fontFamily: 'monospace'
+            fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+            textTransform: 'uppercase',
+            opacity: identity.sha || address ? 1 : 0.6
           }}
         >
           {userAddress}
@@ -68,12 +72,12 @@ const DashboardScreen = ({ navigation }) => {
         <View style={{ marginTop: 20, marginBottom: 40 }}>
           <Text style={[G.textWhite, { fontSize: 24, fontWeight: 'bold', letterSpacing: 5 }]}>ATELIÉR LARIA</Text>
           <Text style={G.textCyber}>
-            {identity.name} | {status.isAdmin ? "Master Mode" : "User Mode"}
+            {identity.name} | {status.isAdmin ? "MASTER MODE" : "USER MODE"}
           </Text>
         </View>
 
         <View>
-          {/* ADMIN PANEL - Viditeľný len ak protokol v kufri povie isAdmin: true */}
+          {/* ADMIN PANEL - Viditeľný len ak protokol povie isAdmin: true */}
           {status.isAdmin && (
             <MenuCard 
               title="ADMIN PANEL" 
@@ -115,7 +119,7 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={[G.textDim, { letterSpacing: 2, color: '#444' }]}>MÔJ VIZITKÁR</Text>
           </View>
 
-          {/* LARIA WEB - Dynamicky odomknuté podľa statusu? (Zatiaľ pre všetkých) */}
+          {/* LARIA WEB - Majstri a artefakty */}
           <MenuCard 
             title="LARIA WEB" 
             icon="🌐" 
@@ -133,10 +137,10 @@ const DashboardScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* FOOTER - Systémový status podľa pripojenia */}
+        {/* FOOTER - Systémový status */}
         <View style={{ marginTop: 50, alignItems: 'center', marginBottom: 20 }}>
-          <Text style={[G.textDim, { fontSize: 10, color: '#222' }]}>
-            {status.isOnline ? "Všetky systémy sú nominálne." : "Systém v offline režime."}
+          <Text style={[G.textDim, { fontSize: 10, color: '#222', letterSpacing: 1 }]}>
+            {status.isOnline ? "VŠETKY SYSTÉMY SÚ NOMINÁLNE" : "SYSTÉM V OFFLINE REŽIME"}
           </Text>
         </View>
       </ScrollView>

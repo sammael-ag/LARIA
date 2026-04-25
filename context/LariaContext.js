@@ -1,4 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { Platform } from 'react-native';
+import * as Application from 'expo-application';
+import * as Device from 'expo-device'; 
 import { runLariaProtocol, saveToVault, loadFromVault } from '../src/services/LariaLogic';
 
 const LariaContext = createContext();
@@ -11,10 +14,12 @@ export const LariaProvider = ({ children }) => {
       hasNFC: false,
       isParanoid: false,
       isGoogleFull: false,
-      isChainNode: false
+      isChainNode: false,
+      isAdmin: false 
     },
     identity: {
       name: "Sammael",
+      deviceId: null,
       sha: null,
       irc: null,
       nfc: null,
@@ -24,42 +29,72 @@ export const LariaProvider = ({ children }) => {
       tg: null,
       gal: null,
       Gtab: null,
-      revo: null,    // Revolut handle (@meno)
-      kRod: null,    // Rodový kľúč / IBAN
-      krypt: null    // Krypto adresa (Base / Coinbase)
+      revo: null,
+      kRod: null,
+      krypt: null 
     }
   });
 
-  // 1. OŽIVENIE PRI ŠTARTE
+  // --- 1. INICIALIZÁCIA MATRIXU ---
   useEffect(() => {
     const initializeVault = async () => {
-      const savedIdentity = await loadFromVault('identity');
-      if (savedIdentity) {
-        const newStatus = runLariaProtocol(savedIdentity);
+      try {
+        // Načítanie existujúcej identity z trezoru
+        let savedIdentity = await loadFromVault('identity');
+        
+        // Získanie unikátneho odtlačku zariadenia
+        let currentDeviceId = null;
+        if (Platform.OS === 'android') {
+          currentDeviceId = Application.androidId || Device.osBuildId || "S_DEVICE_A";
+        } else if (Platform.OS === 'ios') {
+          currentDeviceId = await Application.getIosIdForVendorAsync();
+        }
+
+        // Ak je trezor prázdny, vytvoríme nový základ pre Sammaela
+        if (!savedIdentity) {
+          savedIdentity = { 
+            ...vault.identity,
+            name: "Sammael",
+            deviceId: currentDeviceId
+          };
+        } else {
+          // Vždy aktualizujeme deviceId pre prípad zmeny
+          savedIdentity.deviceId = currentDeviceId;
+        }
+
+        // Spustenie protokolu LARIA - výpočet statusov a oprávnení
+        const updatedStatus = runLariaProtocol(savedIdentity);
+        
         setVault({
-          status: newStatus,
+          status: updatedStatus,
           identity: savedIdentity
         });
+
+        // Tichý zápis do trezoru
+        await saveToVault('identity', savedIdentity);
+        
+      } catch (error) {
+        console.error("Laria Initialization Error:", error);
       }
     };
+
     initializeVault();
   }, []);
 
-  // 2. HLAVNÁ SYNCHRONIZÁCIA
+  // --- 2. SYNCHRONIZÁCIA IDENTITY ---
   const syncIdentity = async (newIdentityData) => {
     const updatedIdentity = { ...vault.identity, ...newIdentityData };
-    
-    // Protokol prepočíta statusy na základe nových dát
     const newStatus = runLariaProtocol(updatedIdentity);
     
-    setVault({
-      status: newStatus,
-      identity: updatedIdentity
+    setVault({ 
+      status: newStatus, 
+      identity: updatedIdentity 
     });
     
     await saveToVault('identity', updatedIdentity);
   };
 
+  // --- 3. AKTUALIZÁCIA TREZORU ---
   const updateVault = (category, data) => {
     setVault(prev => ({
       ...prev,

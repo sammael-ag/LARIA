@@ -1,5 +1,5 @@
 /**
- * LARIA WEB ENGINE - DYNAMICKÉ ČAKRY (LOGIC FIRST)
+ * LARIA WEB ENGINE - DYNAMICKÉ ČAKRY (LOGIC v4.3 - FINAL ALIGNMENT)
  */
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbwYrkLCil1BmJhP7nMgBeJnhqDBe5nTDWhlErjHolLjG-zJjit3sKA_69E-IBEM1vtY/exec";
@@ -43,30 +43,39 @@ const aktivujOdkazy = (text) => {
     return safeText.replace(urlPattern, '<a href="$1" target="_blank" class="text-cyber">$1</a>');
 };
 
-// --- 3. NAČÍTANIE DÁT ---
+// --- 3. NAČÍTANIE DÁT (OPRAVENÉ MAPOVANIE) ---
 async function loadDataFromGSheets() {
     try {
         const response = await fetch(READ_URL);
-        const rawData = await response.json();
+        if (!response.ok) throw new Error("Matrix neodpovedá");
         
-        allData = rawData.map(row => ({
-            id: row[0],
-            datum: row[1],
-            meno: row[2],
-            kat: row[3],
-            lok: row[4],
-            popis: row[5],
-            tel: row[6] ? row[6].toString() : "",
-            email: row[7],
-            fb: row[8],
-            tg: row[9],
-            gal: row[10],
-            isPublic: row[11]
-        })).filter(item => item.isPublic === true || item.isPublic === "TRUE");
+        const rawData = await response.json();
+        console.log("Dáta načítané, počet riadkov:", rawData.length);
+
+        allData = rawData.map(row => {
+        // row[12] je tvoj 'true' - musíme ho brať taký, aký je
+        const publicStatus = row[12]; 
+
+    return {
+        id: row[1] || "no-sha",
+        datum: row[2],
+        meno: row[3] || "Neznámy Majster",
+        kat: row[4] || "Všeobecné",
+        lok: row[5] || "Neznáma lokalita",
+        popis: row[6] || "",
+        tel: row[7] ? row[7].toString().trim() : "",
+        email: row[8] || "",
+        fb: row[9] || "",
+        tg: row[10] || "",
+        gal: row[11] || "",
+        // TOTO JE OPRAVA: Prijme 'true' ako boolean aj ako text "TRUE"
+        isPublic: publicStatus === true || String(publicStatus).toUpperCase() === "TRUE"
+    };}).filter(item => item.isPublic === true);
 
         applyFilter();
     } catch (e) {
         console.error("Matrix offline:", e);
+        document.getElementById('cards-container').innerHTML = '<p style="color:red">Chyba pripojenia k Matrixu...</p>';
     }
 }
 
@@ -74,18 +83,22 @@ async function loadDataFromGSheets() {
 function renderCards(data) {
     const container = document.getElementById('cards-container');
     if (!container) return;
-    container.innerHTML = data.length === 0 ? '<p>Ticho v éteri...</p>' : '';
+    container.innerHTML = '';
+
+    if (data.length === 0) {
+        container.innerHTML = '<p class="text-cyber">Ticho v éteri... (žiadne verejné vizitky)</p>';
+        return;
+    }
 
     data.forEach(item => {
         const card = document.createElement('div');
         card.className = 'card';
         
-        // Čistá štruktúra bez nánosov štýlov
         card.innerHTML = `
             <span class="tag">${item.kat}</span>
             <h2 class="card-title">${item.meno}</h2>
             <p class="card-loc">📍 ${item.lok}</p>
-            <p class="card-desc">${aktivujOdkazy(item.popis)}</p>
+            <p class="card-desc">${item.popis ? aktivujOdkazy(item.popis) : 'Bez popisu.'}</p>
             
             <div class="card-actions">
                 <button onclick="sendToApp('${item.id}')" class="btn-add">[ PRIDAŤ ]</button>
@@ -106,17 +119,25 @@ function renderCards(data) {
 function applyFilter() {
     const term = document.getElementById('searchInput')?.value || '';
     const filtered = allData.filter(item => {
-        const matchCat = (currentCategory === 'vsetko' || item.kat.toLowerCase() === currentCategory.toLowerCase());
-        const content = removeAccents(`${item.meno} ${item.lok} ${item.popis}`.toLowerCase());
-        return matchCat && (term.length < 2 || content.includes(removeAccents(term.toLowerCase())));
+        const matchCat = (currentCategory === 'vsetko' || (item.kat && item.kat.toLowerCase() === currentCategory.toLowerCase()));
+        const searchContent = removeAccents(`${item.meno} ${item.lok} ${item.popis}`.toLowerCase());
+        const matchSearch = term.length < 2 || searchContent.includes(removeAccents(term.toLowerCase()));
+        return matchCat && matchSearch;
     });
     renderCards(filtered);
 }
 
 // --- 6. GLOBÁLNE FUNKCIE ---
-window.copyShareLink = (id) => {
-    const url = `${window.location.origin}${window.location.pathname}?id=${id}`;
-    navigator.clipboard.writeText(url).then(() => alert("Kód skopírovaný."));
+window.setCategory = (cat) => {
+    currentCategory = cat;
+    // Ak máš v HTML prepínače kategórií, tu môžeš pridať vizuálny "active" stav
+    applyFilter();
 };
 
+window.copyShareLink = (id) => {
+    const url = `${window.location.origin}${window.location.pathname}?id=${id}`;
+    navigator.clipboard.writeText(url).then(() => alert("Odkaz skopírovaný do schránky."));
+};
+
+// Štart systému
 window.onload = loadDataFromGSheets;

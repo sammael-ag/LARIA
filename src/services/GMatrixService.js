@@ -4,7 +4,7 @@
  */
 
 // Link na čítanie (CSV)
-const G_MATRIX_READ_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR9Bm2VWW_1OHAct7kfVOJd9x-FAQWVgKSJrfbisueLmhEcoxPD66V40pemwGiN4MqG5JKK4c2D3aD6/pub?gid=1470675339&single=true&output=csv";
+const G_MATRIX_READ_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSrvQfx5lSx2hA85CEujmUAcmYRpi9lEiVkuLzmNpv_eYSvtWVhRNgaFwURSFMgA6l1vxtwlAndxQ3u/pub?output=csv";
 
 // Link na zápis (Tvoj LARIA Bot)
 const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbwYrkLCil1BmJhP7nMgBeJnhqDBe5nTDWhlErjHolLjG-zJjit3sKA_69E-IBEM1vtY/exec";
