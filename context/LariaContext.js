@@ -2,7 +2,8 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device'; 
-import { runLariaProtocol, saveToVault, loadFromVault } from '../src/services/LariaLogic';
+// Importujeme protokol a náš nový mlynček na SHA
+import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../src/services/LariaLogic';
 
 const LariaContext = createContext();
 
@@ -19,8 +20,8 @@ export const LariaProvider = ({ children }) => {
     },
     identity: {
       name: "Sammael",
-      deviceId: null,
-      sha: null,
+      deviceId: null, // Toto ostane v pamäti len počas inicializácie
+      sha: null,      // TOTO bude tvoja nová verejná tvár
       irc: null,
       nfc: null,
       email: null,
@@ -35,42 +36,47 @@ export const LariaProvider = ({ children }) => {
     }
   });
 
-  // --- 1. INICIALIZÁCIA MATRIXU ---
+  // --- 1. INICIALIZÁCIA MATRIXU (S HASH RIGOROM) ---
   useEffect(() => {
     const initializeVault = async () => {
       try {
-        // Načítanie existujúcej identity z trezoru
+        // 1. Načítanie existujúcej identity z trezoru
         let savedIdentity = await loadFromVault('identity');
         
-        // Získanie unikátneho odtlačku zariadenia
-        let currentDeviceId = null;
+        // 2. Získanie unikátneho "surového" odtlačku zariadenia (len pre výpočet)
+        let rawDeviceId = null;
         if (Platform.OS === 'android') {
-          currentDeviceId = Application.androidId || Device.osBuildId || "S_DEVICE_A";
+          rawDeviceId = Application.androidId || Device.osBuildId || "S_DEVICE_A";
         } else if (Platform.OS === 'ios') {
-          currentDeviceId = await Application.getIosIdForVendorAsync();
+          rawDeviceId = await Application.getIosIdForVendorAsync();
         }
 
-        // Ak je trezor prázdny, vytvoríme nový základ pre Sammaela
+        // 3. ALCHÝMIA: Vygenerujeme SHA z deviceId
+        // Ak užívateľ nemá meno, použijeme Sammael ako základ
+        const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.name || "Sammael");
+
         if (!savedIdentity) {
+          // PRVOVÝSTUP: Ak je kufor prázdny
           savedIdentity = { 
             ...vault.identity,
             name: "Sammael",
-            deviceId: currentDeviceId
+            sha: currentSha // Zapíšeme vygenerovaný Hash
           };
         } else {
-          // Vždy aktualizujeme deviceId pre prípad zmeny
-          savedIdentity.deviceId = currentDeviceId;
+          // AKTUALIZÁCIA: Ak sa zmenilo zariadenie, prepočíta sa SHA
+          savedIdentity.sha = currentSha;
         }
 
-        // Spustenie protokolu LARIA - výpočet statusov a oprávnení
+        // 4. PROTOKOL: Výpočet statusov (tu sa rozhodne, či si Admin)
         const updatedStatus = runLariaProtocol(savedIdentity);
         
+        // 5. ZÁPIS DO STAVU: Všimni si, že deviceId sem už ani neposielame!
         setVault({
           status: updatedStatus,
           identity: savedIdentity
         });
 
-        // Tichý zápis do trezoru
+        // 6. ARCHÍV: Uložíme čistú identitu s Hashom do mobilu
         await saveToVault('identity', savedIdentity);
         
       } catch (error) {
