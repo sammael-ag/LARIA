@@ -43,7 +43,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Card" component={CardScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Contacts" component={ContactsScreen} />
-        <Stack.Screen name="CardEditorScreen" component={CardEditorScreen} />
+        <Stack.Screen name="CardEditor" component={CardEditorScreen} />
         <Stack.Screen name="Web" component={MainScreen} />
       </Stack.Navigator>
     </NavigationContainer>
