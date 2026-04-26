@@ -1,3 +1,4 @@
+import 'react-native-get-random-values';
 import 'fast-text-encoding'; 
 import { Buffer } from 'buffer'; 
 if (typeof global.Buffer === 'undefined') {
