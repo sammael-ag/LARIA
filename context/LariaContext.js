@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device'; 
-// Importujeme protokol a náš nový mlynček na SHA
+// Importujeme protokol a alchymistické nástroje z LariaLogic
 import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../src/services/LariaLogic';
 
 const LariaContext = createContext();
@@ -20,8 +20,7 @@ export const LariaProvider = ({ children }) => {
     },
     identity: {
       name: "Sammael",
-      deviceId: null, // Toto ostane v pamäti len počas inicializácie
-      sha: null,      // TOTO bude tvoja nová verejná tvár
+      sha: null,
       irc: null,
       nfc: null,
       email: null,
@@ -36,14 +35,17 @@ export const LariaProvider = ({ children }) => {
     }
   });
 
-  // --- 1. INICIALIZÁCIA MATRIXU (S HASH RIGOROM) ---
+  // --- 1. INICIALIZÁCIA MATRIXU (S ARCHITEKTOVOU PEČAŤOU) ---
   useEffect(() => {
     const initializeVault = async () => {
       try {
-        // 1. Načítanie existujúcej identity z trezoru
+        // A. Načítanie existujúcej identity z trezoru
         let savedIdentity = await loadFromVault('identity');
         
-        // 2. Získanie unikátneho "surového" odtlačku zariadenia (len pre výpočet)
+        // B. Načítanie Architektovej pečate (či už bolo niekedy zadané slovo moci)
+        const hasSeal = await loadFromVault('architect_seal');
+        
+        // C. Získanie unikátneho odtlačku zariadenia pre výpočet SHA
         let rawDeviceId = null;
         if (Platform.OS === 'android') {
           rawDeviceId = Application.androidId || Device.osBuildId || "S_DEVICE_A";
@@ -51,32 +53,27 @@ export const LariaProvider = ({ children }) => {
           rawDeviceId = await Application.getIosIdForVendorAsync();
         }
 
-        // 3. ALCHÝMIA: Vygenerujeme SHA z deviceId
-        // Ak užívateľ nemá meno, použijeme Sammael ako základ
+        // D. ALCHÝMIA: Vygenerujeme aktuálne SHA
         const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.name || "Sammael");
 
         if (!savedIdentity) {
-          // PRVOVÝSTUP: Ak je kufor prázdny
           savedIdentity = { 
             ...vault.identity,
             name: "Sammael",
-            sha: currentSha // Zapíšeme vygenerovaný Hash
+            sha: currentSha 
           };
         } else {
-          // AKTUALIZÁCIA: Ak sa zmenilo zariadenie, prepočíta sa SHA
           savedIdentity.sha = currentSha;
         }
 
-        // 4. PROTOKOL: Výpočet statusov (tu sa rozhodne, či si Admin)
-        const updatedStatus = runLariaProtocol(savedIdentity);
+        // E. PROTOKOL: Výpočet statusov (Dvojitý zámok: SHA + Pečať)
+        const updatedStatus = runLariaProtocol(savedIdentity, hasSeal === true);
         
-        // 5. ZÁPIS DO STAVU: Všimni si, že deviceId sem už ani neposielame!
         setVault({
           status: updatedStatus,
           identity: savedIdentity
         });
 
-        // 6. ARCHÍV: Uložíme čistú identitu s Hashom do mobilu
         await saveToVault('identity', savedIdentity);
         
       } catch (error) {
@@ -87,10 +84,30 @@ export const LariaProvider = ({ children }) => {
     initializeVault();
   }, []);
 
-  // --- 2. SYNCHRONIZÁCIA IDENTITY ---
+  // --- 2. ODOMKNUTIE ARCHITEKTOVEJ PEČATE ---
+  // Táto funkcia sa zavolá, keď úspešne prejde overenie "Slova moci"
+  const unlockSeal = async (isCorrect) => {
+    if (isCorrect) {
+      // Zapíšeme pečať do fyzickej pamäte mobilu
+      await saveToVault('architect_seal', true);
+      
+      // Okamžitý update stavu v pamäti appky, aby sa Admin Panel hneď zjavil
+      const newStatus = runLariaProtocol(vault.identity, true);
+      setVault(prev => ({
+        ...prev,
+        status: newStatus
+      }));
+      return true;
+    }
+    return false;
+  };
+
+  // --- 3. SYNCHRONIZÁCIA IDENTITY ---
   const syncIdentity = async (newIdentityData) => {
+    // Pri synch sa musíme znova pozrieť, či máme pečať
+    const hasSeal = await loadFromVault('architect_seal');
     const updatedIdentity = { ...vault.identity, ...newIdentityData };
-    const newStatus = runLariaProtocol(updatedIdentity);
+    const newStatus = runLariaProtocol(updatedIdentity, hasSeal === true);
     
     setVault({ 
       status: newStatus, 
@@ -100,7 +117,7 @@ export const LariaProvider = ({ children }) => {
     await saveToVault('identity', updatedIdentity);
   };
 
-  // --- 3. AKTUALIZÁCIA TREZORU ---
+  // --- 4. AKTUALIZÁCIA TREZORU ---
   const updateVault = (category, data) => {
     setVault(prev => ({
       ...prev,
@@ -109,7 +126,7 @@ export const LariaProvider = ({ children }) => {
   };
 
   return (
-    <LariaContext.Provider value={{ vault, syncIdentity, updateVault }}>
+    <LariaContext.Provider value={{ vault, syncIdentity, updateVault, unlockSeal }}>
       {children}
     </LariaContext.Provider>
   );
