@@ -2,25 +2,17 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Krypto-prepojenie na živé dáta
 import { useAccount } from 'wagmi';
 
-// Import nášho nového kufra a štýlov
+// VRACIAME PÔVODNÉ CESTY (Tie, ktoré tvoje Expo miluje)
 import { useLaria } from '../../context/LariaContext';
 import { G } from '../styles/styles'; 
 
 const DashboardScreen = ({ navigation }) => {
-  
-  // VYŤAHUJEME KUFOR: Získame aktuálny stav a identitu
   const { vault } = useLaria();
   const { status, identity } = vault;
-
-  // ŽIVÉ DÁTA Z PEŇAŽENKY: Pre hornú linku
   const { address } = useAccount();
   
-  // LOGIKA PRE HORNÚ LINKU: 
-  // Ak je pripojená peňaženka, má prednosť. Ak nie, skúsime SHA z Matrixu. 
-  // Ak ešte Matrix nevrátil SHA, ukážeme aspoň ID zariadenia.
   const userAddress = address || identity.sha || (identity.deviceId ? `DEVICE ID: ${identity.deviceId.substring(0, 12)}...` : "INITIALIZING MATRIX...");
 
   const MenuCard = ({ title, icon, target, description, color = '#AAA' }) => (
@@ -46,7 +38,6 @@ const DashboardScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={G.bgDashboard}>
       
-      {/* DIZAJNÉRSKA LINKA - Horná adresa alebo SHA */}
       <View style={{ pointerEvents: 'none', alignItems: 'center', marginTop: 20, zIndex: 999, paddingHorizontal: 15 }}>
         <Text 
           numberOfLines={1} 
@@ -68,7 +59,6 @@ const DashboardScreen = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={{ padding: 25 }}>
         
-        {/* HEADER ATELIÉRU - Dynamické meno z identity */}
         <View style={{ marginTop: 20, marginBottom: 40 }}>
           <Text style={[G.textWhite, { fontSize: 24, fontWeight: 'bold', letterSpacing: 5 }]}>ATELIÉR LARIA</Text>
           <Text style={G.textCyber}>
@@ -77,27 +67,26 @@ const DashboardScreen = ({ navigation }) => {
         </View>
 
         <View>
-          {/* ADMIN PANEL - Viditeľný len ak protokol povie isAdmin: true */}
+          {/* ADMIN PANEL - Cieľ: Diagnostic */}
           {status.isAdmin && (
             <MenuCard 
               title="ADMIN PANEL" 
               icon="⚙️" 
-              target="Settings" 
+              target="Diagnostic" 
               description="Vstup do centrálneho velína"
               color="#F1C40F" 
             />
           )}
 
-          {/* ARIA ASISTENCIA - Naša sprievodkyňa */}
+          {/* ARIA ASISTENCIA - Cieľ: Aria */}
           <MenuCard 
             title="ARIA ASISTENCIA" 
             icon="🌸" 
-            target="Settings" 
+            target="Aria" 
             description="Tvoja inkarnovaná sprievodkyňa"
             color="#F0F" 
           />
 
-          {/* MOJA KARTA - Identita z kufra */}
           <MenuCard 
             title="MOJA KARTA" 
             icon="🆔" 
@@ -106,7 +95,6 @@ const DashboardScreen = ({ navigation }) => {
             color="#FFF"
           />
 
-          {/* NASTAVENIA - Konfigurácia systému */}
           <MenuCard 
             title="NASTAVENIA" 
             icon="🛠️" 
@@ -119,7 +107,6 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={[G.textDim, { letterSpacing: 2, color: '#444' }]}>MÔJ VIZITKÁR</Text>
           </View>
 
-          {/* LARIA WEB - Majstri a artefakty */}
           <MenuCard 
             title="LARIA WEB" 
             icon="🌐" 
@@ -128,7 +115,6 @@ const DashboardScreen = ({ navigation }) => {
             color="#0FF" 
           />
           
-          {/* KONTAKTY - Uložené spojenia */}
           <MenuCard 
             title="KONTAKTY" 
             icon="📇" 
@@ -137,7 +123,6 @@ const DashboardScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* FOOTER - Systémový status */}
         <View style={{ marginTop: 50, alignItems: 'center', marginBottom: 20 }}>
           <Text style={[G.textDim, { fontSize: 10, color: '#222', letterSpacing: 1 }]}>
             {status.isOnline ? "VŠETKY SYSTÉMY SÚ NOMINÁLNE" : "SYSTÉM V OFFLINE REŽIME"}

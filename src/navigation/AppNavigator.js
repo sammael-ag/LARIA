@@ -2,7 +2,6 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 
-// Importujeme tvoje miestnosti (Screens)
 import SplashScreen from '../screens/SplashScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import IrcScreen from '../screens/IrcScreen';
@@ -11,10 +10,11 @@ import SettingsScreen from '../screens/SettingsScreen';
 import ContactsScreen from '../screens/ContactsScreen';
 import CardEditorScreen from '../screens/CardEditorScreen';
 import MainScreen from '../screens/MainScreen';
+import DiagnosticScreen from '../screens/DiagnosticScreen';
+import AriaScreen from '../screens/AriaScreen';
 
 const Stack = createNativeStackNavigator();
 
-// Tvoj špecifický vizuálny štýl - tma, z ktorej vychádza svetlo
 const LariaTheme = {
   ...DefaultTheme,
   colors: {
@@ -41,10 +41,12 @@ const AppNavigator = () => {
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
         <Stack.Screen name="IRC" component={IrcScreen} />
         <Stack.Screen name="Card" component={CardScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
-        <Stack.Screen name="Contacts" component={ContactsScreen} />
         <Stack.Screen name="CardEditor" component={CardEditorScreen} />
         <Stack.Screen name="Web" component={MainScreen} />
+        <Stack.Screen name="Contacts" component={ContactsScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Aria" component={AriaScreen} />
+        <Stack.Screen name="Diagnostic" component={DiagnosticScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
