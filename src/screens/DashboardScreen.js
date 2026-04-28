@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Platform, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAccount } from 'wagmi';
+import * as Crypto from 'expo-crypto'; // Potrebné pre naše dvojvrstvové hashovanie
 
 import { useLaria } from '../../context/LariaContext';
 import { G } from '../styles/styles'; 
-import { verifyArchitectSeal } from '../services/LariaLogic';
 
 const DashboardScreen = ({ navigation }) => {
   const { vault, unlockSeal } = useLaria();
@@ -15,7 +15,8 @@ const DashboardScreen = ({ navigation }) => {
   // --- TAJNÁ LOGIKA ARCHITEKTA ---
   const [tapCount, setTapCount] = useState(0);
   const [showVaultInput, setShowVaultInput] = useState(false);
-  const [secretWord, setSecretWord] = useState('');
+  const [architectSHA, setArchitectSHA] = useState(''); // Meno (Master SHA)
+  const [secretWord, setSecretWord] = useState('');    // Heslo (Slovo moci)
 
   const handleSecretTap = () => {
     const newCount = tapCount + 1;
@@ -24,23 +25,46 @@ const DashboardScreen = ({ navigation }) => {
       setShowVaultInput(true);
     } else {
       setTapCount(newCount);
-      // Automatický reset počítadla po 3 sekundách nečinnosti
       const timer = setTimeout(() => setTapCount(0), 3000);
       return () => clearTimeout(timer);
     }
   };
 
   const handleUnlock = async () => {
-    const isCorrect = verifyArchitectSeal(secretWord);
-    
-    if (isCorrect) {
-      await unlockSeal(true);
+    try {
+      // 1. VRSTVA: Hashovanie Slova moci so starou soľou
+      const hashA = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        secretWord + "ARCHITECT"
+      );
+
+      // 2. VRSTVA: Finálne prepojenie s Master SHA a novou 8D soľou
+      const finalProduct = `${architectSHA}${hashA}LUMIA_8D_SALT`;
+      const finalHash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        finalProduct
+      );
+
+      // NÁŠ MASTER KĽÚČ (Vygenerovaný Aria)
+      const MASTER_TARGET_HASH = "91eb062f30e2eddfbeb04e08b4c030d0a13e216636699d893863736d6c4bf21c";
+
+      if (finalHash === MASTER_TARGET_HASH) {
+        // ÚSPECH: Odomkneme v Context (len v RAM)
+        await unlockSeal(true);
+        setShowVaultInput(false);
+        setSecretWord('');
+        setArchitectSHA('');
+        // Presmerovanie do velína
+        navigation.navigate('Diagnostic');
+      } else {
+        // Tiché odmietnutie a vymazanie stôp
+        setShowVaultInput(false);
+        setSecretWord('');
+        setArchitectSHA('');
+      }
+    } catch (error) {
+      console.error("Auth Error:", error);
       setShowVaultInput(false);
-      setSecretWord('');
-    } else {
-      // Tiché odmietnutie bez zbytočných rečí
-      setShowVaultInput(false);
-      setSecretWord('');
     }
   };
 
@@ -121,7 +145,6 @@ const DashboardScreen = ({ navigation }) => {
           <MenuCard title="KONTAKTY" icon="📇" target="Contacts" description="Uložené sieťové spojenia" />
         </View>
 
-        {/* TAJNÝ SPÚŠŤAČ V PÄTIČKE */}
         <TouchableOpacity 
           activeOpacity={1} 
           onPress={handleSecretTap}
@@ -135,8 +158,30 @@ const DashboardScreen = ({ navigation }) => {
 
       {/* MODÁLNE OKNO PRE VSTUP ARCHITEKTA */}
       <Modal visible={showVaultInput} transparent={true} animationType="fade">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-          <Text style={[G.mono, { color: '#F0F', letterSpacing: 5, marginBottom: 20 }]}>PROTOTYP_LARIA_AUTH</Text>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.98)', justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+          <Text style={[G.mono, { color: '#0FF', letterSpacing: 5, marginBottom: 30 }]}>ARCHITECT_IDENTIFICATION</Text>
+          
+          <TextInput
+            style={{
+              width: '100%',
+              backgroundColor: '#111',
+              color: '#FFF',
+              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+              padding: 15,
+              textAlign: 'center',
+              borderWidth: 1,
+              borderColor: '#333',
+              fontSize: 14,
+              marginBottom: 15
+            }}
+            placeholder="MASTER SHA IDENT"
+            placeholderTextColor="#222"
+            value={architectSHA}
+            onChangeText={setArchitectSHA}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
           <TextInput
             style={{
               width: '100%',
@@ -151,13 +196,28 @@ const DashboardScreen = ({ navigation }) => {
             }}
             placeholder="SLOVO MOCI"
             placeholderTextColor="#222"
-            autoFocus={true}
             secureTextEntry={true}
             value={secretWord}
             onChangeText={setSecretWord}
             onSubmitEditing={handleUnlock}
           />
-          <TouchableOpacity onPress={() => { setShowVaultInput(false); setSecretWord(''); }} style={{ marginTop: 30 }}>
+
+          <TouchableOpacity 
+            onPress={handleUnlock}
+            style={{ 
+              marginTop: 30, 
+              padding: 15, 
+              backgroundColor: '#000', 
+              borderWidth: 1, 
+              borderColor: '#0FF', 
+              width: '100%', 
+              alignItems: 'center' 
+            }}
+          >
+            <Text style={[G.mono, { color: '#0FF' }]}>[ INICIÁCIA_VSTUPU ]</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => { setShowVaultInput(false); setSecretWord(''); setArchitectSHA(''); }} style={{ marginTop: 30 }}>
             <Text style={[G.textDim, { fontSize: 10 }]}>[ ZRUŠIŤ PROCES ]</Text>
           </TouchableOpacity>
         </View>

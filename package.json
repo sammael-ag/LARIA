@@ -23,6 +23,7 @@
     "ethers": "^6.16.0",
     "expo": "~51.0.38",
     "expo-application": "~5.9.1",
+    "expo-crypto": "~13.0.2",
     "expo-device": "~6.0.2",
     "expo-navigation-bar": "~3.0.7",
     "expo-status-bar": "~1.12.1",

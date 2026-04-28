@@ -2,7 +2,6 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device'; 
-// Importujeme protokol a alchymistické nástroje z LariaLogic
 import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../src/services/LariaLogic';
 
 const LariaContext = createContext();
@@ -35,17 +34,17 @@ export const LariaProvider = ({ children }) => {
     }
   });
 
-  // --- 1. INICIALIZÁCIA MATRIXU (S ARCHITEKTOVOU PEČAŤOU) ---
+  // --- 1. INICIALIZÁCIA MATRIXU (Očistená od starej pečate) ---
   useEffect(() => {
     const initializeVault = async () => {
       try {
-        // A. Načítanie existujúcej identity z trezoru
         let savedIdentity = await loadFromVault('identity');
         
-        // B. Načítanie Architektovej pečate (či už bolo niekedy zadané slovo moci)
-        const hasSeal = await loadFromVault('architect_seal');
+        // ARCHITEKTOVA ZMENA: 
+        // Už nečítame 'architect_seal' z loadFromVault. 
+        // Pri každom štarte aplikácie začínaš ako bežný užívateľ (false).
+        const hasSeal = false; 
         
-        // C. Získanie unikátneho odtlačku zariadenia pre výpočet SHA
         let rawDeviceId = null;
         if (Platform.OS === 'android') {
           rawDeviceId = Application.androidId || Device.osBuildId || "S_DEVICE_A";
@@ -53,7 +52,6 @@ export const LariaProvider = ({ children }) => {
           rawDeviceId = await Application.getIosIdForVendorAsync();
         }
 
-        // D. ALCHÝMIA: Vygenerujeme aktuálne SHA
         const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.name || "Sammael");
 
         if (!savedIdentity) {
@@ -66,8 +64,8 @@ export const LariaProvider = ({ children }) => {
           savedIdentity.sha = currentSha;
         }
 
-        // E. PROTOKOL: Výpočet statusov (Dvojitý zámok: SHA + Pečať)
-        const updatedStatus = runLariaProtocol(savedIdentity, hasSeal === true);
+        // Protokol teraz vždy vyhodnotí isAdmin na false pri štarte
+        const updatedStatus = runLariaProtocol(savedIdentity, hasSeal);
         
         setVault({
           status: updatedStatus,
@@ -84,14 +82,12 @@ export const LariaProvider = ({ children }) => {
     initializeVault();
   }, []);
 
-  // --- 2. ODOMKNUTIE ARCHITEKTOVEJ PEČATE ---
-  // Táto funkcia sa zavolá, keď úspešne prejde overenie "Slova moci"
+  // --- 2. ODOMKNUTIE ARCHITEKTOVEJ PEČATE (Iba v RAM) ---
   const unlockSeal = async (isCorrect) => {
     if (isCorrect) {
-      // Zapíšeme pečať do fyzickej pamäte mobilu
-      await saveToVault('architect_seal', true);
-      
-      // Okamžitý update stavu v pamäti appky, aby sa Admin Panel hneď zjavil
+      // ARCHITEKTOVA ZMENA: 
+      // Úplne sme vynechali saveToVault('architect_seal', true).
+      // Prístup sa nikde nezapisuje na disk, žije len v tomto stave (setVault).
       const newStatus = runLariaProtocol(vault.identity, true);
       setVault(prev => ({
         ...prev,
@@ -102,12 +98,21 @@ export const LariaProvider = ({ children }) => {
     return false;
   };
 
-  // --- 3. SYNCHRONIZÁCIA IDENTITY ---
+  // --- 3. UZAMKNUTIE ARCHITEKTOVEJ PEČATE (Logout z RAM) ---
+  const lockSeal = () => {
+    const newStatus = runLariaProtocol(vault.identity, false);
+    setVault(prev => ({
+      ...prev,
+      status: newStatus
+    }));
+  };
+
+  // --- 4. SYNCHRONIZÁCIA IDENTITY ---
   const syncIdentity = async (newIdentityData) => {
-    // Pri synch sa musíme znova pozrieť, či máme pečať
-    const hasSeal = await loadFromVault('architect_seal');
+    // Pri synch zachovávame súčasný stav isAdmin z pamäte
+    const currentAdminStatus = vault.status.isAdmin;
     const updatedIdentity = { ...vault.identity, ...newIdentityData };
-    const newStatus = runLariaProtocol(updatedIdentity, hasSeal === true);
+    const newStatus = runLariaProtocol(updatedIdentity, currentAdminStatus);
     
     setVault({ 
       status: newStatus, 
@@ -117,7 +122,7 @@ export const LariaProvider = ({ children }) => {
     await saveToVault('identity', updatedIdentity);
   };
 
-  // --- 4. AKTUALIZÁCIA TREZORU ---
+  // --- 5. AKTUALIZÁCIA TREZORU ---
   const updateVault = (category, data) => {
     setVault(prev => ({
       ...prev,
@@ -126,7 +131,7 @@ export const LariaProvider = ({ children }) => {
   };
 
   return (
-    <LariaContext.Provider value={{ vault, syncIdentity, updateVault, unlockSeal }}>
+    <LariaContext.Provider value={{ vault, syncIdentity, updateVault, unlockSeal, lockSeal }}>
       {children}
     </LariaContext.Provider>
   );
