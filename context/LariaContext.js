@@ -2,13 +2,22 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device'; 
+import { ethers } from 'ethers'; // Potrebné pre Vratníka
 import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../src/services/LariaLogic';
-import { useKrypto } from './KryptoContext'; // Importujeme čokoládu
+import { useKrypto } from './KryptoContext';
 
 const LariaContext = createContext();
 
 export const LariaProvider = ({ children }) => {
-  const { generateAutoWallet, recoverWalletFromKey, syncWalletData } = useKrypto();
+  const { 
+    generateAutoWallet, 
+    recoverWalletFromKey, 
+    syncWalletData, 
+    ownerAddress, 
+    rpcUrl, 
+    lariaContractAddress 
+  } = useKrypto();
+
   const [vault, setVault] = useState({
     status: {
       isOnline: false,
@@ -22,8 +31,8 @@ export const LariaProvider = ({ children }) => {
     identity: {
       name: "Sammael",
       sha: null,
-      walletAddress: null, // Tu budeme mať adresu
-      privateKey: null,    // Tu schováme kľúč (v Encrypted Vault)
+      walletAddress: null,
+      privateKey: null,
       irc: null,
       nfc: null,
       email: null,
@@ -38,6 +47,38 @@ export const LariaProvider = ({ children }) => {
     }
   });
 
+  // --- 🔥 VRATNÍK: ONBOARDING PROTOKOL (0.001 LARIA) ---
+  const onboardNewUser = async (newUserAddress) => {
+    try {
+      console.log("🛠️ VRATNÍK: Štartujem distribúciu pre:", newUserAddress);
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
+      
+      // Načítanie kľúča z .env
+      const architectKey = process.env.PRIVATE_KEY || process.env.EXPO_PUBLIC_PRIVATE_KEY;
+
+      if (!architectKey) {
+        console.error("⚠️ VRATNÍK_ERROR: Chýba PRIVATE_KEY v .env súbore!");
+        return;
+      }
+
+      const architectWallet = new ethers.Wallet(architectKey, provider);
+      const minABI = ["function transfer(address to, uint256 amount) returns (bool)"];
+      const contract = new ethers.Contract(lariaContractAddress, minABI, architectWallet);
+
+      const amount = ethers.parseUnits("0.001", 18);
+      const tx = await contract.transfer(newUserAddress, amount);
+      console.log("🚀 VRATNÍK: Transakcia odoslaná:", tx.hash);
+      
+      await tx.wait();
+      console.log("✅ VRATNÍK: 0.001 LARIA doručených!");
+      
+      await syncWalletData(newUserAddress);
+      await syncWalletData(ownerAddress);
+    } catch (error) {
+      console.error("❌ VRATNÍK_ERROR:", error.message);
+    }
+  };
+
   // --- 1. INICIALIZÁCIA MATRIXU ---
   useEffect(() => {
     const initializeVault = async () => {
@@ -45,12 +86,9 @@ export const LariaProvider = ({ children }) => {
         let savedIdentity = await loadFromVault('identity');
         const hasSeal = false; 
         
-        let rawDeviceId = null;
-        if (Platform.OS === 'android') {
-          rawDeviceId = Application.androidId || Device.osBuildId || "S_DEVICE_A";
-        } else if (Platform.OS === 'ios') {
-          rawDeviceId = await Application.getIosIdForVendorAsync();
-        }
+        let rawDeviceId = Platform.OS === 'android' 
+          ? (Application.androidId || Device.osBuildId || "S_DEVICE_A") 
+          : await Application.getIosIdForVendorAsync();
 
         const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.name || "Sammael");
 
@@ -63,7 +101,6 @@ export const LariaProvider = ({ children }) => {
         const updatedStatus = runLariaProtocol(savedIdentity, hasSeal);
         setVault({ status: updatedStatus, identity: savedIdentity });
 
-        // Ak už peňaženku máme, rovno ju skúsime "nacítiť" na blockchaine
         if (savedIdentity.walletAddress) {
           syncWalletData(savedIdentity.walletAddress);
         }
@@ -76,7 +113,7 @@ export const LariaProvider = ({ children }) => {
     initializeVault();
   }, []);
 
-  // --- 2. MOŽNOSŤ: OBNOVA STARÉHO ÚČTU (Reinkarnácia) ---
+  // --- 2. REINKARNÁCIA ---
   const reinkarnaciaIdentity = async (oldPrivateKey) => {
     const recovered = recoverWalletFromKey(oldPrivateKey);
     if (recovered) {
@@ -92,9 +129,8 @@ export const LariaProvider = ({ children }) => {
     return false;
   };
 
-  // --- 3. MOŽNOSŤ: ZROD NOVEJ IDENTITY (AutoWallet) ---
+  // --- 3. ZROD IDENTITY (S AKTIVÁCIOU VRATNÍKA) ---
   const ensureLariaIdentity = async () => {
-    // Ak už adresu máme, nerobíme nič
     if (vault.identity.walletAddress) return vault.identity.walletAddress;
 
     const newWallet = await generateAutoWallet();
@@ -105,14 +141,18 @@ export const LariaProvider = ({ children }) => {
         privateKey: newWallet.privateKey 
       };
       await syncIdentity(updatedIdentity);
-      // Tu v budúcnu zavoláme tvoj Gtab, aby "minti" 0.0001 LARIA
-      await syncWalletData(newWallet.address);
+      
+      // Onboarding s oneskorením, aby blockchain stihol spracovať adresu
+      setTimeout(() => {
+        onboardNewUser(newWallet.address);
+      }, 2000);
+
       return newWallet.address;
     }
     return null;
   };
 
-  // --- OSTATNÉ FUNKCIE (unlock, lock, update...) ---
+  // --- OSTATNÉ FUNKCIE ---
   const unlockSeal = async (isCorrect) => {
     if (isCorrect) {
       const newStatus = runLariaProtocol(vault.identity, true);
@@ -136,6 +176,7 @@ export const LariaProvider = ({ children }) => {
     await saveToVault('identity', updatedIdentity);
   };
 
+  // Tvoja dôležitá funkcia, ktorá predtým chýbala:
   const updateVault = (category, data) => {
     setVault(prev => ({ ...prev, [category]: { ...prev[category], ...data } }));
   };
@@ -147,8 +188,8 @@ export const LariaProvider = ({ children }) => {
       updateVault, 
       unlockSeal, 
       lockSeal, 
-      ensureLariaIdentity, // Nová jahôdka
-      reinkarnaciaIdentity  // Nový šaman
+      ensureLariaIdentity, 
+      reinkarnaciaIdentity 
     }}>
       {children}
     </LariaContext.Provider>

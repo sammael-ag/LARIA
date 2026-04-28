@@ -1,33 +1,52 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLaria } from '../../context/LariaContext';
 import { useKrypto } from '../../context/KryptoContext';
 import { G } from '../styles/styles';
 
 const DiagnosticScreen = ({ navigation }) => {
-  // Pridali sme lockSeal z tvojho nového Contextu
   const { vault, lockSeal } = useLaria();
   const { status, identity } = vault;
   
+  // Ťaháme nové "admin" premenné z nášho rozdvojovača
   const { 
-    connectWallet, 
-    ethBalance, 
-    lariaBalance, 
+    syncWalletData, 
+    adminEthBalance, 
+    adminLariaBalance, 
     isLoading, 
-    isWalletConnected,
     ownerAddress 
   } = useKrypto();
 
   // Definitívny Logout mechanizmus
   const handleSecureLogout = () => {
-    lockSeal(); // Okamžité zničenie admin statusu v RAM
+    lockSeal(); 
     navigation.reset({
       index: 0,
       routes: [{ name: 'Dashboard' }],
-    }); // Návrat na štart a vymazanie histórie navigácie
+    }); 
   };
 
+  // 🛡️ POISTKY A AUTOMATIZÁCIA
+  useEffect(() => {
+    // 1. Automatický refresh pri vstupe (ťaháme dáta majiteľa)
+    syncWalletData(ownerAddress);
+
+    // 2. Poistka na hardvérovú šípku späť (Android)
+    const backAction = () => {
+      handleSecureLogout();
+      return true; // Zastaví predvolený goBack
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, []);
+
+  // Ak nie je admin, nepustíme ho ani k vizuálu
   if (!status.isAdmin) {
     return (
       <SafeAreaView style={[G.bgDashboard, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -46,10 +65,10 @@ const DiagnosticScreen = ({ navigation }) => {
         <Text style={[G.textWhite, { fontSize: 24, fontWeight: 'bold', letterSpacing: 5 }]}>DIAGNOSTIC JADRO</Text>
         <Text style={[G.textCyber, { marginBottom: 30 }]}>ADMIN_LEVEL: 01 | SYSTEM_NOMINAL</Text>
 
-        {/* SEKČIA MATRIXU */}
-        <View style={[G.card, { borderColor: isWalletConnected ? '#0FF' : '#333', borderWidth: 1, marginBottom: 15 }]}>
+        {/* SEKČIA MATRIXU (ARCHITECT DATA) */}
+        <View style={[G.card, { borderColor: '#0FF', borderWidth: 1, marginBottom: 15 }]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-            <Text style={[G.mono, { color: '#0FF' }]}>[ MATRIX_STATUS ]</Text>
+            <Text style={[G.mono, { color: '#0FF' }]}>[ ARCHITECT_STORAGE ]</Text>
             {isLoading && <ActivityIndicator size="small" color="#0FF" />}
           </View>
           
@@ -57,50 +76,48 @@ const DiagnosticScreen = ({ navigation }) => {
 
           {/* PALIVO (ETH) */}
           <View style={{ marginTop: 10 }}>
-            <Text style={[G.mono, { fontSize: 10, color: '#888' }]}>GAS_RESERVE:</Text>
+            <Text style={[G.mono, { fontSize: 10, color: '#888' }]}>OWNER_GAS_RESERVE:</Text>
             <Text style={[G.textWhite, { fontSize: 16 }]}>
-              {ethBalance} <Text style={{ fontSize: 10, color: '#0FF' }}>ETH</Text>
+              {adminEthBalance} <Text style={{ fontSize: 10, color: '#0FF' }}>ETH</Text>
             </Text>
           </View>
 
           {/* OBJEM LARIA */}
-          <View style={{ marginTop: 15, padding: 10, backgroundColor: '#051a1a', borderRadius: 5 }}>
-            <Text style={[G.mono, { fontSize: 10, color: '#0FF' }]}>VOLUME_LARIA:</Text>
-            <Text style={[G.textWhite, { fontSize: 28, fontWeight: 'bold', color: '#0FF' }]}>
-              {lariaBalance ? Number(lariaBalance).toLocaleString() : '0'} 
-              <Text style={{ fontSize: 12, letterSpacing: 1 }}> units</Text>
+          <View style={{ marginTop: 15, padding: 15, backgroundColor: '#051a1a', borderRadius: 5, borderLeftWidth: 3, borderLeftColor: '#0FF' }}>
+            <Text style={[G.mono, { fontSize: 10, color: '#0FF' }]}>TOTAL_LARIA_RESERVE:</Text>
+            <Text style={[G.textWhite, { fontSize: 32, fontWeight: 'bold', color: '#0FF' }]}>
+              {adminLariaBalance && adminLariaBalance !== "0" ? Number(adminLariaBalance).toLocaleString() : '0.00'} 
             </Text>
+            <Text style={[G.textDim, { fontSize: 9 }]}>Ready for distribution</Text>
           </View>
 
           <TouchableOpacity 
-            onPress={connectWallet} 
+            onPress={() => syncWalletData(ownerAddress)} 
             disabled={isLoading}
             style={{ 
               marginTop: 20, 
               padding: 12, 
-              backgroundColor: '#111', 
-              borderWidth: 1, 
-              borderColor: isWalletConnected ? '#0FF' : '#444',
+              backgroundColor: '#0FF', 
               alignItems: 'center' 
             }}
           >
-            <Text style={[G.mono, { fontSize: 11, color: isLoading ? '#444' : '#FFF' }]}>
-              {isWalletConnected ? "REFRESH MATRIX DATA" : "SYNCHRONIZOVAŤ"}
+            <Text style={[G.mono, { fontSize: 11, color: '#000', fontWeight: 'bold' }]}>
+              {isLoading ? "SYNCING..." : "FORCE REFRESH CORE DATA"}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* LOGY SYSTÉMU */}
         <View style={G.card}>
-          <Text style={G.mono}>[ LOGS ]</Text>
-          <Text style={[G.textDim, { fontSize: 12, marginTop: 10 }]}>- Matrix: {isWalletConnected ? "ONLINE" : "STANDBY"}</Text>
-          <Text style={[G.textDim, { fontSize: 12 }]}>- Identita: {identity.sha?.substring(0, 16)}...</Text>
-          <Text style={[G.textDim, { fontSize: 12 }]}>
-            - Wallet: {ownerAddress ? ownerAddress.substring(0, 10) + "..." : "N/A"}
+          <Text style={G.mono}>[ SYSTEM_LOGS ]</Text>
+          <Text style={[G.textDim, { fontSize: 11, marginTop: 10 }]}>- Identity SHA: {identity.sha?.substring(0, 24)}...</Text>
+          <Text style={[G.textDim, { fontSize: 11 }]}>
+            - Owner Node: {ownerAddress?.substring(0, 20)}...
           </Text>
+          <Text style={[G.textCyber, { fontSize: 10, marginTop: 5 }]}>- Status: Full Architect Access Verified</Text>
         </View>
 
-        {/* BEZPEČNOSTNÝ LOGOUT TLAČIDLO */}
+        {/* BEZPEČNOSTNÝ LOGOUT */}
         <TouchableOpacity 
           onPress={handleSecureLogout} 
           style={{ 
@@ -111,15 +128,15 @@ const DiagnosticScreen = ({ navigation }) => {
             alignItems: 'center'
           }}
         >
-          <Text style={[G.mono, { color: '#F44', fontWeight: 'bold', letterSpacing: 2 }]}>[ ARCHITECT_LOGOUT ]</Text>
-          <Text style={[G.textDim, { fontSize: 9, marginTop: 5 }]}>ERASE SESSION FROM RAM</Text>
+          <Text style={[G.mono, { color: '#F44', fontWeight: 'bold', letterSpacing: 2 }]}>[ TERMINATE_ADMIN_SESSION ]</Text>
+          <Text style={[G.textDim, { fontSize: 9, marginTop: 5 }]}>WIPE KEYS FROM VOLATILE MEMORY</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
           onPress={() => navigation.goBack()} 
           style={{ marginTop: 20, paddingBottom: 30, alignItems: 'center' }}
         >
-          <Text style={[G.textDim, { fontSize: 10 }]}>← SKRYŤ PANEL (BEZ ODHLÁSENIA)</Text>
+          <Text style={[G.textDim, { fontSize: 10 }]}>← BACK TO SURFACE (KEEP SESSION)</Text>
         </TouchableOpacity>
 
       </ScrollView>
