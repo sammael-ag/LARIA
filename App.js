@@ -12,12 +12,12 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 
-// Krypto a Data (Tvoje pôvodné)
+// Krypto a Data
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from './src/services/WalletProvider';
 
-// Naše nové taviace kotly (Doplnené)
+// Naše nové taviace kotly
 import { LariaProvider } from './context/LariaContext';
 import { KryptoProvider } from './context/KryptoContext';
 
@@ -39,22 +39,22 @@ export default function App() {
     prepare();
   }, []);
 
-  // Ak krypto config nie je pripravený, vrátime prázdnu plochu
   if (!wagmiConfig) {
     return null; 
   }
 
-  // Tvoj chrám, kde sa spája duša, kód a krypto:
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <LariaProvider>
-          <KryptoProvider>
+        {/* KRYPTO MUSÍ BYŤ PRVÉ - Je to základná doska, na ktorej všetko stojí */}
+        <KryptoProvider>
+          {/* LARIA PRICHÁDZA DRUHÁ - Čerpá funkcie z KryptoProvidera */}
+          <LariaProvider>
             <SafeAreaProvider>
               <AppNavigator />
             </SafeAreaProvider>
-          </KryptoProvider>
-        </LariaProvider>
+          </LariaProvider>
+        </KryptoProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

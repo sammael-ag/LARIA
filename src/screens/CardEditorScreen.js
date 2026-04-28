@@ -41,13 +41,14 @@ const CATEGORIES = [
 ];
 
 const CardEditorScreen = ({ navigation }) => {
-  const { vault, syncIdentity } = useLaria();
+  // Integrujeme našu novú jahôdku 'ensureLariaIdentity'
+  const { vault, syncIdentity, ensureLariaIdentity } = useLaria();
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
   const [cardData, setCardData] = useState({
     sha: vault.identity.sha, 
-    kategoria: vault.identity.kategoria || 'remesla', // OPRAVENÉ: Zladenie s Vrátnikom
+    kategoria: vault.identity.kategoria || 'remesla', 
     meno: vault.identity.name || '',
     lok: vault.identity.lok || 'Rákoš / Rožňava / Revúca',
     popis: vault.identity.popis || 'Rustic, steampunk a avantgardné stolárstvo.',
@@ -58,7 +59,7 @@ const CardEditorScreen = ({ navigation }) => {
     gal: vault.identity.gal || '',
     revo: vault.identity.revo || '',
     kRod: vault.identity.kRod || '',
-    krypt: vault.identity.krypt || '',
+    krypt: vault.identity.walletAddress || vault.identity.krypt || '', 
     isPublic: vault.status.isOnline || false 
   });
 
@@ -82,13 +83,17 @@ const CardEditorScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
+      // --- 🍫 KRYPTO ZROD (Neviditeľný proces) ---
+      // Ak užívateľ ešte nemá peňaženku, vytvoríme ju pred odoslaním do Matrixu
+      const currentWalletAddress = await ensureLariaIdentity();
+      
       const cleanTel = cardData.tel ? cardData.tel.toString().replace(/\s/g, '') : '';
 
-      // 1. ZAPEČATENIE DO KUFRA (Zladenie názvov)
+      // 1. ZAPEČATENIE LOKÁLNEHO TREZORU
       const updatedIdentity = {
         ...vault.identity,
         name: cardData.meno,
-        kategoria: cardData.kategoria, // OPRAVENÉ
+        kategoria: cardData.kategoria,
         lok: cardData.lok,
         popis: cardData.popis,
         tel: cleanTel,
@@ -98,26 +103,33 @@ const CardEditorScreen = ({ navigation }) => {
         gal: cardData.gal,
         revo: cardData.revo,
         kRod: cardData.kRod,
-        krypt: cardData.krypt,
+        // Ak sa vygenerovala nová adresa, prioritne použijeme tú
+        walletAddress: currentWalletAddress || vault.identity.walletAddress,
+        krypt: currentWalletAddress || cardData.krypt,
         isPublic: cardData.isPublic
       };
 
       await syncIdentity(updatedIdentity);
 
-      // 2. VYSIELANIE DO MATRIXU
-      // Tu posielame už priamo cardData, kde je kľúč 'kategoria'
-      const result = await saveToGMatrix({ ...cardData, tel: cleanTel });
+      // 2. VYSIELANIE DO MATRIXU (Pre Vrátnika Gtab)
+      const matrixData = { 
+        ...cardData, 
+        tel: cleanTel, 
+        krypt: currentWalletAddress || cardData.krypt 
+      };
+      
+      const result = await saveToGMatrix(matrixData);
 
       if (result && result.success) {
-        Alert.alert("Pečať vytesaná", "Tvoja identita bola úspešne odoslaná do Matrixu.");
+        Alert.alert("Pečať vytesaná", "Tvoja identita a peňaženka boli úspešne prepojené.");
         navigation.goBack();
       } else {
-        Alert.alert("Lokálne zapečatené", "V mobile uložené, ale Vrátnik neodpovedá.");
+        Alert.alert("Lokálne zapečatené", "V mobile uložené, Vrátnik spracuje dáta neskôr.");
         navigation.goBack();
       }
     } catch (error) {
       console.error(error);
-      Alert.alert("Chyba spojenia", "Synchronizácia s Matrixom zlyhala.");
+      Alert.alert("Chyba spojenia", "Proces tesania identity zlyhal.");
     } finally {
       setLoading(false);
     }
@@ -137,7 +149,7 @@ const CardEditorScreen = ({ navigation }) => {
           <View style={{ width: 8, height: 8, backgroundColor: cardData.isPublic ? '#0FF' : '#F0F', borderRadius: 4 }} />
         </View>
 
-        {/* SHA SIGNATURE */}
+        {/* SHA SIGNATURE DISPLAY */}
         <TouchableOpacity onPress={copyToClipboard} activeOpacity={0.7} style={{ marginBottom: 25, padding: 12, backgroundColor: '#050505', borderRadius: 5, borderStyle: 'dashed', borderWidth: 1, borderColor: '#333', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
             <Text style={[G.textDim, { fontSize: 9, letterSpacing: 1 }]}>AKTÍVNY DIGITÁLNY PODPIS (SHA)</Text>
@@ -160,7 +172,6 @@ const CardEditorScreen = ({ navigation }) => {
         <Text style={G.textCyber}>MENO / NICK</Text>
         <TextInput style={G.terminalInput} value={cardData.meno} onChangeText={(val) => setCardData({...cardData, meno: val})} placeholder="Tvoje meno..." placeholderTextColor={G.placeholderColor} />
 
-        {/* KATEGÓRIA (PICKER) */}
         <Text style={G.textCyber}>HLAVNÁ KATEGÓRIA</Text>
         <TouchableOpacity 
           style={[G.terminalInput, { justifyContent: 'center' }]} 
@@ -237,7 +248,7 @@ const CardEditorScreen = ({ navigation }) => {
                 <TouchableOpacity 
                   style={{ padding: 15, borderBottomWidth: 1, borderBottomColor: '#222' }}
                   onPress={() => {
-                    setCardData({ ...cardData, kategoria: item.id }); // OPRAVENÉ
+                    setCardData({ ...cardData, kategoria: item.id }); 
                     setShowPicker(false);
                   }}
                 >

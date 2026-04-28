@@ -3,10 +3,12 @@ import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device'; 
 import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../src/services/LariaLogic';
+import { useKrypto } from './KryptoContext'; // Importujeme čokoládu
 
 const LariaContext = createContext();
 
 export const LariaProvider = ({ children }) => {
+  const { generateAutoWallet, recoverWalletFromKey, syncWalletData } = useKrypto();
   const [vault, setVault] = useState({
     status: {
       isOnline: false,
@@ -20,6 +22,8 @@ export const LariaProvider = ({ children }) => {
     identity: {
       name: "Sammael",
       sha: null,
+      walletAddress: null, // Tu budeme mať adresu
+      privateKey: null,    // Tu schováme kľúč (v Encrypted Vault)
       irc: null,
       nfc: null,
       email: null,
@@ -34,15 +38,11 @@ export const LariaProvider = ({ children }) => {
     }
   });
 
-  // --- 1. INICIALIZÁCIA MATRIXU (Očistená od starej pečate) ---
+  // --- 1. INICIALIZÁCIA MATRIXU ---
   useEffect(() => {
     const initializeVault = async () => {
       try {
         let savedIdentity = await loadFromVault('identity');
-        
-        // ARCHITEKTOVA ZMENA: 
-        // Už nečítame 'architect_seal' z loadFromVault. 
-        // Pri každom štarte aplikácie začínaš ako bežný užívateľ (false).
         const hasSeal = false; 
         
         let rawDeviceId = null;
@@ -55,83 +55,101 @@ export const LariaProvider = ({ children }) => {
         const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.name || "Sammael");
 
         if (!savedIdentity) {
-          savedIdentity = { 
-            ...vault.identity,
-            name: "Sammael",
-            sha: currentSha 
-          };
+          savedIdentity = { ...vault.identity, name: "Sammael", sha: currentSha };
         } else {
           savedIdentity.sha = currentSha;
         }
 
-        // Protokol teraz vždy vyhodnotí isAdmin na false pri štarte
         const updatedStatus = runLariaProtocol(savedIdentity, hasSeal);
-        
-        setVault({
-          status: updatedStatus,
-          identity: savedIdentity
-        });
+        setVault({ status: updatedStatus, identity: savedIdentity });
+
+        // Ak už peňaženku máme, rovno ju skúsime "nacítiť" na blockchaine
+        if (savedIdentity.walletAddress) {
+          syncWalletData(savedIdentity.walletAddress);
+        }
 
         await saveToVault('identity', savedIdentity);
-        
       } catch (error) {
         console.error("Laria Initialization Error:", error);
       }
     };
-
     initializeVault();
   }, []);
 
-  // --- 2. ODOMKNUTIE ARCHITEKTOVEJ PEČATE (Iba v RAM) ---
-  const unlockSeal = async (isCorrect) => {
-    if (isCorrect) {
-      // ARCHITEKTOVA ZMENA: 
-      // Úplne sme vynechali saveToVault('architect_seal', true).
-      // Prístup sa nikde nezapisuje na disk, žije len v tomto stave (setVault).
-      const newStatus = runLariaProtocol(vault.identity, true);
-      setVault(prev => ({
-        ...prev,
-        status: newStatus
-      }));
+  // --- 2. MOŽNOSŤ: OBNOVA STARÉHO ÚČTU (Reinkarnácia) ---
+  const reinkarnaciaIdentity = async (oldPrivateKey) => {
+    const recovered = recoverWalletFromKey(oldPrivateKey);
+    if (recovered) {
+      const updatedIdentity = { 
+        ...vault.identity, 
+        walletAddress: recovered.address,
+        privateKey: recovered.privateKey 
+      };
+      await syncIdentity(updatedIdentity);
+      await syncWalletData(recovered.address);
       return true;
     }
     return false;
   };
 
-  // --- 3. UZAMKNUTIE ARCHITEKTOVEJ PEČATE (Logout z RAM) ---
-  const lockSeal = () => {
-    const newStatus = runLariaProtocol(vault.identity, false);
-    setVault(prev => ({
-      ...prev,
-      status: newStatus
-    }));
+  // --- 3. MOŽNOSŤ: ZROD NOVEJ IDENTITY (AutoWallet) ---
+  const ensureLariaIdentity = async () => {
+    // Ak už adresu máme, nerobíme nič
+    if (vault.identity.walletAddress) return vault.identity.walletAddress;
+
+    const newWallet = await generateAutoWallet();
+    if (newWallet) {
+      const updatedIdentity = { 
+        ...vault.identity, 
+        walletAddress: newWallet.address,
+        privateKey: newWallet.privateKey 
+      };
+      await syncIdentity(updatedIdentity);
+      // Tu v budúcnu zavoláme tvoj Gtab, aby "minti" 0.0001 LARIA
+      await syncWalletData(newWallet.address);
+      return newWallet.address;
+    }
+    return null;
   };
 
-  // --- 4. SYNCHRONIZÁCIA IDENTITY ---
+  // --- OSTATNÉ FUNKCIE (unlock, lock, update...) ---
+  const unlockSeal = async (isCorrect) => {
+    if (isCorrect) {
+      const newStatus = runLariaProtocol(vault.identity, true);
+      setVault(prev => ({ ...prev, status: newStatus }));
+      return true;
+    }
+    return false;
+  };
+
+  const lockSeal = () => {
+    const newStatus = runLariaProtocol(vault.identity, false);
+    setVault(prev => ({ ...prev, status: newStatus }));
+  };
+
   const syncIdentity = async (newIdentityData) => {
-    // Pri synch zachovávame súčasný stav isAdmin z pamäte
     const currentAdminStatus = vault.status.isAdmin;
     const updatedIdentity = { ...vault.identity, ...newIdentityData };
     const newStatus = runLariaProtocol(updatedIdentity, currentAdminStatus);
     
-    setVault({ 
-      status: newStatus, 
-      identity: updatedIdentity 
-    });
-    
+    setVault({ status: newStatus, identity: updatedIdentity });
     await saveToVault('identity', updatedIdentity);
   };
 
-  // --- 5. AKTUALIZÁCIA TREZORU ---
   const updateVault = (category, data) => {
-    setVault(prev => ({
-      ...prev,
-      [category]: { ...prev[category], ...data }
-    }));
+    setVault(prev => ({ ...prev, [category]: { ...prev[category], ...data } }));
   };
 
   return (
-    <LariaContext.Provider value={{ vault, syncIdentity, updateVault, unlockSeal, lockSeal }}>
+    <LariaContext.Provider value={{ 
+      vault, 
+      syncIdentity, 
+      updateVault, 
+      unlockSeal, 
+      lockSeal, 
+      ensureLariaIdentity, // Nová jahôdka
+      reinkarnaciaIdentity  // Nový šaman
+    }}>
       {children}
     </LariaContext.Provider>
   );
