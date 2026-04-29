@@ -51,19 +51,27 @@ export const LariaProvider = ({ children }) => {
     }
   };
 
-  // --- 🔧 AUTO-REPAIR: Kontrola a oprava zostatku ---
+  // --- 🔧 AUTO-REPAIR: Kontrola a oprava zostatku (S poistkou Nonce) ---
   const checkAndRepairLariaAssets = async (address) => {
     if (!address) return;
     try {
       const provider = new ethers.JsonRpcProvider(rpcUrl);
+      
+      // 1. Zisťujeme zostatok
       const minABI = ["function balanceOf(address) view returns (uint256)"];
       const contract = new ethers.Contract(lariaContractAddress, minABI, provider);
       const balanceRaw = await contract.balanceOf(address);
       const balance = parseFloat(ethers.formatUnits(balanceRaw, 18));
 
-      if (balance < 0.001) {
-        console.log("🛠️ AUTO-REPAIR: Zistený dlh. Aktivujem Vratníka...");
+      // 2. Zisťujeme históriu aktivít (nonce)
+      const nonce = await provider.getTransactionCount(address);
+
+      // PODMIENKA: Opravujeme len ak je nula A peňaženka nikdy nič neodoslala (panenská)
+      if (balance < 0.001 && nonce === 0) {
+        console.log("🛠️ AUTO-REPAIR: Prvé zasvätenie identity. Volám Vratníka...");
         await onboardNewUser(address);
+      } else if (balance < 0.001 && nonce > 0) {
+        console.log("⚠️ MATRIX: Peňaženka už bola aktívna v minulosti. Onboarding zamietnutý.");
       }
     } catch (e) {
       console.log("❌ AUTO-REPAIR_FAIL:", e.message);
@@ -94,7 +102,7 @@ export const LariaProvider = ({ children }) => {
 
         if (savedIdentity.walletAddress) {
           syncWalletData(savedIdentity.walletAddress);
-          // 🚀 JEMNÁ TRANSPLANTÁCIA: Spustenie kontroly po stabilizácii (4 sekundy)
+          // Kontrola zostatku po 4 sekundách s novou poistkou
           setTimeout(() => {
             checkAndRepairLariaAssets(savedIdentity.walletAddress);
           }, 4000);
@@ -133,7 +141,7 @@ export const LariaProvider = ({ children }) => {
     return null;
   };
 
-  // --- OSTATNÉ FUNKCIE (Zachovaná stabilita) ---
+  // --- OSTATNÉ FUNKCIE ---
   const unlockSeal = async (isCorrect) => {
     if (isCorrect) {
       const newStatus = runLariaProtocol(vault.identity, true);
@@ -144,7 +152,6 @@ export const LariaProvider = ({ children }) => {
   };
 
   const lockSeal = () => {
-    const newStatus = runLariaProtocol(prev => runLariaProtocol(prev.identity, false));
     setVault(prev => ({ ...prev, status: runLariaProtocol(prev.identity, false) }));
   };
 
