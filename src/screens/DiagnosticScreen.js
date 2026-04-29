@@ -82,10 +82,10 @@ const DiagnosticScreen = ({ navigation }) => {
             </Text>
           </View>
 
-          {/* OBJEM LARIA */}
+          {/* OBJEM LARIA - FIX: Font nastavený na 16 */}
           <View style={{ marginTop: 15, padding: 15, backgroundColor: '#051a1a', borderRadius: 5, borderLeftWidth: 3, borderLeftColor: '#0FF' }}>
             <Text style={[G.mono, { fontSize: 10, color: '#0FF' }]}>TOTAL_LARIA_RESERVE:</Text>
-            <Text style={[G.textWhite, { fontSize: 32, fontWeight: 'bold', color: '#0FF' }]}>
+            <Text style={[G.textWhite, { fontSize: 16, fontWeight: 'bold', color: '#0FF' }]}>
               {adminLariaBalance && adminLariaBalance !== "0" ? Number(adminLariaBalance).toLocaleString() : '0.00'} 
             </Text>
             <Text style={[G.textDim, { fontSize: 9 }]}>Ready for distribution</Text>

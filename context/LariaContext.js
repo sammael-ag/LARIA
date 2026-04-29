@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device'; 
-import { ethers } from 'ethers'; // Potrebné pre Vratníka
+import { ethers } from 'ethers';
 import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../src/services/LariaLogic';
 import { useKrypto } from './KryptoContext';
 
@@ -19,45 +19,19 @@ export const LariaProvider = ({ children }) => {
   } = useKrypto();
 
   const [vault, setVault] = useState({
-    status: {
-      isOnline: false,
-      isIrcOnline: false, 
-      hasNFC: false,
-      isParanoid: false,
-      isGoogleFull: false,
-      isChainNode: false,
-      isAdmin: false 
-    },
-    identity: {
-      name: "Sammael",
-      sha: null,
-      walletAddress: null,
-      privateKey: null,
-      irc: null,
-      nfc: null,
-      email: null,
-      tel: null,
-      fb: null,
-      tg: null,
-      gal: null,
-      Gtab: null,
-      revo: null,
-      kRod: null,
-      krypt: null 
-    }
+    status: { isOnline: false, isIrcOnline: false, hasNFC: false, isParanoid: false, isGoogleFull: false, isChainNode: false, isAdmin: false },
+    identity: { name: "Sammael", sha: null, walletAddress: null, privateKey: null, irc: null, nfc: null, email: null, tel: null, fb: null, tg: null, gal: null, Gtab: null, revo: null, kRod: null, krypt: null }
   });
 
-  // --- 🔥 VRATNÍK: ONBOARDING PROTOKOL (0.001 LARIA) ---
+  // --- 🔥 VRATNÍK: ONBOARDING PROTOKOL (Doručenie LARIA) ---
   const onboardNewUser = async (newUserAddress) => {
     try {
       console.log("🛠️ VRATNÍK: Štartujem distribúciu pre:", newUserAddress);
       const provider = new ethers.JsonRpcProvider(rpcUrl);
-      
-      // Načítanie kľúča z .env
-      const architectKey = process.env.PRIVATE_KEY || process.env.EXPO_PUBLIC_PRIVATE_KEY;
+      const architectKey = process.env.EXPO_PUBLIC_PRIVATE_KEY || process.env.PRIVATE_KEY;
 
       if (!architectKey) {
-        console.error("⚠️ VRATNÍK_ERROR: Chýba PRIVATE_KEY v .env súbore!");
+        console.error("⚠️ VRATNÍK_ERROR: Chýba súkromný kľúč!");
         return;
       }
 
@@ -67,15 +41,32 @@ export const LariaProvider = ({ children }) => {
 
       const amount = ethers.parseUnits("0.001", 18);
       const tx = await contract.transfer(newUserAddress, amount);
-      console.log("🚀 VRATNÍK: Transakcia odoslaná:", tx.hash);
-      
       await tx.wait();
-      console.log("✅ VRATNÍK: 0.001 LARIA doručených!");
       
+      console.log("✅ VRATNÍK: 0.001 LARIA doručených!");
       await syncWalletData(newUserAddress);
       await syncWalletData(ownerAddress);
     } catch (error) {
       console.error("❌ VRATNÍK_ERROR:", error.message);
+    }
+  };
+
+  // --- 🔧 AUTO-REPAIR: Kontrola a oprava zostatku ---
+  const checkAndRepairLariaAssets = async (address) => {
+    if (!address) return;
+    try {
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
+      const minABI = ["function balanceOf(address) view returns (uint256)"];
+      const contract = new ethers.Contract(lariaContractAddress, minABI, provider);
+      const balanceRaw = await contract.balanceOf(address);
+      const balance = parseFloat(ethers.formatUnits(balanceRaw, 18));
+
+      if (balance < 0.001) {
+        console.log("🛠️ AUTO-REPAIR: Zistený dlh. Aktivujem Vratníka...");
+        await onboardNewUser(address);
+      }
+    } catch (e) {
+      console.log("❌ AUTO-REPAIR_FAIL:", e.message);
     }
   };
 
@@ -103,6 +94,10 @@ export const LariaProvider = ({ children }) => {
 
         if (savedIdentity.walletAddress) {
           syncWalletData(savedIdentity.walletAddress);
+          // 🚀 JEMNÁ TRANSPLANTÁCIA: Spustenie kontroly po stabilizácii (4 sekundy)
+          setTimeout(() => {
+            checkAndRepairLariaAssets(savedIdentity.walletAddress);
+          }, 4000);
         }
 
         await saveToVault('identity', savedIdentity);
@@ -117,11 +112,7 @@ export const LariaProvider = ({ children }) => {
   const reinkarnaciaIdentity = async (oldPrivateKey) => {
     const recovered = recoverWalletFromKey(oldPrivateKey);
     if (recovered) {
-      const updatedIdentity = { 
-        ...vault.identity, 
-        walletAddress: recovered.address,
-        privateKey: recovered.privateKey 
-      };
+      const updatedIdentity = { ...vault.identity, walletAddress: recovered.address, privateKey: recovered.privateKey };
       await syncIdentity(updatedIdentity);
       await syncWalletData(recovered.address);
       return true;
@@ -129,30 +120,20 @@ export const LariaProvider = ({ children }) => {
     return false;
   };
 
-  // --- 3. ZROD IDENTITY (S AKTIVÁCIOU VRATNÍKA) ---
+  // --- 3. ZROD IDENTITY ---
   const ensureLariaIdentity = async () => {
     if (vault.identity.walletAddress) return vault.identity.walletAddress;
-
     const newWallet = await generateAutoWallet();
     if (newWallet) {
-      const updatedIdentity = { 
-        ...vault.identity, 
-        walletAddress: newWallet.address,
-        privateKey: newWallet.privateKey 
-      };
+      const updatedIdentity = { ...vault.identity, walletAddress: newWallet.address, privateKey: newWallet.privateKey };
       await syncIdentity(updatedIdentity);
-      
-      // Onboarding s oneskorením, aby blockchain stihol spracovať adresu
-      setTimeout(() => {
-        onboardNewUser(newWallet.address);
-      }, 2000);
-
+      setTimeout(() => onboardNewUser(newWallet.address), 2000);
       return newWallet.address;
     }
     return null;
   };
 
-  // --- OSTATNÉ FUNKCIE ---
+  // --- OSTATNÉ FUNKCIE (Zachovaná stabilita) ---
   const unlockSeal = async (isCorrect) => {
     if (isCorrect) {
       const newStatus = runLariaProtocol(vault.identity, true);
@@ -163,33 +144,25 @@ export const LariaProvider = ({ children }) => {
   };
 
   const lockSeal = () => {
-    const newStatus = runLariaProtocol(vault.identity, false);
-    setVault(prev => ({ ...prev, status: newStatus }));
+    const newStatus = runLariaProtocol(prev => runLariaProtocol(prev.identity, false));
+    setVault(prev => ({ ...prev, status: runLariaProtocol(prev.identity, false) }));
   };
 
   const syncIdentity = async (newIdentityData) => {
     const currentAdminStatus = vault.status.isAdmin;
     const updatedIdentity = { ...vault.identity, ...newIdentityData };
     const newStatus = runLariaProtocol(updatedIdentity, currentAdminStatus);
-    
     setVault({ status: newStatus, identity: updatedIdentity });
     await saveToVault('identity', updatedIdentity);
   };
 
-  // Tvoja dôležitá funkcia, ktorá predtým chýbala:
   const updateVault = (category, data) => {
     setVault(prev => ({ ...prev, [category]: { ...prev[category], ...data } }));
   };
 
   return (
     <LariaContext.Provider value={{ 
-      vault, 
-      syncIdentity, 
-      updateVault, 
-      unlockSeal, 
-      lockSeal, 
-      ensureLariaIdentity, 
-      reinkarnaciaIdentity 
+      vault, syncIdentity, updateVault, unlockSeal, lockSeal, ensureLariaIdentity, reinkarnaciaIdentity 
     }}>
       {children}
     </LariaContext.Provider>
