@@ -17,9 +17,10 @@ import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from './src/services/WalletProvider';
 
-// Naše nové taviace kotly
+// Naše taviace kotly - Pridávame SignalProvider
 import { LariaProvider } from './context/LariaContext';
 import { KryptoProvider } from './context/KryptoContext';
+import { SignalProvider } from './context/SignalContext'; 
 
 const queryClient = new QueryClient();
 
@@ -32,7 +33,7 @@ export default function App() {
           await NavigationBar.setBackgroundColorAsync("#000000");
           await NavigationBar.setButtonStyleAsync("light");
         } catch (e) {
-          // Ticho v ateliéri...
+          // Ticho v ateliéri... ostávame v tme.
         }
       }
     }
@@ -46,13 +47,16 @@ export default function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        {/* KRYPTO MUSÍ BYŤ PRVÉ - Je to základná doska, na ktorej všetko stojí */}
+        {/* KRYPTO - Základná doska a energetický zdroj */}
         <KryptoProvider>
-          {/* LARIA PRICHÁDZA DRUHÁ - Čerpá funkcie z KryptoProvidera */}
+          {/* LARIA - Vedomie, identita a vault */}
           <LariaProvider>
-            <SafeAreaProvider>
-              <AppNavigator />
-            </SafeAreaProvider>
+            {/* SIGNAL - Zmysly a komunikácia (NFC, IRC, QR) */}
+            <SignalProvider>
+              <SafeAreaProvider>
+                <AppNavigator />
+              </SafeAreaProvider>
+            </SignalProvider>
           </LariaProvider>
         </KryptoProvider>
       </QueryClientProvider>
