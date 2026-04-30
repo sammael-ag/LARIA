@@ -13,7 +13,8 @@
       "backgroundColor": "#000000"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "sk.laria.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +25,8 @@
       "navigationBar": {
         "backgroundColor": "#000000",
         "barStyle": "light-content"
-      }
+      },
+      "package": "sk.laria.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"

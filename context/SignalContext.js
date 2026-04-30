@@ -1,70 +1,109 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import TcpSocket from 'react-native-tcp-socket';
 import { useLaria } from './LariaContext';
 
 const SignalContext = createContext();
 
+// KONFIGURÁCIA POTRUBIA
+const IRC_HOST = 'irc.freenode.net'; // Pre test, neskôr náš vlastný node
+const IRC_PORT = 6667;
+
 export const SignalProvider = ({ children }) => {
-  const { vault } = useLaria(); // Máme prístup k identite (stĺpec P = walletAddress)
-  
+  const { vault } = useLaria();
+  const [client, setClient] = useState(null);
   const [isIrcConnected, setIsIrcConnected] = useState(false);
-  const [onlinePeers, setOnlinePeers] = useState([]); 
-  const [incomingRequests, setIncomingRequests] = useState([]); 
+  const [incomingRequests, setIncomingRequests] = useState([]);
 
-  // --- 101 OKTÁNOVÝ VYSIELAČ (Friend Request + Vizitka) ---
-  const sendLariaPackage = async (targetAddress, personalMessage) => {
-    // KONTROLA: Používame walletAddress zo stĺpca P tvojho LariaContextu
-    if (!vault.identity.walletAddress) {
-      console.error("[SIGNAL] Chýba tvoja peňaženka (stĺpec P). Onboarding zlyhal.");
-      return { success: false, error: 'NO_WALLET' };
+  // --- ŠTART IRC AGENTA ---
+  const connectToIrc = (userAddress) => {
+    if (client) return; // Už sme pripojení
+
+    console.log(`[SIGNAL] Štartujem TCP potrubie pre: ${userAddress}`);
+
+    const newClient = TcpSocket.createConnection({
+      host: IRC_HOST,
+      port: IRC_PORT,
+    }, () => {
+      // HANDSHAKE - Tu sa predstavujeme serveru
+      const nick = `L_${userAddress.substring(2, 10)}`; // Skrátený Nick pre IRC limity
+      newClient.write(`NICK ${nick}\r\n`);
+      newClient.write(`USER ${nick} 8 * :LariaNode_${userAddress}\r\n`);
+      newClient.write(`JOIN #LARIA_CORE\r\n`);
+      setIsIrcConnected(true);
+    });
+
+    newClient.on('data', (data) => {
+      const msg = data.toString();
+      // 1. Logika PING/PONG (Udržiavač života)
+      if (msg.startsWith('PING')) {
+        newClient.write(`PONG ${msg.split(' ')[1]}\r\n`);
+      }
+
+      // 2. Zachytenie nášho balíka (Friend Request)
+      if (msg.includes('#LRQ#')) {
+        handleIncomingLariaPackage(msg);
+      }
+      
+      console.log('[IRC_RAW]:', msg);
+    });
+
+    newClient.on('error', (error) => {
+      console.error('[IRC_ERROR]:', error);
+      setIsIrcConnected(false);
+      setClient(null);
+    });
+
+    setClient(newClient);
+  };
+
+  const handleIncomingLariaPackage = (rawMsg) => {
+    try {
+      const payloadPart = rawMsg.split('#LRQ#')[1];
+      const data = JSON.parse(payloadPart);
+      console.log('[SIGNAL] Prijatý energetický balík od:', data.from);
+      setIncomingRequests(prev => [...prev, data]);
+    } catch (e) {
+      console.error('[SIGNAL] Chyba pri rozbalovaní balíka:', e);
     }
+  };
 
-    // Zoštíhlený Cyber-JSON (V2) - Zladenie s názvami v tvojom LariaContexte
+  const sendLariaPackage = async (targetAddress, personalMessage) => {
+    if (!client || !isIrcConnected) return { success: false, error: 'NOT_CONNECTED' };
+
     const lariaPackage = {
       h: "LRQ_V1",
-      from: vault.identity.walletAddress, // 0x adresa zo stĺpca P
+      from: vault.identity.walletAddress,
       msg: personalMessage,
       d: {
         t: vault.identity.tel,
         e: vault.identity.email,
         tg: vault.identity.tg,
         fb: vault.identity.fb,
-        rv: vault.identity.revo, // Zladené: revo
-        kr: vault.identity.kRod, // Zladené: kRod
-        ka: vault.identity.krypt // Krypto adresa
+        rv: vault.identity.revo,
+        kr: vault.identity.kRod
       }
     };
 
+    const targetNick = `L_${targetAddress.substring(2, 10)}`;
     const payload = JSON.stringify(lariaPackage);
     
-    try {
-      console.log(`[SIGNAL] Pripravujem transport pre: ${targetAddress}`);
-      
-      /* TU PRÍDE ČISTÁ IRC MÁGIA (TCP Socket):
-         ircBot.sendPrivateMessage(`L_${targetAddress}`, `#LRQ#${payload}`);
-      */
-
-      console.log(`[SIGNAL] Balík pre ${targetAddress} bol odovzdaný do éteru.`);
-      return { success: true, timestamp: Date.now() };
-    } catch (error) {
-      console.error("[SIGNAL] Prenos zlyhal:", error);
-      return { success: false, error };
-    }
+    // POSIELAME CEZ IRC POTRUBIE
+    client.write(`PRIVMSG ${targetNick} :#LRQ#${payload}\r\n`);
+    
+    return { success: true };
   };
 
   useEffect(() => {
-    if (vault.identity.walletAddress) {
-      console.log(`[SIGNAL] Zmysly napojené na adresu: ${vault.identity.walletAddress}`);
-      setIsIrcConnected(true); 
+    if (vault.identity.walletAddress && !client) {
+      connectToIrc(vault.identity.walletAddress);
     }
   }, [vault.identity.walletAddress]);
 
   return (
     <SignalContext.Provider value={{
       isIrcConnected,
-      onlinePeers,
       incomingRequests,
-      sendLariaPackage,
-      setIsIrcConnected
+      sendLariaPackage
     }}>
       {children}
     </SignalContext.Provider>
