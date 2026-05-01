@@ -29,11 +29,8 @@ export const SignalProvider = ({ children }) => {
       newClient.write(`USER ${nick} 8 * :LariaNode_${userAddress}\r\n`);
       newClient.write(`JOIN #LARIA_CORE\r\n`);
       setIsIrcConnected(true);
-
-      // --- [MATRIX_TEST_INJECTION] ---
-      // Tento riadok simuluje príchod správy hneď po nadviazaní spojenia
-      console.log("[SIGNAL_TEST] Odpaľujem testovací atóm do systému...");
-      handleIncomingLariaPackage(`#LRQ#{"from":"0xSAMMAEL_MASTER","msg":"Aria, testujeme Hyperspeed potrubie. Vidíme sa v tabuľke?"}`);
+      
+      // TESTOVACÍ SPAMER BOL ODSTRÁNENÝ - TU JE TERAZ TICHO A ČISTO
     });
 
     newClient.on('data', async (data) => {
@@ -77,7 +74,6 @@ export const SignalProvider = ({ children }) => {
         status: '0'
       };
 
-      // Zápis cez naše nové Hyperspeed potrubie
       await SignalService.writeToBuffer('Signal_Buffer_1', gMatrixEntry);
 
       setTranslatedCache(prev => ({ ...prev, [gTabId]: gMatrixEntry }));
