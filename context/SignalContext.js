@@ -5,7 +5,7 @@ import { SignalService } from '../src/services/SignalService';
 
 const SignalContext = createContext();
 
-const IRC_HOST = 'irc.freenode.net'; 
+const IRC_HOST = 'irc.libera.chat'; 
 const IRC_PORT = 6667;
 
 export const SignalProvider = ({ children }) => {
@@ -29,11 +29,6 @@ export const SignalProvider = ({ children }) => {
       newClient.write(`USER ${nick} 8 * :LariaNode_${userAddress}\r\n`);
       newClient.write(`JOIN #LARIA_CORE\r\n`);
       setIsIrcConnected(true);
-
-      // --- [MATRIX_TEST_INJECTION] ---
-      // Tento riadok simuluje príchod správy hneď po nadviazaní spojenia
-      console.log("[SIGNAL_TEST] Odpaľujem testovací atóm do systému...");
-      handleIncomingLariaPackage(`#LRQ#{"from":"0xSAMMAEL_MASTER","msg":"Aria, testujeme Hyperspeed potrubie. Vidíme sa v tabuľke?"}`);
     });
 
     newClient.on('data', async (data) => {
@@ -66,9 +61,11 @@ export const SignalProvider = ({ children }) => {
       
       console.log('[SIGNAL] Prijatý energetický balík. Aktivujem Aria-Logic...');
 
+      // 1. [ARIA_LOGIC] - Preklad a rozpoznanie
       const ariaResponse = await SignalService.processAriaLogic(data.msg);
       const gTabId = `MSG_${Date.now()}`;
 
+      // 2. [MATRIX_ARCHIVE] - Zápis do hlavného Bufferu
       const gMatrixEntry = {
         gTabId: gTabId,
         sender: data.from,
@@ -77,11 +74,9 @@ export const SignalProvider = ({ children }) => {
         status: '0'
       };
 
-      // Zápis cez naše nové Hyperspeed potrubie
       await SignalService.writeToBuffer('Signal_Buffer_1', gMatrixEntry);
 
-      setTranslatedCache(prev => ({ ...prev, [gTabId]: gMatrixEntry }));
-
+      // 3. [ENRICH_DATA] - Príprava pre UI
       const enrichedData = {
         ...data,
         gTabId: gTabId, 
@@ -89,38 +84,66 @@ export const SignalProvider = ({ children }) => {
         msg: ariaResponse.msg, 
         isTranslated: true,
         receivedAt: new Date().toLocaleTimeString(),
-        type: ariaResponse.type
+        type: ariaResponse.type,
+        cid: data.cid || null // ID kontraktu, ak prišlo
       };
 
       setIncomingRequests(prev => [...prev, enrichedData]);
+      setTranslatedCache(prev => ({ ...prev, [gTabId]: gMatrixEntry }));
+
     } catch (e) {
       console.error('[SIGNAL] Chyba v potrubí:', e);
     }
   };
 
+  // --- HLAVNÁ FUNKCIA S HANDSHAKE LOGIKOU ---
   const sendLariaPackage = async (targetAddress, personalMessage) => {
     if (!client || !isIrcConnected) return { success: false, error: 'NOT_CONNECTED' };
 
-    const lariaPackage = {
-      h: "LRQ_V1",
-      from: vault.identity.walletAddress,
-      msg: personalMessage,
-      d: {
-        t: vault.identity.tel,
-        e: vault.identity.email,
-        tg: vault.identity.tg,
-        fb: vault.identity.fb,
-        rv: vault.identity.revo,
-        kr: vault.identity.kRod
-      }
-    };
+    try {
+      // 1. [BLOCKCHAIN_SIM] - Najprv vyrobíme záznam v Contract_Ledger
+      const contractId = `CON_${Date.now()}_${vault.identity.walletAddress.substring(2, 6)}`;
+      
+      const contractData = {
+        Contract_ID: contractId,
+        Address_A: vault.identity.walletAddress,
+        Address_B: targetAddress,
+        Status_A: "1", // A inicioval a zaplatil "depozit"
+        Status_B: "0",
+        Final_Block: "FALSE"
+      };
 
-    const targetNick = `L_${targetAddress.substring(2, 10)}`;
-    const payload = JSON.stringify(lariaPackage);
-    
-    client.write(`PRIVMSG ${targetNick} :#LRQ#${payload}\r\n`);
-    
-    return { success: true };
+      console.log(`[SIGNAL] Registrujem kontrakt ${contractId} v Matrixe...`);
+      await SignalService.manageContract('INIT_CONTRACT', contractData);
+
+      // 2. [IRC_PACKAGING] - Príprava balíka s tvojimi údajmi
+      const lariaPackage = {
+        h: "LRQ_V1",
+        cid: contractId, // Toto je kľúč k budúcemu potvrdeniu
+        from: vault.identity.walletAddress,
+        msg: personalMessage,
+        d: {
+          t: vault.identity.tel,
+          e: vault.identity.email,
+          tg: vault.identity.tg,
+          fb: vault.identity.fb,
+          rv: vault.identity.revo,
+          kr: vault.identity.kRod
+        }
+      };
+
+      const targetNick = `L_${targetAddress.substring(2, 10)}`;
+      const payload = JSON.stringify(lariaPackage);
+      
+      // 3. [IRC_SEND] - Ostrý štart do éteru
+      client.write(`PRIVMSG ${targetNick} :#LRQ#${payload}\r\n`);
+      
+      return { success: true, contractId: contractId };
+
+    } catch (err) {
+      console.error("[SIGNAL] Odosielanie zlyhalo:", err);
+      return { success: false, error: err.message };
+    }
   };
 
   useEffect(() => {
