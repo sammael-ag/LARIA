@@ -10,24 +10,24 @@ import {
   StatusBar
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'; 
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { G } from '../styles/styles';
-import { fetchGMatrix } from '../services/GMatrixService';
-import { useKrypto } from '../../context/KryptoContext';
-// [SIGNAL_IMPORT]
 import { useSignal } from '../../context/SignalContext';
+import { useLaria } from '../../context/LariaContext'; 
+import { SignalService } from '../services/SignalService'; 
 
 const IRCScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0); 
+  const [confirmedIds, setConfirmedIds] = useState([]); // Sledovanie kliknutých tlačidiel
   const insets = useSafeAreaInsets(); 
   const flatListRef = useRef();
 
-  // Napojenie na naše TCP potrubie
   const { incomingRequests, sendLariaPackage, isIrcConnected } = useSignal();
+  const { syncIdentity } = useLaria(); 
 
   const [chatLog, setChatLog] = useState([
-    { id: '1', user: 'SYSTEM', text: 'Channel #LARIA_CORE established.', time: '04:17' },
-    { id: '2', user: 'Aria', text: 'Sammael, linka je zabezpečená. Čakám na tvoje príkazy...', time: '04:18' },
+    { id: '1', user: 'SYSTEM', text: 'Channel #LARIA_CORE established.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
   ]);
 
   useEffect(() => {
@@ -39,68 +39,128 @@ const IRCScreen = ({ navigation }) => {
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => setKeyboardHeight(0)
     );
-
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
     };
   }, []);
 
-  // --- UPRAVENÉ ODOSIELANIE ---
+  const confirmHandshake = async (item) => {
+    const handshakeId = item.id;
+    console.log(`[HANDSHAKE] Oživujem kontrakt: ${item.cid}`);
+    
+    try {
+      await SignalService.manageContract('CONFIRM_CONTRACT', { 
+        Contract_ID: item.cid,
+        Address_B: item.from, 
+        Status_B: "1"
+      });
+      
+      const viza = item.d; 
+      const newEntry = {
+        id: item.cid || Date.now().toString(),
+        name: viza?.n || 'Neznámy Majster',
+        tel: viza?.t || '',
+        email: viza?.e || '',
+        revo: viza?.ib || '', 
+        cat: 'Handshake',
+        loc: 'IRC Signal',
+        pinned: false,
+        isVerified: true,
+        timestamp: new Date().toISOString()
+      };
+
+      const storedJson = await AsyncStorage.getItem('laria_contacts');
+      const currentContacts = storedJson ? JSON.parse(storedJson) : [];
+      
+      if (!currentContacts.find(c => c.id === newEntry.id)) {
+        const updated = [...currentContacts, newEntry];
+        await AsyncStorage.setItem('laria_contacts', JSON.stringify(updated));
+      }
+
+      // TLAČIDLO ZMIZNI: Pridáme ID do zoznamu potvrdených
+      setConfirmedIds(prev => [...prev, handshakeId]);
+
+      setChatLog(prev => [...prev, {
+        id: `CONF_MSG_${Date.now()}`,
+        user: 'SYSTEM',
+        text: `Kontakt ${newEntry.name} oživený. Tlačidlo spálené v Matrixe.`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+
+    } catch (err) {
+      console.error("Chyba pri oživovaní:", err);
+    }
+  };
+
   const sendMessage = async () => {
     if (message.trim().length === 0) return;
-
-    // Pridáme lokálny záznam do logu
     const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const newMessage = {
-      id: Date.now().toString(),
-      user: 'Sammael',
-      text: message,
-      time: timeNow
-    };
+    const newMessage = { id: Date.now().toString(), user: 'Sammael', text: message, time: timeNow };
     setChatLog(prev => [...prev, newMessage]);
-
-    // Skutočné odoslanie cez IRC (Ak sme pripojení)
-    if (isIrcConnected) {
-       // Zatiaľ testujeme na fixnú adresu, neskôr pridáme výber adresáta
-       await sendLariaPackage("0xTEST_TARGET", message);
-    }
-
+    if (isIrcConnected) { await sendLariaPackage("0xTEST_TARGET", message); }
     setMessage('');
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
-  // Spojenie systémových správ a prichádzajúcich dát z IRC
+  const renderMessageContent = (item) => {
+    // Tlačidlo sa zobrazí len ak ide o handshake A ZÁROVEŇ ešte nebolo potvrdené
+    const showButton = item.isHandshake && !confirmedIds.includes(item.id);
+
+    return (
+      <View style={{ flex: 1 }}>
+        <Text style={[G.textMain]}>{item.text}</Text>
+        
+        {showButton && (
+          <TouchableOpacity 
+            onPress={() => confirmHandshake(item)} 
+            activeOpacity={0.7}
+            style={{ 
+              marginTop: 12, paddingVertical: 10, paddingHorizontal: 15,
+              borderWidth: 1, borderColor: '#0FF', borderRadius: 4,
+              backgroundColor: 'rgba(0, 255, 255, 0.05)', alignItems: 'center'
+            }}
+          >
+            <Text style={[G.textCyber, { color: '#0FF', fontSize: 13, fontWeight: 'bold' }]}>
+               [ PRIJAŤ KONTAKT A VIZITKU ]
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {item.isLariaPackage && item.translatedText !== item.text && (
+          <Text style={[G.textCyber, { fontSize: 11, marginTop: 6, color: '#0FF', opacity: 0.8 }]}>
+            {`-> ${item.translatedText}`}
+          </Text>
+        )}
+      </View>
+    );
+  };
+
   const combinedLog = [...chatLog, ...incomingRequests.map(req => ({
-    id: req.from + req.receivedAt,
+    id: req.cid || (req.from + req.receivedAt),
     user: `L_${req.from.substring(2, 8)}`,
     text: req.msgOriginal || req.msg,
     translatedText: req.msg,
     time: req.receivedAt,
-    isLariaPackage: true
+    isLariaPackage: true,
+    isHandshake: req.isHandshake,
+    cid: req.cid,
+    from: req.from,
+    d: req.d 
   }))];
 
   return (
     <SafeAreaView style={[G.bg, { flex: 1 }]} edges={['top']}>
       <StatusBar barStyle="light-content" />
-      
-      <View style={{ flex: 1, paddingBottom: 0 }}>
-        
-        {/* HEADER */}
+      <View style={{ flex: 1 }}>
         <View style={G.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={G.textDim}>[ ESC ]</Text>
           </TouchableOpacity>
           <Text style={G.headerTitle}>#LARIA_SECURE_IRC</Text>
-          <View style={{ 
-            width: 8, 
-            height: 8, 
-            backgroundColor: isIrcConnected ? '#0F0' : '#F00', 
-            borderRadius: 4 
-          }} />
+          <View style={{ width: 8, height: 8, backgroundColor: isIrcConnected ? '#0F0' : '#F00', borderRadius: 4 }} />
         </View>
 
-        {/* CHAT LOG - S PODPOROU PREKLADU */}
         <FlatList
           ref={flatListRef}
           data={combinedLog}
@@ -108,33 +168,17 @@ const IRCScreen = ({ navigation }) => {
           renderItem={({ item }) => (
             <View style={G.msgContainer}>
               <Text style={G.msgTime}>{`[${item.time}]`}</Text>
-              <Text style={item.user === 'Aria' ? G.msgUserAria : G.msgUserSammael}>
+              <Text style={item.user === 'Sammael' ? G.msgUserSammael : G.msgUserAria}>
                   {`<${item.user}>`}
               </Text>
-              <View style={{ flex: 1 }}>
-                <Text style={[G.textMain]}>{item.text}</Text>
-                {/* Zobrazenie Aria-Bridge prekladu */}
-                {item.isLariaPackage && (
-                  <Text style={[G.textCyber, { fontSize: 12, marginTop: 4, color: '#0FF' }]}>
-                    {`-> ${item.translatedText}`}
-                  </Text>
-                )}
-              </View>
+              {renderMessageContent(item)}
             </View>
           )}
           contentContainerStyle={{ padding: 15, paddingBottom: 20 }}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
-        {/* INPUT AREA - BEZ ZMENY SPRÁVANIA */}
-        <View style={[
-          G.inputArea, 
-          { 
-            paddingBottom: keyboardHeight > 0 
-              ? 10  
-              : (Platform.OS === 'ios' ? Math.max(insets.bottom, 15) : 15)
-          }
-        ]}>
+        <View style={[G.inputArea, { paddingBottom: keyboardHeight > 0 ? 10 : Math.max(insets.bottom, 15) }]}>
           <Text style={[G.textCyber, { marginRight: 10 }]}>{'>'}</Text>
           <TextInput
             style={G.terminalInput}
@@ -142,12 +186,11 @@ const IRCScreen = ({ navigation }) => {
             onChangeText={setMessage}
             placeholder="Zadaj správu..."
             placeholderTextColor="#444"
-            selectionColor="#0F0"
             autoCorrect={false}
             autoCapitalize="none"
             onSubmitEditing={sendMessage}
           />
-          <TouchableOpacity onPress={sendMessage} activeOpacity={0.7}>
+          <TouchableOpacity onPress={sendMessage}>
             <Text style={[G.textCyber, { fontWeight: 'bold' }]}>[ SEND ]</Text>
           </TouchableOpacity>
         </View>

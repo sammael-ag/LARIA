@@ -1,55 +1,79 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Budeš potrebovať na trvalé uloženie
+import { useFocusEffect } from '@react-navigation/native'; // Dôležité pre okamžitý update
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { G } from '../styles/styles'; 
 
 const ContactsScreen = ({ navigation }) => {
   const [search, setSearch] = useState('');
-  const [contacts, setContacts] = useState([]); // Prázdne, čaká na dáta z WebView
+  const [contacts, setContacts] = useState([]);
 
-  // Načítanie uložených kontaktov zo systému (tvoj lokálny chain)
-  useEffect(() => {
-    const loadContacts = async () => {
-      const stored = await AsyncStorage.getItem('laria_contacts');
-      if (stored) setContacts(JSON.parse(stored));
-    };
-    loadContacts();
-  }, []);
+  // useFocusEffect zabezpečí, že zakaždým, keď Sammael otvorí túto obrazovku, 
+  // Aria prečíta najnovšie záznamy z AsyncStorage
+  useFocusEffect(
+    useCallback(() => {
+      const loadContacts = async () => {
+        try {
+          const stored = await AsyncStorage.getItem('laria_contacts');
+          if (stored) {
+            setContacts(JSON.parse(stored));
+          }
+        } catch (e) {
+          console.error("Chyba pri načítaní reťazca:", e);
+        }
+      };
+      loadContacts();
+    }, [])
+  );
 
-  // Logika pre PIN - zoradenie (pripnuté idú hore)
+  // Zoradenie: Pripnuté (📍) idú prvé, potom zvyšok podľa mena
   const sortedContacts = [...contacts]
     .filter(c => 
-      c.name.toLowerCase().includes(search.toLowerCase()) || 
-      c.cat.toLowerCase().includes(search.toLowerCase())
+      (c.name && c.name.toLowerCase().includes(search.toLowerCase())) || 
+      (c.cat && c.cat.toLowerCase().includes(search.toLowerCase()))
     )
-    .sort((a, b) => (b.pinned === a.pinned) ? 0 : a.pinned ? -1 : 1);
+    .sort((a, b) => {
+      if (a.pinned === b.pinned) return 0;
+      return a.pinned ? -1 : 1;
+    });
 
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={[
         G.card, 
         { padding: 18, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
-        item.pinned && { borderColor: '#0FF', borderWidth: 1 } // Tyrkysový okraj pre pripnuté
+        item.pinned && { borderColor: '#0FF', borderWidth: 1 }
       ]} 
       onPress={() => navigation.navigate('Card', { contact: item, mode: 'view' })}
     >
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {item.pinned && <Text style={{ marginRight: 8 }}>📍</Text>}
-          <Text style={[G.textWhite, { fontSize: 16, fontWeight: 'bold' }]}>{item.name}</Text>
+          {item.pinned && <Text style={{ marginRight: 8, fontSize: 14 }}>📍</Text>}
+          <Text style={[G.textWhite, { fontSize: 16, fontWeight: 'bold' }]}>
+            {item.name}
+          </Text>
         </View>
-        <Text style={[G.textDim, { marginTop: 4 }]}>
-          {`${item.cat} • ${item.loc}`}
+        <Text style={[G.textDim, { marginTop: 4, fontSize: 12 }]}>
+          {`${item.cat || 'Majster'} • ${item.loc || 'Matrix'}`}
         </Text>
       </View>
-      {/* Tu sa neskôr zobrazí status: LOCK (pred SC) alebo UNLOCK (po SC) */}
-      <Text style={[G.textDim, { fontSize: 10 }]}>{item.isVerified ? '● SC' : '○ LOCK'}</Text>
+      
+      {/* Vizuálny indikátor overeného kontraktu (Smart Contract) */}
+      <View style={{ alignItems: 'flex-end' }}>
+        <Text style={[
+          { fontSize: 10, fontWeight: 'bold' },
+          item.isVerified ? { color: '#0FF' } : { color: '#444' }
+        ]}>
+          {item.isVerified ? '● SC_ACTIVE' : '○ LOCKED'}
+        </Text>
+        {item.revo ? <Text style={{ fontSize: 9, color: '#0F0', marginTop: 2 }}>€ REV_ID</Text> : null}
+      </View>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={G.bgDashboard}>
+    <SafeAreaView style={[G.bgDashboard, { flex: 1 }]}>
       <View style={G.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={G.textDim}>[ SPÄŤ ]</Text>
@@ -58,6 +82,7 @@ const ContactsScreen = ({ navigation }) => {
         <View style={{ width: 40 }} /> 
       </View>
 
+      {/* SEARCH BAR */}
       <View style={{ paddingHorizontal: 25, marginBottom: 20 }}>
         <TextInput 
           style={{ 
@@ -67,26 +92,31 @@ const ContactsScreen = ({ navigation }) => {
             borderRadius: 8, 
             padding: 12, 
             color: '#0F0', 
-            fontFamily: 'monospace',
+            fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
             fontSize: 14
           }}
-          placeholder="Hľadať v tvojom reťazci..."
+          placeholder="Hľadať v reťazci..."
           placeholderTextColor="#444"
           value={search}
           onChangeText={setSearch}
           autoCorrect={false}
+          autoCapitalize="none"
         />
       </View>
 
+      {/* ZOZNAM KONTAKTOV */}
       <FlatList
         data={sortedContacts}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingHorizontal: 25 }}
+        contentContainerStyle={{ paddingHorizontal: 25, paddingBottom: 100 }}
         ListEmptyComponent={
-          <Text style={[G.textDim, { textAlign: 'center', marginTop: 50 }]}>
-            Tvoj lokálny reťazec je zatiaľ prázdny.{"\n"}Pridaj majstra cez LARIA WEB.
-          </Text>
+          <View style={{ marginTop: 50, alignItems: 'center' }}>
+            <Text style={[G.textDim, { textAlign: 'center', lineHeight: 22 }]}>
+              Tvoj lokálny reťazec je zatiaľ prázdny.{"\n"}
+              <Text style={{ color: '#0FF' }}>Prijmi vizitku cez #LARIA_SECURE_IRC.</Text>
+            </Text>
+          </View>
         }
       />
     </SafeAreaView>
