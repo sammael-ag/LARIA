@@ -1,7 +1,7 @@
 /**
  * LARIA WEB ENGINE - DYNAMICKÉ ČAKRY
- * LOGIC v4.4 - Špecializované pre Renderer v7.0
- * Čistý kód bez džabania.
+ * LOGIC v4.5 - Stabilizované pre Renderer v7.1
+ * Čistý kód s diagnostikou surových dát.
  */
 
 // TU VLOŽ SVOJU NOVÚ URL Z RENDERER SKRIPTU
@@ -10,19 +10,37 @@ const READ_URL = "https://script.google.com/macros/s/AKfycbxBcijYrg4MZNwz8zP2Qi9
 let allData = []; 
 let currentCategory = 'vsetko';
 
-// --- 1. NAČÍTANIE DÁT (SYNERGIA S RENDEREROM v7.0) ---
+// --- 1. NAČÍTANIE DÁT (SYNERGIA S RENDEREROM) ---
 async function loadDataFromGSheets() {
     console.log("🚀 Matrix: Štartujem sťahovanie dát...");
+    const container = document.getElementById('cards-container');
+    
     try {
         const response = await fetch(READ_URL);
-        if (!response.ok) throw new Error("Matrix neodpovedá");
+        if (!response.ok) throw new Error("Matrix neodpovedá (HTTP Error)");
         
-        // Renderer v7.0 posiela pole objektov, kde kľúče sú názvy stĺpcov (malými písmenami)
-        const rawData = await response.json();
-        console.log("✅ Dáta načítané, počet záznamov:", rawData.length);
+        // --- 🔍 DETEKTÍVNA KONTROLA SUROVÝCH DÁT ---
+        const textData = await response.text(); 
+        console.log("📥 Surové dáta z Matrixu:", textData);
+        
+        let rawData;
+        try {
+            rawData = JSON.parse(textData);
+        } catch (e) {
+            console.error("❌ Kritická chyba: Matrix neposlal JSON!", textData);
+            throw new Error("Prijatý text nie je platný JSON formát.");
+        }
+
+        if (!Array.isArray(rawData)) {
+            console.error("❌ Chyba formátu: Očakával som pole [], prišlo:", typeof rawData);
+            throw new Error("Dáta prišli v nesprávnom formáte (nie je to pole).");
+        }
+        // ------------------------------------------
+
+        console.log("✅ Dáta spracované, počet záznamov:", rawData.length);
 
         allData = rawData.map(item => {
-            // Každý kľúč zodpovedá názvu stĺpca v G-Tab (status, sha, meno, kat...)
+            // Renderer v7.1 mapuje LOKALITA -> lok a PUBLIC -> public
             const publicStatus = item.public; 
 
             return {
@@ -37,20 +55,19 @@ async function loadDataFromGSheets() {
                 fb: item.fb || "",
                 tg: item.tg || "",
                 gal: item.gal || "",
-                // Akceptujeme boolean aj textovú verziu z tabuľky
                 isPublic: publicStatus === true || String(publicStatus).toUpperCase() === "TRUE"
             };
-        }).filter(item => item.isPublic === true); // Ukážeme len tie, čo majú PUBLIC = TRUE
+        }).filter(item => item.isPublic === true);
 
         applyFilter();
     } catch (e) {
         console.error("❌ Matrix offline:", e);
-        const container = document.getElementById('cards-container');
         if (container) {
             container.innerHTML = `
                 <div style="text-align:center; padding: 50px;">
-                    <p style="color:#F0F; font-family:monospace;">[ CHYBA_SPOJENIA_S_MATRIXOM ]</p>
-                    <p style="color:#555; font-size:12px;">${e.message}</p>
+                    <p style="color:#F0F; font-family:monospace; font-weight:bold;">[ KRYPTICKÁ_CHYBA_MATRIXU ]</p>
+                    <p style="color:#555; font-size:12px; margin-top:10px;">DETAIL: ${e.message}</p>
+                    <p style="color:#333; font-size:10px; margin-top:20px;">Skontroluj konzolu (F12) pre výpis surových dát.</p>
                 </div>`;
         }
     }
@@ -63,7 +80,7 @@ function renderCards(data) {
     container.innerHTML = '';
 
     if (data.length === 0) {
-        container.innerHTML = '<p class="text-cyber" style="text-align:center; width:100%;">Ticho v éteri... (žiadne verejné vizitky)</p>';
+        container.innerHTML = '<p class="text-cyber" style="text-align:center; width:100%; opacity:0.5;">Ticho v éteri... (žiadne verejné vizitky)</p>';
         return;
     }
 
@@ -114,7 +131,7 @@ function sendToApp(id) {
             }
         }));
     } else {
-        alert("Pre uloženie vizitky otvor tento web v appke LARIA.");
+        alert("Pre uloženie vizitky otvor tento web priamo v appke LARIA.");
     }
 }
 
@@ -142,7 +159,6 @@ function applyFilter() {
 // --- 5. GLOBÁLNE ROZHRANIE ---
 window.setCategory = (cat) => {
     currentCategory = cat;
-    // Vizuálna odozva (voliteľné: tu môžeš pridať triedu .active na tlačidlá)
     applyFilter();
 };
 
@@ -156,5 +172,5 @@ window.copyShareLink = (id) => {
     });
 };
 
-// INICIALIZÁCIA
+// ŠTART
 window.onload = loadDataFromGSheets;
