@@ -7,7 +7,7 @@
 const G_MATRIX_READ_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSrvQfx5lSx2hA85CEujmUAcmYRpi9lEiVkuLzmNpv_eYSvtWVhRNgaFwURSFMgA6l1vxtwlAndxQ3u/pub?output=csv";
 
 // Link na zápis (Tvoj LARIA Bot)
-const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbxJFMhDTzWA9S7h5m6b27v96wToqdAa3pDR_WHoskcOaMTJzGPGssLbzami4yhtinZN/exec";
+const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbxubEzcknytR16HECxr716A8c3cjABLalg1SIebavwHeL6hnFXe47K7QqvpNaSR_uC1/exec";
 
 // FUNKCIA NA ČÍTANIE DÁT
 export const fetchGMatrix = async () => {
