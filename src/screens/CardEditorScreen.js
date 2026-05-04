@@ -41,15 +41,15 @@ const CATEGORIES = [
 ];
 
 const CardEditorScreen = ({ navigation }) => {
-  // Integrujeme našu novú jahôdku 'ensureLariaIdentity'
   const { vault, syncIdentity, ensureLariaIdentity } = useLaria();
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
+  // Inicializácia dát z vaultu (identity)
   const [cardData, setCardData] = useState({
     sha: vault.identity.sha, 
     kategoria: vault.identity.kategoria || 'remesla', 
-    meno: vault.identity.name || '',
+    meno: vault.identity.name || vault.identity.meno || '',
     lok: vault.identity.lok || 'Rákoš / Rožňava / Revúca',
     popis: vault.identity.popis || 'Rustic, steampunk a avantgardné stolárstvo.',
     tel: vault.identity.tel || '',
@@ -83,19 +83,20 @@ const CardEditorScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      // --- 🍫 KRYPTO ZROD (Neviditeľný proces) ---
-      // Ak užívateľ ešte nemá peňaženku, vytvoríme ju pred odoslaním do Matrixu
+      // 1. Zabezpečenie peňaženky
       const currentWalletAddress = await ensureLariaIdentity();
       
+      // 2. Čistenie dát pred odoslaním (Ošetrenie Enterov a medzier)
+      const cleanPopis = cardData.popis ? cardData.popis.replace(/[\r\n\t]+/g, " ").trim() : "";
       const cleanTel = cardData.tel ? cardData.tel.toString().replace(/\s/g, '') : '';
 
-      // 1. ZAPEČATENIE LOKÁLNEHO TREZORU
-      const updatedIdentity = {
-        ...vault.identity,
-        name: cardData.meno,
+      // 3. UNIFIKOVANÝ BALÍK DÁT pre Vrátnika 7.9
+      const finalData = {
+        sha: cardData.sha, 
+        meno: cardData.meno,      // Zjednotené na 'meno'
         kategoria: cardData.kategoria,
         lok: cardData.lok,
-        popis: cardData.popis,
+        popis: cleanPopis,        // Vyčistený popis
         tel: cleanTel,
         email: cardData.email,
         fb: cardData.fb,
@@ -103,32 +104,27 @@ const CardEditorScreen = ({ navigation }) => {
         gal: cardData.gal,
         revo: cardData.revo,
         kRod: cardData.kRod,
-        // Ak sa vygenerovala nová adresa, prioritne použijeme tú
-        walletAddress: currentWalletAddress || vault.identity.walletAddress,
-        krypt: currentWalletAddress || cardData.krypt,
+        krypt: currentWalletAddress || cardData.krypt || vault.identity.walletAddress,
         isPublic: cardData.isPublic
       };
 
-      await syncIdentity(updatedIdentity);
+      // 4. ZAPEČATENIE LOKÁLNEHO TREZORU
+      await syncIdentity(finalData);
 
-      // 2. VYSIELANIE DO MATRIXU (Pre Vrátnika Gtab)
-      const matrixData = { 
-        ...cardData, 
-        tel: cleanTel, 
-        krypt: currentWalletAddress || cardData.krypt 
-      };
-      
-      const result = await saveToGMatrix(matrixData);
+      // 5. VYSIELANIE DO MATRIXU
+      const result = await saveToGMatrix(finalData);
 
       if (result && result.success) {
-        Alert.alert("Pečať vytesaná", "Tvoja identita a peňaženka boli úspešne prepojené.");
+        Alert.alert("Pečať vytesaná", "Tvoja identita bola úspešne zapísaná do Matrixu.");
         navigation.goBack();
       } else {
-        Alert.alert("Lokálne zapečatené", "V mobile uložené, Vrátnik spracuje dáta neskôr.");
+        // Ak Vrátnik odmietne, vypíšeme dôvod do konzoly
+        console.log("⚠️ Vrátnik zaváhal:", result);
+        Alert.alert("Lokálne zapečatené", "V mobile uložené, Matrix sync zlyhal (Pozri VS Code konzolu).");
         navigation.goBack();
       }
     } catch (error) {
-      console.error(error);
+      console.error("❌ Chyba CardEditorSave:", error);
       Alert.alert("Chyba spojenia", "Proces tesania identity zlyhal.");
     } finally {
       setLoading(false);
@@ -149,71 +145,59 @@ const CardEditorScreen = ({ navigation }) => {
           <View style={{ width: 8, height: 8, backgroundColor: cardData.isPublic ? '#0FF' : '#F0F', borderRadius: 4 }} />
         </View>
 
-        {/* SHA SIGNATURE DISPLAY */}
+        {/* SHA SIGNATURE */}
         <TouchableOpacity onPress={copyToClipboard} activeOpacity={0.7} style={{ marginBottom: 25, padding: 12, backgroundColor: '#050505', borderRadius: 5, borderStyle: 'dashed', borderWidth: 1, borderColor: '#333', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
             <Text style={[G.textDim, { fontSize: 9, letterSpacing: 1 }]}>AKTÍVNY DIGITÁLNY PODPIS (SHA)</Text>
-            <Text style={{ color: '#0FF', fontSize: 11, fontFamily: 'monospace', marginTop: 4 }}>{cardData.sha || 'Generujem pečať...'}</Text>
-            <Text style={{ color: '#444', fontSize: 8, marginTop: 4 }}>[ KLIKNI PRE KOPÍROVANIE ]</Text>
+            <Text style={{ color: '#0FF', fontSize: 11, fontFamily: 'monospace', marginTop: 4 }}>{cardData.sha}</Text>
           </View>
           <Text style={{ color: '#0FF', fontSize: 18 }}>📋</Text>
         </TouchableOpacity>
 
-        {/* REŽIM SÚKROMIA */}
+        {/* PUBLIC SWITCH */}
         <View style={[G.terminalInput, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderLeftWidth: 3, borderLeftColor: cardData.isPublic ? '#0FF' : '#F0F', marginBottom: 25 }]}>
           <View>
             <Text style={G.textCyber}>REŽIM SÚKROMIA</Text>
-            <Text style={{ color: '#666', fontSize: 10 }}>{cardData.isPublic ? 'VEREJNÉ - Vizitka bude na webe' : 'SÚKROMNÉ - Len v tvojom mobile'}</Text>
+            <Text style={{ color: '#666', fontSize: 10 }}>{cardData.isPublic ? 'VEREJNÉ - Vizitka bude na webe' : 'SÚKROMNÉ - Len v mobile'}</Text>
           </View>
           <Switch onValueChange={(val) => setCardData({...cardData, isPublic: val})} value={cardData.isPublic} trackColor={{ false: "#333", true: "#066" }} thumbColor={cardData.isPublic ? "#0FF" : "#666"} />
         </View>
 
-        {/* FORMULÁR */}
         <Text style={G.textCyber}>MENO / NICK</Text>
         <TextInput style={G.terminalInput} value={cardData.meno} onChangeText={(val) => setCardData({...cardData, meno: val})} placeholder="Tvoje meno..." placeholderTextColor={G.placeholderColor} />
 
         <Text style={G.textCyber}>HLAVNÁ KATEGÓRIA</Text>
-        <TouchableOpacity 
-          style={[G.terminalInput, { justifyContent: 'center' }]} 
-          onPress={() => setShowPicker(true)}
-        >
+        <TouchableOpacity style={[G.terminalInput, { justifyContent: 'center' }]} onPress={() => setShowPicker(true)}>
           <Text style={{ color: '#FFF' }}>{getCategoryLabel(cardData.kategoria)}</Text>
           <Text style={{ color: '#666', position: 'absolute', right: 15 }}>▼</Text>
         </TouchableOpacity>
 
         <Text style={G.textCyber}>LOKALITA PÔSOBENIA</Text>
-        <TextInput style={G.terminalInput} value={cardData.lok} onChangeText={(val) => setCardData({...cardData, lok: val})} placeholder="Napr. Rákoš / Rožňava" placeholderTextColor={G.placeholderColor} />
+        <TextInput style={G.terminalInput} value={cardData.lok} onChangeText={(val) => setCardData({...cardData, lok: val})} placeholder="Rákoš / Rožňava..." placeholderTextColor={G.placeholderColor} />
 
         <Text style={G.textCyber}>VÍZIA A POPIS PRÁCE</Text>
         <TextInput style={[G.terminalInput, { height: 80, textAlignVertical: 'top' }]} multiline numberOfLines={3} value={cardData.popis} onChangeText={(val) => setCardData({...cardData, popis: val})} placeholder="Čomu sa venuješ..." placeholderTextColor={G.placeholderColor} />
 
         <View style={G.divider} />
 
-        <Text style={[G.textCyber, { color: '#0FF' }]}>REVOLUT HANDLE</Text>
-        <TextInput style={G.terminalInput} value={cardData.revo} onChangeText={(val) => setCardData({...cardData, revo: val})} placeholder="@meno" placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
-
-        <Text style={[G.textCyber, { color: '#F0F' }]}>K-ROD (IBAN)</Text>
-        <TextInput style={G.terminalInput} value={cardData.kRod} onChangeText={(val) => setCardData({...cardData, kRod: val})} placeholder="SK00..." placeholderTextColor={G.placeholderColor} />
-
-        <Text style={[G.textCyber, { color: '#0F0' }]}>KRYPTO ADRESA (BASE)</Text>
-        <TextInput style={G.terminalInput} value={cardData.krypt} onChangeText={(val) => setCardData({...cardData, krypt: val})} placeholder="0x..." placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
-
-        <View style={G.divider} />
-
+        {/* KONTAKTY */}
         <Text style={G.textCyber}>TELEFÓN</Text>
         <TextInput style={G.terminalInput} keyboardType="phone-pad" value={cardData.tel} onChangeText={(val) => setCardData({...cardData, tel: val})} placeholder="+421..." placeholderTextColor={G.placeholderColor} />
 
         <Text style={G.textCyber}>E-MAIL</Text>
         <TextInput style={G.terminalInput} keyboardType="email-address" value={cardData.email} onChangeText={(val) => setCardData({...cardData, email: val})} placeholder="tvoj@email.com" placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
 
-        <Text style={G.textCyber}>FACEBOOK</Text>
-        <TextInput style={G.terminalInput} value={cardData.fb} onChangeText={(val) => setCardData({...cardData, fb: val})} placeholder="fb.com/tvoj.profil" placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
-
         <Text style={G.textCyber}>TELEGRAM</Text>
         <TextInput style={G.terminalInput} value={cardData.tg} onChangeText={(val) => setCardData({...cardData, tg: val})} placeholder="Nick / URL" placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
 
-        <Text style={G.textCyber}>G-ALBUM URL</Text>
-        <TextInput style={G.terminalInput} value={cardData.gal} onChangeText={(val) => setCardData({...cardData, gal: val})} placeholder="Link na portfólio" placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
+        <View style={G.divider} />
+
+        {/* FINANCIE */}
+        <Text style={[G.textCyber, { color: '#0FF' }]}>REVOLUT</Text>
+        <TextInput style={G.terminalInput} value={cardData.revo} onChangeText={(val) => setCardData({...cardData, revo: val})} placeholder="@meno" placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
+
+        <Text style={[G.textCyber, { color: '#0F0' }]}>KRYPTO ADRESA (BASE)</Text>
+        <TextInput style={G.terminalInput} value={cardData.krypt} onChangeText={(val) => setCardData({...cardData, krypt: val})} placeholder="0x..." placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
 
         <TouchableOpacity 
           style={[G.ircButton, { marginTop: 30, borderColor: cardData.isPublic ? '#0FF' : '#F0F', opacity: loading ? 0.5 : 1, marginBottom: 50 }]} 
@@ -231,7 +215,7 @@ const CardEditorScreen = ({ navigation }) => {
 
       </ScrollView>
 
-      {/* MODAL PICKER PRE KATEGÓRIE */}
+      {/* CATEGORY PICKER MODAL */}
       <Modal visible={showPicker} transparent={true} animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', padding: 20 }}>
           <View style={{ backgroundColor: '#111', borderWidth: 1, borderColor: '#333', maxHeight: '80%', borderRadius: 10 }}>

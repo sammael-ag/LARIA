@@ -1,15 +1,16 @@
 /**
  * LARIA G-MATRIX SERVICE
  * Centralizovaný prístup k dátam z Google Tabuľky (Čítanie aj Zápis)
+ * Verzia: 2.0 (Bez no-cors, s detekciou odpovede)
  */
 
-// Link na čítanie (CSV)
+// Link na čítanie (Renderer)
 const G_MATRIX_READ_URL = "https://script.google.com/macros/s/AKfycbxBcijYrg4MZNwz8zP2Qi91rn-EgcFdG18b50HGc4_BhTnpe2paXqI6WiJP9NN5UenP/exec";
 
-// Link na zápis (Tvoj LARIA Bot)
-const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbxubEzcknytR16HECxr716A8c3cjABLalg1SIebavwHeL6hnFXe47K7QqvpNaSR_uC1/exec";
+// Link na zápis (Tvoj VRÁTNIK 7.7) - Uisti sa, že je to tá najnovšia URL!
+const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbyr-Lus52rAlGwESkO4P9zgAaTDK7PVzoME5QIYCsqPpGgubUovlyx4ESAE94boqmgH/exec";
 
-// FUNKCIA NA ČÍTANIE DÁT
+// 1. FUNKCIA NA ČÍTANIE DÁT
 export const fetchGMatrix = async () => {
     try {
         const response = await fetch(G_MATRIX_READ_URL);
@@ -17,29 +18,44 @@ export const fetchGMatrix = async () => {
         const data = await response.text();
         return data; 
     } catch (error) {
-        console.error("Chyba LARIA Matrix pripojenia (čítanie):", error);
+        console.error("❌ Chyba Matrixu pri čítaní:", error);
         return null;
     }
 };
 
-// FUNKCIA NA ZÁPIS DÁT (Botov „Vrátnik“)
+// 2. FUNKCIA NA ZÁPIS DÁT (Vrátnik)
 export const saveToGMatrix = async (vizitkaData) => {
     try {
+        console.log("📡 Odosielam dáta Vrátnikovi...");
+
         const response = await fetch(G_MATRIX_WRITE_URL, {
             method: 'POST',
-            mode: 'no-cors', // Dôležité pre Google Apps Script
-            cache: 'no-cache',
+            redirect: 'follow', // <--- TOTO TU MUSÍ BYŤ!
             headers: {
-                'Content-Type': 'application/json',
+                // Používame text/plain, aby sme obišli zložité CORS vyjednávanie, 
+                // Google Script si s tým poradí.
+                'Content-Type': 'text/plain;charset=utf-8',
             },
             body: JSON.stringify(vizitkaData)
         });
+
+        // Keďže už nemáme no-cors, môžeme prečítať odpoveď zo servera
+        const result = await response.json();
         
-        console.log("Dáta odoslané do Matrixu!");
-        return { success: true };
+        console.log("🚀 VRÁTNIK ODPOVEDÁ:", result);
+
+        if (result.result === "success") {
+            console.log("✅ Matrix úspešne aktualizovaný!");
+            return { success: true, message: result.message, system: result.system };
+        } else {
+            console.error("⚠️ Vrátnik dáta odmietol:", result.message);
+            return { success: false, error: result.message };
+        }
+
     } catch (error) {
-        console.error("Chyba LARIA Matrix zápisu:", error);
-        return { success: false, error };
+        // Tu konečne uvidíme reálnu chybu, ak napríklad zlyhá sieť alebo URL
+        console.error("❌ Kritická chyba komunikácie s Matrixom:", error);
+        return { success: false, error: error.message };
     }
 };
 
