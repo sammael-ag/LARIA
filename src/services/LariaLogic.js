@@ -1,13 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
- * PROTOKOL LARIA ART v2.4 - THE ARCHITECT'S FINAL SEAL
- * Úplná nezávislosť, čistá digitálna tesárčina.
+ * PROTOKOL LARIA ART v2.5 - THE ARCHITECT'S FINAL SEAL
+ * Ochrana proti Faucet Drain & Identity Drift.
  */
 
 // --- 1. VNÚTORNÝ MLYNČEK (Generátor Hashov) ---
 export const generatePureSHA = (deviceId, name = "Sammael") => {
   if (!deviceId) return null;
+  // name.toLowerCase() zabezpečuje, že Sammael aj sammael hodia rovnaký hash
   const rawInput = `${deviceId}-${name.toLowerCase()}`;
   let hash = 0;
   for (let i = 0; i < rawInput.length; i++) {
@@ -21,6 +22,7 @@ export const generatePureSHA = (deviceId, name = "Sammael") => {
 };
 
 // --- 2. TAJNÉ KONŠTANTY (Zatlčené Shadows) ---
+// Tieto ostávajú pre spätnú kompatibilitu, ale už neblokujú prístup ak máš Pečať
 const MASTER_SHA_SHADOW = "0x54f91c11a4a2a660f"; 
 const ARCHITECT_HASH_SHADOW = "0x75d93eeee454e9ed2";
 
@@ -47,17 +49,38 @@ export const verifyArchitectSeal = (secretWord) => {
   // Zomelieme zadané slovo pomocou mlynčeka so soľou "ARCHITECT"
   const inputHash = generatePureSHA(secretWord, "ARCHITECT");
   
-  // Prísne porovnanie tieňov
+  // Porovnanie so zatieneným heslom
   return inputHash === ARCHITECT_HASH_SHADOW;
 };
 
-// --- 5. ROZHODOVACÍ PROTOKOL ---
+/**
+ * 5. OCHRANA IDENTITY (Anti-Drain Poistka)
+ * Táto funkcia skontroluje, či už v trezore existuje adresa.
+ * Ak áno, nedovolí Manfredovi vytvoriť novú peňaženku.
+ */
+export const getSacredWallet = async (currentIdentity) => {
+  const saved = await loadFromVault('identity');
+  if (saved && saved.walletAddress) {
+    return {
+      address: saved.walletAddress,
+      key: saved.privateKey,
+      isRecovered: true
+    };
+  }
+  return null;
+};
+
+// --- 6. ROZHODOVACÍ PROTOKOL (Vylepšený pre Architecta) ---
 export const runLariaProtocol = (identity, hasSeal = false) => {
   if (!identity || !identity.sha) return { isAdmin: false };
 
-  // Dvojfázové overenie: Správne zariadenie + Odomknutá pečať v AsyncStorage
-  const isMasterDevice = identity.sha === MASTER_SHA_SHADOW;
-  const isAdmin = isMasterDevice && (hasSeal === true);
+  /**
+   * ZMENA LOGIKY:
+   * Admin status (isAdmin) je teraz viazaný PRÍMÁRNE na Pečať (hasSeal).
+   * Ak si zadal správne Slovo moci v Dashboarde, hasSeal je true.
+   * Je jedno, či si v mobile Manfred alebo Sammael.
+   */
+  const isAdmin = (hasSeal === true);
 
   return {
     isOnline: !!identity.sha,
@@ -66,6 +89,6 @@ export const runLariaProtocol = (identity, hasSeal = false) => {
     isParanoid: !identity.email && !!identity.sha,
     isGoogleFull: !!identity.email && !!identity.gTab,
     isChainNode: !!identity.gTab && !!identity.email,
-    isAdmin: isAdmin // Odovzdávame čistú pravdu (Boolean)
+    isAdmin: isAdmin // Čistá pravda o tvojej moci
   };
 };
