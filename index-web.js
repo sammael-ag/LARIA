@@ -5,7 +5,7 @@
  */
 
 // TU VLOŽ SVOJU NOVÚ URL Z RENDERER SKRIPTU
-const READ_URL = "https://script.google.com/macros/s/AKfycbxBcijYrg4MZNwz8zP2Qi91rn-EgcFdG18b50HGc4_BhTnpe2paXqI6WiJP9NN5UenP/exec";
+const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
 
 let allData = []; 
 let currentCategory = 'vsetko';

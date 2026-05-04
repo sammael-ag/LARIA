@@ -1,19 +1,20 @@
 /**
  * LARIA G-MATRIX SERVICE
  * Centralizovaný prístup k dátam z Google Tabuľky (Čítanie aj Zápis)
- * Verzia: 2.0 (Bez no-cors, s detekciou odpovede)
+ * Verzia: 2.2 (The Cache Breaker - s elimináciou Google Cache)
  */
 
 // Link na čítanie (Renderer)
-const G_MATRIX_READ_URL = "https://script.google.com/macros/s/AKfycbxBcijYrg4MZNwz8zP2Qi91rn-EgcFdG18b50HGc4_BhTnpe2paXqI6WiJP9NN5UenP/exec";
+const G_MATRIX_READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
 
-// Link na zápis (Tvoj VRÁTNIK 7.7) - Uisti sa, že je to tá najnovšia URL!
-const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbyr-Lus52rAlGwESkO4P9zgAaTDK7PVzoME5QIYCsqPpGgubUovlyx4ESAE94boqmgH/exec";
+// Link na zápis (Tvoj VRÁTNIK 7.9 TEST IDENTITA)
+const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbyD0INZlUfMJaBYFp8Q9ndgi9gQqYjPPyql9BjmulvvoF6LU6HLLP6gTRHHbrHbgZt6/exec";
 
 // 1. FUNKCIA NA ČÍTANIE DÁT
 export const fetchGMatrix = async () => {
     try {
-        const response = await fetch(G_MATRIX_READ_URL);
+        // Aj tu pridáme náhodné číslo, aby sme čítali VŽDY čerstvý Matrix
+        const response = await fetch(`${G_MATRIX_READ_URL}?v=${Date.now()}`);
         if (!response.ok) throw new Error('Sieťová odozva nebola v poriadku');
         const data = await response.text();
         return data; 
@@ -26,20 +27,22 @@ export const fetchGMatrix = async () => {
 // 2. FUNKCIA NA ZÁPIS DÁT (Vrátnik)
 export const saveToGMatrix = async (vizitkaData) => {
     try {
-        console.log("📡 Odosielam dáta Vrátnikovi...");
+        // Vytvoríme unikátnu URL pre tento konkrétny pokus
+        const uniqueWriteUrl = `${G_MATRIX_WRITE_URL}?nocache=${Date.now()}`;
+        
+        console.log("🎯 REÁLNY CIEĽ STREĽBY:", uniqueWriteUrl);
+        console.log("📡 Odosielam balík Vrátnikovi...");
 
-        const response = await fetch(G_MATRIX_WRITE_URL, {
+        const response = await fetch(uniqueWriteUrl, {
             method: 'POST',
-            redirect: 'follow', // <--- TOTO TU MUSÍ BYŤ!
+            mode: 'cors', 
+            redirect: 'follow', 
             headers: {
-                // Používame text/plain, aby sme obišli zložité CORS vyjednávanie, 
-                // Google Script si s tým poradí.
                 'Content-Type': 'text/plain;charset=utf-8',
             },
             body: JSON.stringify(vizitkaData)
         });
 
-        // Keďže už nemáme no-cors, môžeme prečítať odpoveď zo servera
         const result = await response.json();
         
         console.log("🚀 VRÁTNIK ODPOVEDÁ:", result);
@@ -48,12 +51,11 @@ export const saveToGMatrix = async (vizitkaData) => {
             console.log("✅ Matrix úspešne aktualizovaný!");
             return { success: true, message: result.message, system: result.system };
         } else {
-            console.error("⚠️ Vrátnik dáta odmietol:", result.message);
-            return { success: false, error: result.message };
+            console.warn("⚠️ Vrátnik dáta odmietol:", result.message);
+            return { success: false, error: result.message, system: result.system };
         }
 
     } catch (error) {
-        // Tu konečne uvidíme reálnu chybu, ak napríklad zlyhá sieť alebo URL
         console.error("❌ Kritická chyba komunikácie s Matrixom:", error);
         return { success: false, error: error.message };
     }
