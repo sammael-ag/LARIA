@@ -17,10 +17,12 @@ import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from './src/services/WalletProvider';
 
-// Naše taviace kotly - Pridávame SignalProvider
+// Naše taviace kotly
 import { LariaProvider } from './context/LariaContext';
 import { KryptoProvider } from './context/KryptoContext';
 import { SignalProvider } from './context/SignalContext'; 
+// PRIDÁVAME NOVÝ SKLAD KONTAKTOV
+import { ContactProvider } from './context/ContactContext'; 
 
 const queryClient = new QueryClient();
 
@@ -49,13 +51,16 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         {/* KRYPTO - Základná doska a energetický zdroj */}
         <KryptoProvider>
-          {/* LARIA - Vedomie, identita a vault */}
+          {/* LARIA - Vedomie, identita a vault (Svätyňa) */}
           <LariaProvider>
-            {/* SIGNAL - Zmysly a komunikácia (NFC, IRC, QR) */}
+            {/* SIGNAL - Zmysly (NFC, IRC, QR) */}
             <SignalProvider>
-              <SafeAreaProvider>
-                <AppNavigator />
-              </SafeAreaProvider>
+              {/* CONTACTS - Spoločenská prístavba (Náš nový sklad) */}
+              <ContactProvider>
+                <SafeAreaProvider>
+                  <AppNavigator />
+                </SafeAreaProvider>
+              </ContactProvider>
             </SignalProvider>
           </LariaProvider>
         </KryptoProvider>

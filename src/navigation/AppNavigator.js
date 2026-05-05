@@ -12,6 +12,7 @@ import CardEditorScreen from '../screens/CardEditorScreen';
 import MainScreen from '../screens/MainScreen';
 import DiagnosticScreen from '../screens/DiagnosticScreen';
 import AriaScreen from '../screens/AriaScreen';
+import ScannerScreen from '../screens/ScannerScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -47,6 +48,8 @@ const AppNavigator = () => {
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Aria" component={AriaScreen} />
         <Stack.Screen name="Diagnostic" component={DiagnosticScreen} />
+        <Stack.Screen name="Scanner" component={ScannerScreen} />
+        
       </Stack.Navigator>
     </NavigationContainer>
   );
