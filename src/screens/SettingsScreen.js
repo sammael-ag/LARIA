@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, Switch, ScrollView, TouchableOpacity, ActivityIndicator, Clipboard, Alert } from 'react-native';
 import { useKrypto } from '../../context/KryptoContext';
+import { useLaria } from '../../context/LariaContext'; 
 import { G } from '../styles/styles'; 
 
 const SettingsScreen = () => {
   const [isStealth, setIsStealth] = useState(true);
   const [isLariaSync, setIsLariaSync] = useState(true);
 
+  const { vault } = useLaria(); 
   const { 
     lariaBalance, 
     ethBalance, 
@@ -21,6 +23,21 @@ const SettingsScreen = () => {
     }
   }, [walletAddress]);
 
+  const copySHA = () => {
+    if (vault.identity.sha) {
+      Clipboard.setString(vault.identity.sha);
+      Alert.alert("Pečať skopírovaná", "Tento kód si bezpečne uschovaj pre obnovu identity.");
+    }
+  };
+
+  // --- NOVÁ FUNKCIA PRE KOPÍROVANIE WALLET ADRESY ---
+  const copyWallet = () => {
+    if (walletAddress) {
+      Clipboard.setString(walletAddress);
+      Alert.alert("Adresa skopírovaná", "Tvoja Active Node adresa je pripravená na zdieľanie.");
+    }
+  };
+
   const shortAddress = walletAddress 
     ? `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`
     : "ČAKÁM NA AKTIVÁCIU IDENTITY";
@@ -29,10 +46,35 @@ const SettingsScreen = () => {
     <ScrollView style={[G.bg, { padding: 25 }]}>
       
       {/* HEADER CONFIGURATION */}
-      <View style={{ marginTop: 40, marginBottom: 40 }}>
+      <View style={{ marginTop: 40, marginBottom: 30 }}>
         <Text style={[G.textWhite, { fontSize: 24, fontWeight: 'bold', letterSpacing: 5 }]}>CORE CONFIG</Text>
         <Text style={[G.textDim, { marginTop: 5, fontSize: 10 }]}>Sammael Engine v1.0.4 | Base Matrix</Text>
       </View>
+
+      {/* --- RECOVERY BLOCK (MOJA PEČAŤ) --- */}
+      <TouchableOpacity 
+        onPress={copySHA} 
+        activeOpacity={0.7} 
+        style={{ 
+          marginBottom: 40, 
+          padding: 15, 
+          backgroundColor: '#080808', 
+          borderRadius: 8, 
+          borderStyle: 'dashed', 
+          borderWidth: 1, 
+          borderColor: '#b19cd9' 
+        }}
+      >
+        <Text style={[G.textDim, { fontSize: 10, letterSpacing: 1, color: '#b19cd9' }]}>
+            OBNOVA ÚČTU (UNIKÁTNA PEČAŤ SHA-256)
+        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+          <Text style={{ color: '#FFF', fontSize: 11, fontFamily: 'monospace', flex: 1 }}>
+            {vault.identity.sha || 'HĽADÁM PEČAŤ...'}
+          </Text>
+          <Text style={{ fontSize: 18, marginLeft: 10 }}>📋</Text>
+        </View>
+      </TouchableOpacity>
 
       {/* SEKCIA: FREKVENCIA BYTIA */}
       <View style={{ marginBottom: 40, borderTopWidth: 1, borderTopColor: '#111', paddingTop: 20 }}>
@@ -65,19 +107,31 @@ const SettingsScreen = () => {
         </View>
       </View>
 
-      {/* SEKCIA: WALLET & TOKENY (ZROVNANÝ VIZUÁL) */}
+      {/* SEKCIA: WALLET & TOKENY (AKTUALIZOVANÁ O KOPÍROVANIE) */}
       <View style={[G.card, { padding: 20, borderTopWidth: 2, borderTopColor: '#0FF', marginBottom: 40 }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
           <Text style={[G.mono, { color: '#0FF' }]}>USER ASSETS</Text>
           {isLoading && <ActivityIndicator size="small" color="#0FF" />}
         </View>
         
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+        {/* INTERAKTÍVNY RIADOK ADRESY */}
+        <TouchableOpacity 
+          onPress={copyWallet}
+          activeOpacity={0.6}
+          style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-between', 
+            marginBottom: 15, 
+            paddingVertical: 5 
+          }}
+        >
           <Text style={G.textDim}>Active Node:</Text>
-          <Text style={[G.textWhite, { fontSize: 11 }]}>{shortAddress}</Text>
-        </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+             <Text style={[G.textWhite, { fontSize: 11, marginRight: 8 }]}>{shortAddress}</Text>
+             <Text style={{ fontSize: 12, opacity: 0.5 }}>📋</Text>
+          </View>
+        </TouchableOpacity>
 
-        {/* LARIA BALANCE - TERAZ IDENTICKÝ S ETH STYLE */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
           <Text style={G.textDim}>LARIA Balance:</Text>
           <Text style={G.textWhite}>
@@ -85,7 +139,6 @@ const SettingsScreen = () => {
           </Text>
         </View>
 
-        {/* ETH BALANCE */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
           <Text style={G.textDim}>Base Gas (ETH):</Text>
           <Text style={G.textWhite}>

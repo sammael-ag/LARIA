@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { G } from '../styles/styles'; 
-// DOLEŽITÉ: Prepojenie na náš nový Sklad
 import { useContacts } from '../../context/ContactContext'; 
 
 const ContactsScreen = ({ navigation }) => {
   const [search, setSearch] = useState('');
-  
-  // Tu sa deje tá mágia: už žiadne manuálne loadovanie cez useEffect/AsyncStorage!
-  // Sklad (Context) to robí za teba a hneď ti dáva čerstvé kontakty.
-  const { contacts } = useContacts();
+  const { contacts, togglePin, deleteContact } = useContacts();
 
   const sortedContacts = [...contacts]
     .filter(c => 
@@ -22,81 +18,151 @@ const ContactsScreen = ({ navigation }) => {
       return a.pinned ? -1 : 1;
     });
 
+  const handleLongPress = (item) => {
+    Alert.alert(
+      `[ PROTOKOL: ${item.name.toUpperCase()} ]`,
+      "Zvoľ operáciu so záznamom:",
+      [
+        { text: '[ ZRUŠIŤ ]', style: 'cancel' },
+        { 
+          text: item.pinned ? '[ ODPNÚŤ ]' : '[ PRIPNÚŤ NA VRCH ]', 
+          onPress: () => togglePin(item.id) 
+        },
+        { 
+          text: '[ TERMINOVAŤ ]', 
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'VAROVANIE',
+              `Naozaj chceš identitu ${item.name} vymazať?`,
+              [
+                { text: 'NIE', style: 'cancel' },
+                { text: 'ÁNO, VYMAZAŤ', style: 'destructive', onPress: () => deleteContact(item.id) }
+              ]
+            );
+          }
+        }
+      ]
+    );
+  };
+
+  // --- RENDEROVANIE POLOŽKY V ŠTÝLE DASHBOARDU ---
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={[
-        G.card,
-        item.pinned && { borderColor: '#0FF', borderWidth: 1 }
+        G.card, 
+        { 
+          padding: 18, 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          marginBottom: 15, // JEDNOTNÁ MEDZERA AKO V DASHBOARD
+          borderColor: item.pinned ? '#0FF' : '#222',
+          borderWidth: item.pinned ? 1 : 0.5
+        }
       ]} 
       onPress={() => navigation.navigate('Card', { contact: item, mode: 'view' })}
+      onLongPress={() => handleLongPress(item)}
+      activeOpacity={0.7}
     >
+      {/* IKONA / PIN STAT */}
+      <View style={{
+        width: 45, height: 45, backgroundColor: '#000', borderRadius: 8, 
+        justifyContent: 'center', alignItems: 'center', marginRight: 15,
+        borderWidth: 1, borderColor: item.pinned ? '#0FF' : '#222'
+      }}>
+        <Text style={{ fontSize: 18 }}>{item.pinned ? '📍' : '👤'}</Text>
+      </View>
+
+      {/* TEXTOVÝ OBSAH */}
       <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {item.pinned && <Text style={{ marginRight: 8 }}>📍</Text>}
-          <Text style={G.textWhite}>
-            {item.name}
-          </Text>
-        </View>
-        <Text style={G.textDim}>
-          {`${item.cat || 'Majster'} • ${item.loc || 'Matrix'}`}
+        <Text style={[G.mono, { fontSize: 14, fontWeight: 'bold', letterSpacing: 1, color: '#FFF' }]}>
+          {item.name.toUpperCase()}
+        </Text>
+        <Text style={[G.textDim, { fontSize: 11, marginTop: 2 }]}>
+          {item.cat || 'Majster'} • {item.loc || 'Matrix'}
         </Text>
       </View>
-      
+
+      {/* STATUS INDIKÁTOR */}
       <View style={{ alignItems: 'flex-end' }}>
-        <Text style={[
-          G.textCyber, { fontSize: 10 },
-          item.isVerified ? { color: '#0FF' } : { color: '#444' }
-        ]}>
-          {item.isVerified ? '● SC_ACTIVE' : '○ LOCKED'}
-        </Text>
-        {item.revo ? <Text style={[G.textCyber, { fontSize: 9, color: '#0F0', marginTop: 2 }]}>€ REV_ID</Text> : null}
+        <View style={{ 
+          width: 8, height: 8, borderRadius: 4, 
+          backgroundColor: item.isVerified ? '#0FF' : '#444',
+          marginBottom: 5
+        }} />
+        {item.revo && <Text style={{ color: '#0F0', fontSize: 8 }}>€ REV</Text>}
       </View>
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={G.bg}>
+      {/* IDENTIFIKAČNÁ LIŠTA (Jednotná s Dashboardom) */}
+      <View style={{ alignItems: 'center', marginTop: 10, paddingHorizontal: 15 }}>
+        <Text style={{
+          fontSize: 8, color: '#555', letterSpacing: 2, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
+        }}>
+          LOCAL_ENCRYPTED_CHAIN // NODE: {contacts.length}
+        </Text>
+      </View>
+
       <View style={G.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={G.textDim}>[ SPÄŤ ]</Text>
         </TouchableOpacity>
-        <Text style={G.headerTitle}>SIEŤ SPOJENÍ</Text>
+        <Text style={G.headerTitle}>KONTAKTY</Text>
         <View style={{ width: 40 }} /> 
-      </View>
-
-      <View style={{ paddingHorizontal: 25, marginBottom: 15 }}>
-        <TouchableOpacity 
-          style={[G.btnMain, { borderColor: '#0F0', backgroundColor: '#000' }]} 
-          onPress={() => navigation.navigate('Scanner')}
-        >
-          <Text style={[G.textCyber, { color: '#0F0' }]}>
-            [ SKENOVAŤ QR VIZITKU ]
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={{ paddingHorizontal: 25, marginBottom: 20 }}>
-        <TextInput 
-          style={[G.input, { color: '#0F0' }]} 
-          placeholder="Hľadať v reťazci..."
-          placeholderTextColor="#444"
-          value={search}
-          onChangeText={setSearch}
-          autoCorrect={false}
-          autoCapitalize="none"
-        />
       </View>
 
       <FlatList
         data={sortedContacts}
-        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+        keyExtractor={(item) => item.id?.toString()}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingHorizontal: 25, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 25, paddingBottom: 100 }}
+        
+        ListHeaderComponent={
+          <View style={{ marginBottom: 25 }}>
+            {/* VYHĽADÁVANIE V ŠTÝLE ARCHITECT INPUTU */}
+            <TextInput 
+              style={{
+                backgroundColor: '#080808',
+                color: '#0F0',
+                fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                padding: 15,
+                borderWidth: 1,
+                borderColor: '#111',
+                borderRadius: 8,
+                fontSize: 14
+              }} 
+              placeholder="VYHĽADAŤ V REŤAZCI..."
+              placeholderTextColor="#222"
+              value={search}
+              onChangeText={setSearch}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            
+            <TouchableOpacity 
+              style={{ 
+                marginTop: 15, 
+                padding: 15, 
+                backgroundColor: '#000', 
+                borderWidth: 1, 
+                borderColor: '#0F0', 
+                borderRadius: 8,
+                alignItems: 'center' 
+              }} 
+              onPress={() => navigation.navigate('Scanner')}
+            >
+              <Text style={[G.mono, { color: '#0F0', fontSize: 12 }]}>[ SKENOVAŤ NOVÚ PEČAŤ ]</Text>
+            </TouchableOpacity>
+          </View>
+        }
+
         ListEmptyComponent={
           <View style={{ marginTop: 50, alignItems: 'center' }}>
-            <Text style={[G.textDim, { textAlign: 'center' }]}>
-              Tvoj lokálny reťazec je prázdny.{"\n"}
-              <Text style={{ color: '#0FF' }}>Prijmi vizitku cez QR alebo #LARIA_SECURE_IRC.</Text>
+            <Text style={[G.textDim, { textAlign: 'center', fontSize: 10, letterSpacing: 1 }]}>
+              REŤAZEC JE PRÁZDNY. ČAKÁM NA INICIÁCIU SPOJENIA.
             </Text>
           </View>
         }
