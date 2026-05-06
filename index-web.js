@@ -1,6 +1,7 @@
 /**
- * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v6.1
- * LOGIC: Dual-ID Mapping (SHA + Krypt/Wallet) & Auto-Modal
+ * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v6.2
+ * LOGIC: Dual-ID Mapping & Correct Payload Naming
+ * FIX: Zjednotenie kľúčov pre bezchybné pridávanie kontaktov
  */
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
@@ -27,7 +28,7 @@ window.onload = async () => {
     }
 };
 
-// --- 2. NAČÍTANIE DÁT (S mapovaním stĺpca 'krypt') ---
+// --- 2. NAČÍTANIE DÁT ---
 async function loadDataFromGSheets(targetId = null) {
     console.log("🚀 Matrix: Synchronizácia dát...");
     const container = document.getElementById('cards-container');
@@ -40,22 +41,20 @@ async function loadDataFromGSheets(targetId = null) {
         allData = rawData.map(item => {
             const fingerprint = item.sha ? item.sha.substring(0, 12) : "no-sha";
             
-            // TU prepojíme 'krypt' z tabuľky na náš interný 'wallet'
             return {
-                id: fingerprint,
-                wallet: item.krypt || "", // Mapujeme stĺpec P (krypt)
-                fullSha: item.sha, 
+                id: fingerprint,        // Krátke ID pre web/URL
+                fullSha: item.sha,      // Plné SHA pre unikátnosť v appke
                 meno: item.meno || "Neznámy Majster",
-                kat: item.kat || "Všeobecné",
+                kategoria: item.kat || "ine", // Tu fixujeme názov na 'kategoria'
                 lok: item.lok || "V sieti",
                 popis: item.popis || "",
                 gal: item.gal || "", 
+                wallet: item.krypt || "", // Odkladáme si krypt adresu
                 isPublic: item.public === true || String(item.public).toUpperCase() === "TRUE"
             };
         }).filter(item => item.isPublic);
 
         if (targetId) {
-            // Hľadáme buď podľa SHA12 alebo podľa Wallet adresy (stĺpec krypt)
             const soloItem = allData.find(i => 
                 i.id === targetId || 
                 (i.wallet && i.wallet.toLowerCase() === targetId.toLowerCase())
@@ -99,7 +98,7 @@ function renderCards(data, isSolo = false) {
         };
 
         card.innerHTML = `
-            <span class="tag">${item.kat}</span>
+            <span class="tag">${item.kategoria}</span>
             <h2 class="card-title">${item.meno}</h2>
             <p class="card-loc">📍 ${item.lok}</p>
             <p class="card-desc">${aktivujOdkazy(item.popis)}</p>
@@ -117,15 +116,26 @@ function renderCards(data, isSolo = false) {
     });
 }
 
-// --- 4. MODÁLNY MOST ---
+// --- 4. MODÁLNY MOST (Kľúčová oprava tu!) ---
 function smartAdd(fingerprint) {
     const item = allData.find(i => i.id === fingerprint);
     if (!item) return;
 
+    // PRÍPRAVA BALÍKA PRE APP (Musí ladiť s LariaContext.js a onMessage v appke)
+    const payload = {
+        sha: item.fullSha,         // Plné ID
+        meno: item.meno,           // Tu musí byť 'meno'
+        kategoria: item.kategoria, // Tu musí byť 'kategoria'
+        lok: item.lok,
+        popis: item.popis,
+        gal: item.gal,
+        krypt: item.wallet         // Mapujeme späť na 'krypt'
+    };
+
     if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ 
             type: 'ADD_CONTACT', 
-            payload: { ...item, id: item.fullSha } 
+            payload: payload 
         }));
         return;
     }
@@ -151,7 +161,6 @@ function closeLariaBridge() {
     if (modal) modal.style.display = 'none';
 }
 
-// Kliknutie mimo okna ho zavrie
 window.onclick = function(event) {
     const modal = document.getElementById('lariaBridge');
     if (event.target == modal) {
@@ -169,7 +178,7 @@ const aktivujOdkazy = (text) => {
 function applyFilter() {
     const term = document.getElementById('searchInput')?.value || '';
     const filtered = allData.filter(item => {
-        const matchCat = (currentCategory === 'vsetko' || item.kat.toLowerCase() === currentCategory.toLowerCase());
+        const matchCat = (currentCategory === 'vsetko' || item.kategoria.toLowerCase() === currentCategory.toLowerCase());
         const searchContent = `${item.meno} ${item.lok} ${item.popis}`.toLowerCase();
         return matchCat && searchContent.includes(term.toLowerCase());
     });

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'; // Pridaný useEffect
-import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, Platform, Linking } from 'react-native'; // Pridaný Linking
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { G } from '../styles/styles'; 
 import { useContacts } from '../../context/ContactContext'; 
@@ -8,12 +8,9 @@ const ContactsScreen = ({ navigation }) => {
   const [search, setSearch] = useState('');
   const { contacts, togglePin, deleteContact } = useContacts();
 
-  // --- LARIA DEEP LINK PROTOKOL (PRÍJEM ZVONKU) ---
   useEffect(() => {
     const handleDeepLink = (url) => {
       if (!url) return;
-      
-      // Rozklad URL: laria://contact/sha12
       const route = url.replace(/.*?:\/\//g, '');
       const [action, id] = route.split('/');
 
@@ -26,7 +23,6 @@ const ContactsScreen = ({ navigation }) => {
             { 
               text: '[ INICIALIZOVAŤ ]', 
               onPress: () => {
-                // Posielame SHA do Card screenu, kde sa cez useEffect stiahnu dáta z tabuľky
                 navigation.navigate('Card', { contactId: id, mode: 'new' });
               }
             }
@@ -35,10 +31,7 @@ const ContactsScreen = ({ navigation }) => {
       }
     };
 
-    // Ak bola appka úplne vypnutá a zobudil ju link
     Linking.getInitialURL().then(handleDeepLink);
-
-    // Ak appka beží na pozadí a príde link
     const subscription = Linking.addEventListener('url', (event) => {
       handleDeepLink(event.url);
     });
@@ -48,20 +41,23 @@ const ContactsScreen = ({ navigation }) => {
     };
   }, []);
 
-  // --- ZVYŠOK TVOJHO PÔVODNÉHO KÓDU (Logika filtrovania a renderovania) ---
+  // --- FIX: Filtrovanie podľa 'meno' a 'kategoria' ---
   const sortedContacts = [...contacts]
-    .filter(c => 
-      (c.name && c.name.toLowerCase().includes(search.toLowerCase())) || 
-      (c.cat && c.cat.toLowerCase().includes(search.toLowerCase()))
-    )
+    .filter(c => {
+      const meno = c.meno || c.name || ""; // Podpora oboch verzií pre istotu
+      const kategoria = c.kategoria || c.cat || "";
+      return meno.toLowerCase().includes(search.toLowerCase()) || 
+             kategoria.toLowerCase().includes(search.toLowerCase());
+    })
     .sort((a, b) => {
       if (a.pinned === b.pinned) return 0;
       return a.pinned ? -1 : 1;
     });
 
   const handleLongPress = (item) => {
+    const displayMeno = item.meno || item.name || "Neznámy";
     Alert.alert(
-      `[ PROTOKOL: ${item.name.toUpperCase()} ]`,
+      `[ PROTOKOL: ${displayMeno.toUpperCase()} ]`,
       "Zvoľ operáciu so záznamom:",
       [
         { text: '[ ZRUŠIŤ ]', style: 'cancel' },
@@ -75,7 +71,7 @@ const ContactsScreen = ({ navigation }) => {
           onPress: () => {
             Alert.alert(
               'VAROVANIE',
-              `Naozaj chceš identitu ${item.name} vymazať?`,
+              `Naozaj chceš identitu ${displayMeno} vymazať?`,
               [
                 { text: 'NIE', style: 'cancel' },
                 { text: 'ÁNO, VYMAZAŤ', style: 'destructive', onPress: () => deleteContact(item.id) }
@@ -87,50 +83,56 @@ const ContactsScreen = ({ navigation }) => {
     );
   };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={[
-        G.card, 
-        { 
-          padding: 18, 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          marginBottom: 15, 
-          borderColor: item.pinned ? '#0FF' : '#222',
-          borderWidth: item.pinned ? 1 : 0.5
-        }
-      ]} 
-      onPress={() => navigation.navigate('Card', { contact: item, mode: 'view' })}
-      onLongPress={() => handleLongPress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={{
-        width: 45, height: 45, backgroundColor: '#000', borderRadius: 8, 
-        justifyContent: 'center', alignItems: 'center', marginRight: 15,
-        borderWidth: 1, borderColor: item.pinned ? '#0FF' : '#222'
-      }}>
-        <Text style={{ fontSize: 18 }}>{item.pinned ? '📍' : '👤'}</Text>
-      </View>
+  const renderItem = ({ item }) => {
+    // --- FIX: Mapovanie premenných pre render ---
+    const displayMeno = item.meno || item.name || "Pútnik";
+    const displayKat = item.kategoria || item.cat || "Majster";
 
-      <View style={{ flex: 1 }}>
-        <Text style={[G.mono, { fontSize: 14, fontWeight: 'bold', letterSpacing: 1, color: '#FFF' }]}>
-          {item.name.toUpperCase()}
-        </Text>
-        <Text style={[G.textDim, { fontSize: 11, marginTop: 2 }]}>
-          {item.cat || 'Majster'} • {item.loc || 'Matrix'}
-        </Text>
-      </View>
+    return (
+      <TouchableOpacity 
+        style={[
+          G.card, 
+          { 
+            padding: 18, 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            marginBottom: 15, 
+            borderColor: item.pinned ? '#0FF' : '#222',
+            borderWidth: item.pinned ? 1 : 0.5
+          }
+        ]} 
+        onPress={() => navigation.navigate('Card', { contact: item, mode: 'view' })}
+        onLongPress={() => handleLongPress(item)}
+        activeOpacity={0.7}
+      >
+        <View style={{
+          width: 45, height: 45, backgroundColor: '#000', borderRadius: 8, 
+          justifyContent: 'center', alignItems: 'center', marginRight: 15,
+          borderWidth: 1, borderColor: item.pinned ? '#0FF' : '#222'
+        }}>
+          <Text style={{ fontSize: 18 }}>{item.pinned ? '📍' : '👤'}</Text>
+        </View>
 
-      <View style={{ alignItems: 'flex-end' }}>
-        <View style={{ 
-          width: 8, height: 8, borderRadius: 4, 
-          backgroundColor: item.isVerified ? '#0FF' : '#444',
-          marginBottom: 5
-        }} />
-        {item.revo && <Text style={{ color: '#0F0', fontSize: 8 }}>€ REV</Text>}
-      </View>
-    </TouchableOpacity>
-  );
+        <View style={{ flex: 1 }}>
+          <Text style={[G.mono, { fontSize: 14, fontWeight: 'bold', letterSpacing: 1, color: '#FFF' }]}>
+            {displayMeno.toUpperCase()}
+          </Text>
+          <Text style={[G.textDim, { fontSize: 11, marginTop: 2 }]}>
+            {displayKat} • {item.lok || 'Matrix'}
+          </Text>
+        </View>
+
+        <View style={{ alignItems: 'flex-end' }}>
+          <View style={{ 
+            width: 8, height: 8, borderRadius: 4, 
+            backgroundColor: item.isVerified ? '#0FF' : '#444',
+            marginBottom: 5
+          }} />
+          {(item.revo || item.krypt) && <Text style={{ color: '#0F0', fontSize: 8 }}>$ LINK</Text>}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={G.bg}>
