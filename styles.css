@@ -1,22 +1,24 @@
-/* --- LARIA MATRIX ARCHITEKTÚRA --- */
+/* --- LARIA MATRIX ARCHITEKTÚRA v5.5 --- */
 
 :root {
     --bg-main: #000;
     --bg-dashboard: #050505;
     --text-main: #DDD;
-    --text-dim: #888;
-    --text-cyber: #0F0; /* SPDR Green */
-    --aria-pink: #F0F;  /* Moja zóna */
+    --text-dim: #666;    /* Zladenie so styles.js */
+    --text-white: #FFF;
+    --text-cyber: #0F0;  /* SPDR Green */
     --border-dark: #333;
     --border-soft: #222;
+    --border-action: #444;
     --max-sirka-vizitky: 500px;
+    --laria-fialova: #b19cd9;
 }
 
 body {
     background-color: var(--bg-main);
     margin: 0;
     padding: 0;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'Courier New', Courier, monospace; /* Pevné mono */
     color: var(--text-main);
 }
 
@@ -30,6 +32,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding-top: 45px; /* Podľa Platform.OS === 'android' v styles.js */
 }
 
 /* --- HLAVIČKA A STATUS --- */
@@ -38,17 +41,18 @@ body {
     width: 100%;
     max-width: var(--max-sirka-vizitky);
     align-items: center;
-    padding: 20px;
+    padding: 15px 20px;
     justify-content: space-between;
     box-sizing: border-box;
     margin: 0 auto;
 }
 
 .header-title {
-    color: var(--text-cyber);
+    color: var(--text-white);
     font-size: 14px;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     font-weight: bold;
+    text-transform: uppercase;
 }
 
 .status-indicator {
@@ -71,20 +75,17 @@ body {
     width: 100%;
     max-width: var(--max-sirka-vizitky);
     margin: 0 auto 20px auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
     padding: 0 20px;
     box-sizing: border-box;
 }
 
 .terminal-input {
-    background-color: #111;
-    border: 1px solid var(--border-dark);
+    background-color: #080808; /* Zladenie so styles.js */
+    border: 1px solid var(--border-soft);
     color: #CCC;
     padding: 12px;
-    font-size: 16px;
-    border-radius: 8px;
+    font-size: 15px;
+    border-radius: 6px;
     font-family: monospace;
     width: 100%;
     box-sizing: border-box;
@@ -94,19 +95,10 @@ body {
 
 .terminal-input:focus {
     border-color: var(--text-cyber);
-    box-shadow: 0 0 5px rgba(0, 255, 0, 0.2);
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.15);
 }
 
-/* --- GRID A KARTY --- */
-.laria-grid {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    width: 100%;
-    padding-bottom: 50px;
-}
-
+/* --- KARTY (Prevedenie zo styles.js) --- */
 .card {
     background-color: #111;
     width: 100%;
@@ -114,70 +106,104 @@ body {
     padding: 25px;
     border-radius: 20px;
     border: 1px solid var(--border-dark);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    /* Tieňovanie pre hĺbku podľa shadowColor: '#0F0' */
+    box-shadow: 0 10px 30px rgba(0, 255, 0, 0.05); 
     box-sizing: border-box;
-    transition: 0.3s;
+    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Štýl pre kartu v JS renderi */
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 255, 0, 0.1);
+    border-color: #444;
+}
+
 .card-title {
-    color: #FFF;
+    color: var(--text-white);
     font-size: 18px;
     font-weight: bold;
     margin: 10px 0 5px 0;
 }
 
-.card-loc { color: var(--text-dim); font-size: 12px; margin-bottom: 10px; }
-.card-desc { color: var(--text-main); font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+.card-loc { 
+    color: var(--text-dim); 
+    font-size: 11px; 
+    margin-bottom: 12px; 
+    text-transform: uppercase;
+}
 
-/* Akcie a Linky */
+.card-desc { 
+    color: var(--text-main); 
+    font-size: 14px; 
+    line-height: 1.5; 
+    margin-bottom: 20px; 
+}
+
+/* --- SÓLO VIZITKA --- */
+.card-solo {
+    border: 1px solid var(--laria-fialova);
+    box-shadow: 0 0 30px rgba(177, 156, 217, 0.15);
+    transform: scale(1.05);
+}
+
+/* --- TLAČIDLÁ (btnAction look) --- */
 .card-actions {
     display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 12px;
+    margin-bottom: 20px;
 }
 
-.card-links {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    border-top: 1px solid var(--border-soft);
-    padding-top: 15px;
-}
-
-.card-links a {
-    color: var(--text-cyber);
-    font-size: 11px;
-    text-decoration: none;
-    font-weight: bold;
-    letter-spacing: 1px;
-}
-
-/* --- TLAČIDLÁ --- */
 .btn-add, .btn-share {
     flex: 1;
     padding: 12px;
     border-radius: 8px;
-    border: 1px solid var(--border-dark);
+    border: 1px solid var(--border-action);
     cursor: pointer;
     font-family: monospace;
     font-weight: bold;
+    font-size: 11px;
     text-transform: uppercase;
     transition: 0.3s;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-add {
     background-color: var(--text-cyber);
     color: #000;
+    border-color: var(--text-cyber);
 }
 
 .btn-share {
-    background-color: #1a1a1a;
-    color: #FFF;
+    background-color: #222; /* Podľa btnAction */
+    color: var(--text-white);
 }
 
-.btn-add:hover { background-color: #0C0; }
-.btn-share:hover { border-color: var(--text-cyber); }
+.btn-add:hover { 
+    background-color: #0C0;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+}
+
+.btn-share:hover { 
+    border-color: var(--text-cyber);
+    color: var(--text-cyber);
+}
+
+/* --- ODKAZY --- */
+.card-links {
+    border-top: 1px solid #222; /* divider zo styles.js */
+    padding-top: 20px;
+    text-align: center;
+}
+
+.card-links a {
+    color: var(--text-cyber);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-decoration: none;
+    font-weight: bold;
+    text-transform: uppercase;
+}
 
 /* --- DOPLNKY --- */
 .tag {
@@ -186,17 +212,34 @@ body {
     letter-spacing: 2px;
     font-weight: bold;
     text-transform: uppercase;
+    margin-bottom: 10px;
+    display: block;
 }
 
-.text-cyber { color: var(--text-cyber); }
-
-/* Back to Top - štýl podľa appky */
+/* IRC Button style pre hlavné akcie na webe */
 .irc-button {
-    background-color: var(--text-cyber);
-    color: #000;
-    border: none;
-    border-radius: 25px;
+    border: 1px solid var(--text-cyber);
+    padding: 18px;
+    border-radius: 12px;
+    background-color: transparent;
+    color: var(--text-cyber);
     font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
     cursor: pointer;
-    box-shadow: 0 0 15px var(--text-cyber);
+    width: 100%;
+    transition: 0.3s;
+}
+
+.irc-button:hover {
+    background-color: rgba(0, 255, 0, 0.05);
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+}
+
+/* --- RESPONSIVITA --- */
+@media (max-width: 600px) {
+    .card-solo {
+        transform: scale(1);
+        margin: 20px;
+    }
 }
