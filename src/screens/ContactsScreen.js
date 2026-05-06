@@ -46,7 +46,6 @@ const ContactsScreen = ({ navigation }) => {
     );
   };
 
-  // --- RENDEROVANIE POLOŽKY V ŠTÝLE DASHBOARDU ---
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={[
@@ -55,7 +54,7 @@ const ContactsScreen = ({ navigation }) => {
           padding: 18, 
           flexDirection: 'row', 
           alignItems: 'center', 
-          marginBottom: 15, // JEDNOTNÁ MEDZERA AKO V DASHBOARD
+          marginBottom: 15, 
           borderColor: item.pinned ? '#0FF' : '#222',
           borderWidth: item.pinned ? 1 : 0.5
         }
@@ -64,7 +63,6 @@ const ContactsScreen = ({ navigation }) => {
       onLongPress={() => handleLongPress(item)}
       activeOpacity={0.7}
     >
-      {/* IKONA / PIN STAT */}
       <View style={{
         width: 45, height: 45, backgroundColor: '#000', borderRadius: 8, 
         justifyContent: 'center', alignItems: 'center', marginRight: 15,
@@ -73,7 +71,6 @@ const ContactsScreen = ({ navigation }) => {
         <Text style={{ fontSize: 18 }}>{item.pinned ? '📍' : '👤'}</Text>
       </View>
 
-      {/* TEXTOVÝ OBSAH */}
       <View style={{ flex: 1 }}>
         <Text style={[G.mono, { fontSize: 14, fontWeight: 'bold', letterSpacing: 1, color: '#FFF' }]}>
           {item.name.toUpperCase()}
@@ -83,7 +80,6 @@ const ContactsScreen = ({ navigation }) => {
         </Text>
       </View>
 
-      {/* STATUS INDIKÁTOR */}
       <View style={{ alignItems: 'flex-end' }}>
         <View style={{ 
           width: 8, height: 8, borderRadius: 4, 
@@ -97,7 +93,6 @@ const ContactsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={G.bg}>
-      {/* IDENTIFIKAČNÁ LIŠTA (Jednotná s Dashboardom) */}
       <View style={{ alignItems: 'center', marginTop: 10, paddingHorizontal: 15 }}>
         <Text style={{
           fontSize: 8, color: '#555', letterSpacing: 2, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
@@ -122,7 +117,6 @@ const ContactsScreen = ({ navigation }) => {
         
         ListHeaderComponent={
           <View style={{ marginBottom: 25 }}>
-            {/* VYHĽADÁVANIE V ŠTÝLE ARCHITECT INPUTU */}
             <TextInput 
               style={{
                 backgroundColor: '#080808',
@@ -142,19 +136,26 @@ const ContactsScreen = ({ navigation }) => {
               autoCapitalize="none"
             />
             
+            {/* TLAČIDLO AKTIVÁCIE SKENERA S NFC NÁDYCHOM */}
             <TouchableOpacity 
               style={{ 
                 marginTop: 15, 
-                padding: 15, 
+                padding: 18, // Trošku hlbšie, aby sa naň dobre klikalo
                 backgroundColor: '#000', 
                 borderWidth: 1, 
-                borderColor: '#0F0', 
-                borderRadius: 8,
-                alignItems: 'center' 
+                borderColor: '#0FF', // Zmenená na tyrkysovú (NFC vibra)
+                borderRadius: 12, // Viac zaoblené pre organický pocit
+                alignItems: 'center',
+                shadowColor: '#0FF',
+                shadowOpacity: 0.2,
+                shadowRadius: 5,
+                elevation: 5
               }} 
               onPress={() => navigation.navigate('Scanner')}
             >
-              <Text style={[G.mono, { color: '#0F0', fontSize: 12 }]}>[ SKENOVAŤ NOVÚ PEČAŤ ]</Text>
+              <Text style={[G.mono, { color: '#0FF', fontSize: 13, fontWeight: 'bold' }]}>
+                [ PRIJAŤ NOVÚ PEČAŤ (QR / NFC) ]
+              </Text>
             </TouchableOpacity>
           </View>
         }
