@@ -1,6 +1,6 @@
 /**
- * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v5.7
- * LOGIC: Inteligentná distribúcia & Stabilizované načítanie
+ * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v6.1
+ * LOGIC: Dual-ID Mapping (SHA + Krypt/Wallet) & Auto-Modal
  */
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
@@ -8,35 +8,42 @@ const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlv
 let allData = []; 
 let currentCategory = 'vsetko';
 
-// --- 1. ŠTART A DEEP LINKING ---
+// --- 1. ŠTART A INTELIGENTNÉ OTVÁRANIE ---
 window.onload = async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const targetId = urlParams.get('id'); 
+    
     await loadDataFromGSheets(targetId);
+
+    // Ak prišiel cez priamy odkaz (QR/NFC), po krátkej pauze aktivujeme most
+    if (targetId) {
+        setTimeout(() => {
+            const item = allData.find(i => 
+                i.id === targetId || 
+                (i.wallet && i.wallet.toLowerCase() === targetId.toLowerCase())
+            );
+            if (item) smartAdd(item.id); 
+        }, 1200); 
+    }
 };
 
-// --- 2. NAČÍTANIE DÁT (Stabilizovaná detektívna metóda) ---
+// --- 2. NAČÍTANIE DÁT (S mapovaním stĺpca 'krypt') ---
 async function loadDataFromGSheets(targetId = null) {
     console.log("🚀 Matrix: Synchronizácia dát...");
     const container = document.getElementById('cards-container');
     
     try {
         const response = await fetch(READ_URL);
-        if (!response.ok) throw new Error("Matrix neodpovedá (HTTP Error)");
-        
         const textData = await response.text();
-        let rawData;
-        try {
-            rawData = JSON.parse(textData);
-        } catch (e) {
-            console.error("❌ Kritická chyba JSONu:", textData);
-            throw new Error("Prijatý text nie je platný JSON.");
-        }
+        let rawData = JSON.parse(textData);
 
         allData = rawData.map(item => {
             const fingerprint = item.sha ? item.sha.substring(0, 12) : "no-sha";
+            
+            // TU prepojíme 'krypt' z tabuľky na náš interný 'wallet'
             return {
                 id: fingerprint,
+                wallet: item.krypt || "", // Mapujeme stĺpec P (krypt)
                 fullSha: item.sha, 
                 meno: item.meno || "Neznámy Majster",
                 kat: item.kat || "Všeobecné",
@@ -48,7 +55,12 @@ async function loadDataFromGSheets(targetId = null) {
         }).filter(item => item.isPublic);
 
         if (targetId) {
-            const soloItem = allData.find(i => i.id === targetId);
+            // Hľadáme buď podľa SHA12 alebo podľa Wallet adresy (stĺpec krypt)
+            const soloItem = allData.find(i => 
+                i.id === targetId || 
+                (i.wallet && i.wallet.toLowerCase() === targetId.toLowerCase())
+            );
+            
             if (soloItem) {
                 renderCards([soloItem], true);
                 return;
@@ -57,9 +69,7 @@ async function loadDataFromGSheets(targetId = null) {
         applyFilter();
     } catch (e) {
         console.error("❌ Matrix offline:", e);
-        if (container) {
-            container.innerHTML = `<p style="color:#F0F; text-align:center; padding:50px;">[ CHYBA_MATRIXU: ${e.message} ]</p>`;
-        }
+        if (container) container.innerHTML = `<p style="color:#F0F; text-align:center; padding:50px;">[ CHYBA_MATRIXU ]</p>`;
     }
 }
 
@@ -75,11 +85,6 @@ function renderCards(data, isSolo = false) {
         backBtn.style.maxWidth = "500px";
         backBtn.innerHTML = `<button onclick="window.location.href='index.html'" class="btn-share" style="margin-bottom: 20px; width:100%;">[ ↩ SPÄŤ DO SIETE ]</button>`;
         container.appendChild(backBtn);
-    }
-
-    if (data.length === 0) {
-        container.innerHTML = '<p class="text-cyber" style="text-align:center; width:100%; opacity:0.5;">Ticho v éteri...</p>';
-        return;
     }
 
     data.forEach(item => {
@@ -112,12 +117,11 @@ function renderCards(data, isSolo = false) {
     });
 }
 
-// --- 4. INTELIGENTNÝ MOST (DISTRIBUČNÝ ROZCESTNÍK) ---
+// --- 4. MODÁLNY MOST ---
 function smartAdd(fingerprint) {
     const item = allData.find(i => i.id === fingerprint);
     if (!item) return;
 
-    // A. Ak sme v WebView appky LARIA, hneď ukladáme (SHA do bezpečného tunela)
     if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ 
             type: 'ADD_CONTACT', 
@@ -126,38 +130,32 @@ function smartAdd(fingerprint) {
         return;
     }
 
-    // B. Pre bežný web - náš vlastný interaktívny rozcestník
-    const choice = prompt(`
-[ LARIA PROTOKOL: DISTRIBÚCIA ]
+    const modal = document.getElementById('lariaBridge');
+    const fpLabel = document.getElementById('modal-fingerprint');
+    const openAppBtn = document.getElementById('btn-open-app');
 
-Zvoľte akciu pre túto pečať:
-1 - Otvoriť v nainštalovanej appke (laria://)
-2 - Stiahnuť Android (.apk)
-3 - Stiahnuť Apple (TestFlight)
-4 - Stiahnuť Ubuntu (.deb)
-5 - Navštíviť GitHub repozitár
+    if (!modal) return;
 
-Zadajte číslo voľby:`, "1");
+    fpLabel.innerText = fingerprint;
+    
+    openAppBtn.onclick = () => {
+        window.location.href = `laria://contact/${fingerprint}`;
+        closeLariaBridge();
+    };
 
-    switch(choice) {
-        case "1":
-            window.location.href = `laria://contact/${fingerprint}`;
-            break;
-        case "2":
-            window.location.href = "https://github.com/sammael-ag/LARIA/releases/latest/download/laria.apk";
-            break;
-        case "3":
-            alert("[ INFO ] Apple verzia je momentálne v schvaľovacom procese.");
-            break;
-        case "4":
-            window.location.href = "https://github.com/sammael-ag/LARIA/releases/latest/download/laria.deb";
-            break;
-        case "5":
-            window.location.href = "https://github.com/sammael-ag/LARIA";
-            break;
-        default:
-            // Ak užívateľ stlačí Cancel alebo zadá iné, nerobíme nič
-            break;
+    modal.style.display = 'flex';
+}
+
+function closeLariaBridge() {
+    const modal = document.getElementById('lariaBridge');
+    if (modal) modal.style.display = 'none';
+}
+
+// Kliknutie mimo okna ho zavrie
+window.onclick = function(event) {
+    const modal = document.getElementById('lariaBridge');
+    if (event.target == modal) {
+        closeLariaBridge();
     }
 }
 

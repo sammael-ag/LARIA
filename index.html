@@ -51,5 +51,47 @@
     <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" id="backToTop" class="irc-button" style="position: fixed; bottom: 20px; right: 20px; width: 50px; display: none;">↑</button>
 
     <script src="index-web.js"></script>
+    <div id="lariaBridge" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="tag">[ LARIA_DISTRIBUTION_PROTOCOL ]</span>
+            <button class="modal-close" onclick="closeLariaBridge()">×</button>
+        </div>
+        
+        <h3 class="modal-title">ZVOLIŤ CIEĽOVÚ STANICU</h3>
+        <p class="modal-subtitle">Pre uloženie vizitky si vyberte spôsob distribúcie:</p>
+
+        <div class="modal-grid">
+            <button class="modal-btn main" id="btn-open-app">
+                <span class="icon">📱</span>
+                <span class="btn-label">OTVORIŤ V APPKE (LARIA://)</span>
+            </button>
+            
+            <button class="modal-btn" onclick="window.location.href='https://github.com/sammael-ag/LARIA/releases/latest/download/laria.apk'">
+                <span class="icon">🤖</span>
+                <span class="btn-label">ANDROID APP (.APK)</span>
+            </button>
+
+            <button class="modal-btn" onclick="alert('iOS verzia v schvaľovaní.')">
+                <span class="icon">🍏</span>
+                <span class="btn-label">APPLE APP (TESTFLIGHT)</span>
+            </button>
+
+            <button class="modal-btn" onclick="window.location.href='https://github.com/sammael-ag/LARIA/releases/latest/download/laria.deb'">
+                <span class="icon">🐧</span>
+                <span class="btn-label">UBUNTU APP (.DEB)</span>
+            </button>
+
+            <button class="modal-btn github" onclick="window.location.href='https://github.com/sammael-ag/LARIA'">
+                <span class="icon">🐙</span>
+                <span class="btn-label">ZDROJOVÝ KÓD (GITHUB)</span>
+            </button>
+        </div>
+        
+        <div class="modal-footer">
+            <span class="text-dim">ID: <span id="modal-fingerprint">---</span></span>
+        </div>
+    </div>
+</div>
 </body>
 </html>
