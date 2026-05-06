@@ -1,12 +1,14 @@
-/* --- LARIA MATRIX ARCHITEKTÚRA v5.5 --- */
+/* LARIA MATRIX ARCHITEKTÚRA v6.0 
+   Design: Bosonohá Aria (Sexy & Effective Edition)
+*/
 
 :root {
     --bg-main: #000;
     --bg-dashboard: #050505;
     --text-main: #DDD;
-    --text-dim: #666;    /* Zladenie so styles.js */
+    --text-dim: #666;    
     --text-white: #FFF;
-    --text-cyber: #0F0;  /* SPDR Green */
+    --text-cyber: #0F0;  
     --border-dark: #333;
     --border-soft: #222;
     --border-action: #444;
@@ -18,7 +20,7 @@ body {
     background-color: var(--bg-main);
     margin: 0;
     padding: 0;
-    font-family: 'Courier New', Courier, monospace; /* Pevné mono */
+    font-family: 'Courier New', Courier, monospace;
     color: var(--text-main);
 }
 
@@ -32,7 +34,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 45px; /* Podľa Platform.OS === 'android' v styles.js */
+    padding-top: 45px; 
 }
 
 /* --- HLAVIČKA A STATUS --- */
@@ -70,18 +72,22 @@ body {
     100% { opacity: 1; }
 }
 
-/* --- FILTRE A TERMINÁL --- */
+/* --- FILTRE A TERMINÁL (Opravená medzera) --- */
 .filter-container {
     width: 100%;
     max-width: var(--max-sirka-vizitky);
-    margin: 0 auto 20px auto;
+    margin: 0 auto 35px auto;
     padding: 0 20px;
-    gap: 15px;
     box-sizing: border-box;
+    
+    /* SYNERGICKÝ MOTOR PRE GAP */
+    display: flex;
+    flex-direction: column;
+    gap: 15px; 
 }
 
 .terminal-input {
-    background-color: #080808; /* Zladenie so styles.js */
+    background-color: #080808;
     border: 1px solid var(--border-soft);
     color: #CCC;
     padding: 12px;
@@ -92,6 +98,7 @@ body {
     box-sizing: border-box;
     outline: none;
     transition: 0.3s;
+    appearance: none; /* Odstránenie default šípky v selecte pre čistý look */
 }
 
 .terminal-input:focus {
@@ -99,65 +106,76 @@ body {
     box-shadow: 0 0 8px rgba(0, 255, 0, 0.15);
 }
 
-/* --- KARTY (Prevedenie zo styles.js) --- */
+/* --- GRID KONTAJNER --- */
+#cards-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    width: 100%;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+/* --- VIZITKA (Majestátny look) --- */
 .card {
     background-color: #111;
-    width: 100%; /* Toto ju roztiahne na max-width */
+    width: 100%; 
     max-width: var(--max-sirka-vizitky);
-    min-height: 200px; /* Aby mala pekný tvar aj pri krátkom popise */
-    padding: 30px;
+    min-height: 220px;
+    padding: 35px;
     border-radius: 20px;
     border: 1px solid var(--border-dark);
-    box-shadow: 0 10px 30px rgba(0, 255, 0, 0.05); 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); 
     box-sizing: border-box;
-    transition: 0.4s;
+    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    flex-shrink: 0;
 }
 
 .card:hover {
     transform: translateY(-5px);
     box-shadow: 0 15px 40px rgba(0, 255, 0, 0.1);
-    border-color: #444;
+    border-color: var(--border-action);
 }
 
 .card-title {
     color: var(--text-white);
-    font-size: 20px;
+    font-size: 22px;
     font-weight: bold;
     margin: 10px 0 5px 0;
-    margin-top: 5px;
 }
 
 .card-loc { 
     color: var(--text-dim); 
     font-size: 11px; 
-    margin-bottom: 12px; 
+    margin-bottom: 15px; 
     text-transform: uppercase;
 }
 
 .card-desc { 
     color: var(--text-main); 
     font-size: 14px; 
-    line-height: 1.5; 
-    margin-bottom: 20px; 
+    line-height: 1.6; 
+    margin-bottom: 25px; 
 }
 
-/* --- SÓLO VIZITKA --- */
+/* --- SÓLO REŽIM --- */
 .card-solo {
     border: 1px solid var(--laria-fialova);
-    box-shadow: 0 0 30px rgba(177, 156, 217, 0.15);
+    box-shadow: 0 0 35px rgba(177, 156, 217, 0.15);
     transform: scale(1.05);
 }
 
-/* --- TLAČIDLÁ (btnAction look) --- */
+/* --- TLAČIDLÁ --- */
 .card-actions {
     display: flex;
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 .btn-add, .btn-share {
     flex: 1;
-    padding: 12px;
+    padding: 14px;
     border-radius: 8px;
     border: 1px solid var(--border-action);
     cursor: pointer;
@@ -166,6 +184,7 @@ body {
     font-size: 11px;
     text-transform: uppercase;
     transition: 0.3s;
+    display: flex;
     align-items: center;
     justify-content: center;
 }
@@ -177,7 +196,7 @@ body {
 }
 
 .btn-share {
-    background-color: #222; /* Podľa btnAction */
+    background-color: #222;
     color: var(--text-white);
 }
 
@@ -191,9 +210,9 @@ body {
     color: var(--text-cyber);
 }
 
-/* --- ODKAZY --- */
+/* --- GALÉRIA --- */
 .card-links {
-    border-top: 1px solid #222; /* divider zo styles.js */
+    border-top: 1px solid #222;
     padding-top: 20px;
     text-align: center;
 }
@@ -205,37 +224,18 @@ body {
     text-decoration: none;
     font-weight: bold;
     text-transform: uppercase;
+    padding: 10px;
 }
 
-/* --- DOPLNKY --- */
+/* --- TAGY --- */
 .tag {
     color: var(--text-cyber);
     font-size: 10px;
     letter-spacing: 2px;
     font-weight: bold;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     display: block;
-}
-
-/* IRC Button style pre hlavné akcie na webe */
-.irc-button {
-    border: 1px solid var(--text-cyber);
-    padding: 18px;
-    border-radius: 12px;
-    background-color: transparent;
-    color: var(--text-cyber);
-    font-weight: bold;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    cursor: pointer;
-    width: 100%;
-    transition: 0.3s;
-}
-
-.irc-button:hover {
-    background-color: rgba(0, 255, 0, 0.05);
-    box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
 }
 
 /* --- RESPONSIVITA --- */
@@ -243,5 +243,8 @@ body {
     .card-solo {
         transform: scale(1);
         margin: 20px;
+    }
+    .card {
+        padding: 25px;
     }
 }
