@@ -1,39 +1,52 @@
 /**
- * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v5.4
- * LOGIC: Minimalistická vizitka (Motivácia k inštalácii app)
+ * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v5.6
+ * LOGIC: Zjednotená verzia so stabilným načítaním
  */
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
 
 let allData = []; 
+let currentCategory = 'vsetko';
 
-// --- 1. ŠTART ---
+// --- 1. ŠTART A DEEP LINKING ---
 window.onload = async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const targetId = urlParams.get('id'); 
     await loadDataFromGSheets(targetId);
 };
 
-// --- 2. NAČÍTANIE DÁT (Očistené o súkromné údaje) ---
+// --- 2. NAČÍTANIE DÁT (Stabilizovaná metóda) ---
 async function loadDataFromGSheets(targetId = null) {
-    console.log("🚀 Matrix: Synchronizácia verejných dát...");
+    console.log("🚀 Matrix: Synchronizácia dát...");
+    const container = document.getElementById('cards-container');
+    
     try {
         const response = await fetch(READ_URL);
-        const rawData = await response.json();
+        if (!response.ok) throw new Error("Matrix neodpovedá (HTTP Error)");
+        
+        // Použijeme tvoju detektívnu metódu, ktorá je stabilnejšia
+        const textData = await response.text();
+        let rawData;
+        try {
+            rawData = JSON.parse(textData);
+        } catch (e) {
+            console.error("❌ Kritická chyba JSONu:", textData);
+            throw new Error("Prijatý text nie je platný JSON.");
+        }
 
         allData = rawData.map(item => {
             // Unikátny 12-znakový fingerprint pre URL
-            const fingerprint = item.sha ? item.sha.substring(0, 12) : "no-id";
+            const fingerprint = item.sha ? item.sha.substring(0, 12) : "no-sha";
 
             return {
                 id: fingerprint,
                 fullSha: item.sha, 
                 meno: item.meno || "Neznámy Majster",
-                kat: item.kat || "HĽADAČ SLOBODY",
-                lok: item.lok || "V SIETI",
+                kat: item.kat || "Všeobecné",
+                lok: item.lok || "V sieti",
                 popis: item.popis || "",
-                gal: item.gal || "", // Galéria je jediný povolený externý link
-                isPublic: String(item.public).toUpperCase() === "TRUE"
+                gal: item.gal || "", 
+                isPublic: item.public === true || String(item.public).toUpperCase() === "TRUE"
             };
         }).filter(item => item.isPublic);
 
@@ -46,7 +59,10 @@ async function loadDataFromGSheets(targetId = null) {
         }
         applyFilter();
     } catch (e) {
-        console.error("❌ Matrix Error:", e);
+        console.error("❌ Matrix offline:", e);
+        if (container) {
+            container.innerHTML = `<p style="color:#F0F; text-align:center; padding:50px;">[ CHYBA_MATRIXU: ${e.message} ]</p>`;
+        }
     }
 }
 
@@ -64,12 +80,16 @@ function renderCards(data, isSolo = false) {
         container.appendChild(backBtn);
     }
 
+    if (data.length === 0) {
+        container.innerHTML = '<p class="text-cyber" style="text-align:center; width:100%; opacity:0.5;">Ticho v éteri...</p>';
+        return;
+    }
+
     data.forEach(item => {
         const card = document.createElement('div');
         card.className = isSolo ? 'card card-solo' : 'card';
         if (!isSolo) card.style.cursor = 'pointer';
         
-        // Kliknutím na kartu sa zobrazí jej samostatný detail
         card.onclick = (e) => {
             if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
                 window.location.href = `?id=${item.id}`;
@@ -88,14 +108,14 @@ function renderCards(data, isSolo = false) {
             </div>
 
             <div class="card-links">
-                ${item.gal ? `<a href="${item.gal}" target="_blank" style="color: #FF0;">[ FOTOGALÉRIA ARTEFAKTOV ]</a>` : ''}
+                ${item.gal ? `<a href="${item.gal}" target="_blank" style="color: #FF0; font-size: 10px;">[ GALÉRIA ARTEFAKTOV ]</a>` : ''}
             </div>
         `;
         container.appendChild(card);
     });
 }
 
-// --- 4. INTELIGENTNÝ MOST (Odosiela SHA len do appky) ---
+// --- 4. INTELIGENTNÝ MOST (SMART ADD) ---
 function smartAdd(fingerprint) {
     const item = allData.find(i => i.id === fingerprint);
     if (!item) return;
@@ -103,28 +123,21 @@ function smartAdd(fingerprint) {
     if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ 
             type: 'ADD_CONTACT', 
-            payload: { ...item, id: item.fullSha } 
+            payload: { ...item, id: item.fullSha } // Posielame celé SHA do appky
         }));
-        return;
-    }
-
-    // Pokus o otvorenie nainštalovanej appky
-    window.location.href = `laria://contact/${item.id}`;
-
-    // Ak appka nereaguje, ponúkneme inštaláciu
-    setTimeout(() => {
-        if (document.hasFocus()) showInstallModal(item.id);
-    }, 1500);
-}
-
-function showInstallModal(id) {
-    const msg = `[ LARIA PROTOKOL: OBMEDZENÝ PRÍSTUP ]\n\nPre zobrazenie kontaktu a šifrovanú komunikáciu si musíš nainštalovať aplikáciu LARIA.\n\nChceš prejsť na stiahnutie (Android/Ubuntu)?`;
-    if (confirm(msg)) {
-        window.location.href = "download.html?id=" + id;
+    } else {
+        window.location.href = `laria://contact/${item.id}`;
+        setTimeout(() => {
+            if (document.hasFocus()) {
+                if (confirm("[ LARIA APP ]\n\nPre uloženie vizitky potrebuješ našu appku. Chceš ju stiahnuť?")) {
+                    window.location.href = "download.html?id=" + fingerprint;
+                }
+            }
+        }, 1500);
     }
 }
 
-// --- 5. POMOCNÉ FUNKCIE ---
+// --- POMOCNÉ FUNKCIE ---
 const aktivujOdkazy = (text) => {
     if (!text) return "Bez popisu.";
     const urlPattern = /(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;

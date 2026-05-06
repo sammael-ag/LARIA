@@ -76,6 +76,7 @@ body {
     max-width: var(--max-sirka-vizitky);
     margin: 0 auto 20px auto;
     padding: 0 20px;
+    gap: 15px;
     box-sizing: border-box;
 }
 
