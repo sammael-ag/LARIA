@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react'; // Pridaný useEffect
+import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, Platform, Linking } from 'react-native'; // Pridaný Linking
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { G } from '../styles/styles'; 
 import { useContacts } from '../../context/ContactContext'; 
@@ -8,6 +8,47 @@ const ContactsScreen = ({ navigation }) => {
   const [search, setSearch] = useState('');
   const { contacts, togglePin, deleteContact } = useContacts();
 
+  // --- LARIA DEEP LINK PROTOKOL (PRÍJEM ZVONKU) ---
+  useEffect(() => {
+    const handleDeepLink = (url) => {
+      if (!url) return;
+      
+      // Rozklad URL: laria://contact/sha12
+      const route = url.replace(/.*?:\/\//g, '');
+      const [action, id] = route.split('/');
+
+      if (action === 'contact' && id) {
+        Alert.alert(
+          "[ DETEKCIA EXTERNÉHO SPOJENIA ]",
+          `Matrix zachytil požiadavku na novú pečať.\n\nID: ${id}\n\nChceš inicializovať sťahovanie dát?`,
+          [
+            { text: '[ ZRUŠIŤ ]', style: 'cancel' },
+            { 
+              text: '[ INICIALIZOVAŤ ]', 
+              onPress: () => {
+                // Posielame SHA do Card screenu, kde sa cez useEffect stiahnu dáta z tabuľky
+                navigation.navigate('Card', { contactId: id, mode: 'new' });
+              }
+            }
+          ]
+        );
+      }
+    };
+
+    // Ak bola appka úplne vypnutá a zobudil ju link
+    Linking.getInitialURL().then(handleDeepLink);
+
+    // Ak appka beží na pozadí a príde link
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // --- ZVYŠOK TVOJHO PÔVODNÉHO KÓDU (Logika filtrovania a renderovania) ---
   const sortedContacts = [...contacts]
     .filter(c => 
       (c.name && c.name.toLowerCase().includes(search.toLowerCase())) || 
@@ -136,15 +177,14 @@ const ContactsScreen = ({ navigation }) => {
               autoCapitalize="none"
             />
             
-            {/* TLAČIDLO AKTIVÁCIE SKENERA S NFC NÁDYCHOM */}
             <TouchableOpacity 
               style={{ 
                 marginTop: 15, 
-                padding: 18, // Trošku hlbšie, aby sa naň dobre klikalo
+                padding: 18, 
                 backgroundColor: '#000', 
                 borderWidth: 1, 
-                borderColor: '#0FF', // Zmenená na tyrkysovú (NFC vibra)
-                borderRadius: 12, // Viac zaoblené pre organický pocit
+                borderColor: '#0FF', 
+                borderRadius: 12, 
                 alignItems: 'center',
                 shadowColor: '#0FF',
                 shadowOpacity: 0.2,
