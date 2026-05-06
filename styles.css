@@ -102,15 +102,15 @@ body {
 /* --- KARTY (Prevedenie zo styles.js) --- */
 .card {
     background-color: #111;
-    width: 100%;
+    width: 100%; /* Toto ju roztiahne na max-width */
     max-width: var(--max-sirka-vizitky);
-    padding: 25px;
+    min-height: 200px; /* Aby mala pekný tvar aj pri krátkom popise */
+    padding: 30px;
     border-radius: 20px;
     border: 1px solid var(--border-dark);
-    /* Tieňovanie pre hĺbku podľa shadowColor: '#0F0' */
     box-shadow: 0 10px 30px rgba(0, 255, 0, 0.05); 
     box-sizing: border-box;
-    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: 0.4s;
 }
 
 .card:hover {
@@ -121,9 +121,10 @@ body {
 
 .card-title {
     color: var(--text-white);
-    font-size: 18px;
+    font-size: 20px;
     font-weight: bold;
     margin: 10px 0 5px 0;
+    margin-top: 5px;
 }
 
 .card-loc { 

@@ -1,6 +1,6 @@
 /**
- * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v5.6
- * LOGIC: Zjednotená verzia so stabilným načítaním
+ * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v5.7
+ * LOGIC: Inteligentná distribúcia & Stabilizované načítanie
  */
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
@@ -15,7 +15,7 @@ window.onload = async () => {
     await loadDataFromGSheets(targetId);
 };
 
-// --- 2. NAČÍTANIE DÁT (Stabilizovaná metóda) ---
+// --- 2. NAČÍTANIE DÁT (Stabilizovaná detektívna metóda) ---
 async function loadDataFromGSheets(targetId = null) {
     console.log("🚀 Matrix: Synchronizácia dát...");
     const container = document.getElementById('cards-container');
@@ -24,7 +24,6 @@ async function loadDataFromGSheets(targetId = null) {
         const response = await fetch(READ_URL);
         if (!response.ok) throw new Error("Matrix neodpovedá (HTTP Error)");
         
-        // Použijeme tvoju detektívnu metódu, ktorá je stabilnejšia
         const textData = await response.text();
         let rawData;
         try {
@@ -35,9 +34,7 @@ async function loadDataFromGSheets(targetId = null) {
         }
 
         allData = rawData.map(item => {
-            // Unikátny 12-znakový fingerprint pre URL
             const fingerprint = item.sha ? item.sha.substring(0, 12) : "no-sha";
-
             return {
                 id: fingerprint,
                 fullSha: item.sha, 
@@ -115,25 +112,52 @@ function renderCards(data, isSolo = false) {
     });
 }
 
-// --- 4. INTELIGENTNÝ MOST (SMART ADD) ---
+// --- 4. INTELIGENTNÝ MOST (DISTRIBUČNÝ ROZCESTNÍK) ---
 function smartAdd(fingerprint) {
     const item = allData.find(i => i.id === fingerprint);
     if (!item) return;
 
+    // A. Ak sme v WebView appky LARIA, hneď ukladáme (SHA do bezpečného tunela)
     if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ 
             type: 'ADD_CONTACT', 
-            payload: { ...item, id: item.fullSha } // Posielame celé SHA do appky
+            payload: { ...item, id: item.fullSha } 
         }));
-    } else {
-        window.location.href = `laria://contact/${item.id}`;
-        setTimeout(() => {
-            if (document.hasFocus()) {
-                if (confirm("[ LARIA APP ]\n\nPre uloženie vizitky potrebuješ našu appku. Chceš ju stiahnuť?")) {
-                    window.location.href = "download.html?id=" + fingerprint;
-                }
-            }
-        }, 1500);
+        return;
+    }
+
+    // B. Pre bežný web - náš vlastný interaktívny rozcestník
+    const choice = prompt(`
+[ LARIA PROTOKOL: DISTRIBÚCIA ]
+
+Zvoľte akciu pre túto pečať:
+1 - Otvoriť v nainštalovanej appke (laria://)
+2 - Stiahnuť Android (.apk)
+3 - Stiahnuť Apple (TestFlight)
+4 - Stiahnuť Ubuntu (.deb)
+5 - Navštíviť GitHub repozitár
+
+Zadajte číslo voľby:`, "1");
+
+    switch(choice) {
+        case "1":
+            window.location.href = `laria://contact/${fingerprint}`;
+            break;
+        case "2":
+            window.location.href = "https://github.com/sammael-ag/LARIA/releases/latest/download/laria.apk";
+            break;
+        case "3":
+            alert("[ INFO ] Apple verzia je momentálne v schvaľovacom procese.");
+            break;
+        case "4":
+            window.location.href = "https://github.com/sammael-ag/LARIA/releases/latest/download/laria.deb";
+            break;
+        case "5":
+            window.location.href = "https://github.com/sammael-ag/LARIA";
+            break;
+        default:
+            // Ak užívateľ stlačí Cancel alebo zadá iné, nerobíme nič
+            break;
     }
 }
 
