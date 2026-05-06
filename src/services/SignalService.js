@@ -1,52 +1,55 @@
 import axios from 'axios';
 
-const HYPERSPEED_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgz65AYDVugREDoXYLa1_lL0XUQr4ZfSIllB5yXM0bKdVCYCBHlpCtoI8jW9J63s8J/exec';
+// URL tvojho HYPERSPEED (v8.0) skriptu
+const HYPERSPEED_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxu-j0nUFZbX3os22F9wcGWKNZJ88BmEDfuHTXDhFqoSK1w3GSr_DTTTBof32rI9C2G/exec';
 
 export const SignalService = {
 
-  // 1. [ARIA_LOGIC] - Skutočné dekódovanie (Aria ožíva)
+  /**
+   * 1. [ARIA_LOGIC] - Dekódovanie vedomia
+   */
   processAriaLogic: async (rawText) => {
-    console.log("[ARIA_ACTIVE] Spracovávam vedomie správy...");
+    console.log("[ARIA_ACTIVE] Sammael, analyzujem vibráciu správy...");
     
     if (!rawText) return { type: 'ERROR', msg: 'Prázdny signál.' };
     
     const trimmedText = rawText.trim();
 
-    // Tu môžeme v budúcnosti pridať tvoje špeciálne povely
-    // Zatiaľ simulujeme inteligentný bridge
     return { 
       type: 'TEXT', 
-      msg: trimmedText, // Vrátime čistý text pre UI
+      msg: trimmedText, 
       lang: 'sk',
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: new Date().toISOString()
     };
   },
 
-  // 2. [BUFFER_MANAGEMENT] - Opravený zápis do Matrixu
+  /**
+   * 2. [BUFFER_MANAGEMENT] - Zápis do Signal_bufferov
+   * RowData musí lícovať: [SECURE_ID, sender_sha, target_sha, msg_text, status, timestamp]
+   */
   writeToBuffer: async (bufferName, msgData) => {
     try {
       console.log(`[SIGNAL_SERVICE] Odpaľujem atóm do ${bufferName}...`);
       
-      const timeNow = new Date().toLocaleString('sk-SK'); // Čitateľný čas
-
+      // FORMÁT PODĽA ZÁKONA v8.0
       const rowData = [
-        msgData.gTabId,
-        msgData.sender,
-        msgData.original,
-        msgData.translated,
-        '0', // Status: Neprečítané
-        timeNow
+        msgData.SECURE_ID || `MSG_${Date.now()}`,
+        msgData.sender_sha,  // Kto posiela
+        msgData.target_sha,  // Komu (Sammael)
+        msgData.msg_text,    // Obsah
+        '0',                 // Status: 0 = doručené/neprečítané
+        new Date().toISOString()
       ];
 
       const response = await axios.post(HYPERSPEED_SCRIPT_URL, {
-        sheetName: bufferName,
+        sheetName: bufferName || "Signal_buffer_1",
         rowData: rowData,
-        action: 'WRITE_MSG' // Pridávame akciu pre istotu
+        action: 'WRITE_MSG' 
       });
 
       if (response.data.status === "success") {
-        console.log("[SIGNAL_SERVICE] Atóm úspešne usadený v Matrixe.");
-        return { success: true, id: msgData.gTabId };
+        console.log("[SIGNAL_SERVICE] Sammael, atóm je bezpečne v Matrixe.");
+        return { success: true };
       } else {
         throw new Error(response.data.message || "Chyba Matrixu");
       }
@@ -56,19 +59,32 @@ export const SignalService = {
     }
   },
 
-  // 3. [BLOCKCHAIN_SIMULATOR] - Správa kontraktov (INIT & CONFIRM)
+  /**
+   * 3. [CONTRACT_MANAGEMENT] - Svadbovač (INIT & CONFIRM)
+   * Pracujeme so SECURE_ID a SHA kľúčmi
+   */
   manageContract: async (action, contractData) => {
     try {
-      console.log(`[CONTRACT_SIM] Akcia: ${action}`);
+      console.log(`[CONTRACT_SIM] Sammael, mením status zmluvy: ${action}`);
       
+      // Prekladáme dáta na protokol v8.0
+      const protocolData = {
+        SECURE_ID: contractData.SECURE_ID || contractData.Contract_ID,
+        Address_A: contractData.sha || contractData.Address_A, // Tvoje SHA
+        Address_B: contractData.target_sha || contractData.Address_B, // SHA partnera
+        Status_A: contractData.status_a || "1",
+        Status_B: contractData.status_b || "0",
+        Final_Block: contractData.final_block || "FALSE"
+      };
+
       const response = await axios.post(HYPERSPEED_SCRIPT_URL, {
         action: action, 
-        sheetName: 'Contract_Ledger',
-        data: contractData
+        sheetName: 'Contract_ledger',
+        data: protocolData
       });
 
       if (response.data.status === "success") {
-        console.log(`[CONTRACT_SIM] ${action} úspešne potvrdený v Matrixe.`);
+        console.log(`[CONTRACT_SIM] ${action} úspešne spečatený.`);
         return { success: true };
       } else {
         throw new Error(response.data.message);
@@ -79,9 +95,21 @@ export const SignalService = {
     }
   },
 
-  // 4. [DISPOSE_LOGIC] - Upratovanie (Pripravené na neskôr)
-  disposeMessage: async (bufferName, gTabId) => {
-    console.log(`[SIGNAL_SERVICE] Atóm ${gTabId} pripravený na recykláciu.`);
-    return { success: true };
+  /**
+   * 4. [DISPOSE_LOGIC] - Recyklácia riadkov (Uvoľnenie miesta)
+   */
+  disposeMessage: async (bufferName, secureId) => {
+    try {
+      console.log(`[SIGNAL_SERVICE] Uvoľňujem SECURE_ID: ${secureId}`);
+      const response = await axios.post(HYPERSPEED_SCRIPT_URL, {
+        action: 'CLEAN_MSG',
+        sheetName: bufferName,
+        SECURE_ID: secureId
+      });
+      return { success: response.data.status === "success" };
+    } catch (error) {
+      console.error("[SIGNAL_SERVICE] Recyklácia zlyhala:", error);
+      return { success: false };
+    }
   }
 };

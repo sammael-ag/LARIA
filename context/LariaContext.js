@@ -18,20 +18,41 @@ export const LariaProvider = ({ children }) => {
     lariaContractAddress 
   } = useKrypto();
 
+  // --- ✨ ŠTRUKTÚRA PODĽA ZÁKONA O PREMENNÝCH ---
   const [vault, setVault] = useState({
-    status: { isOnline: false, isIrcOnline: false, hasNFC: false, isParanoid: false, isGoogleFull: false, isChainNode: false, isAdmin: false },
-    identity: { name: "Sammael", sha: null, walletAddress: null, privateKey: null, irc: null, nfc: null, email: null, tel: null, fb: null, tg: null, gal: null, Gtab: null, revo: null, kRod: null, krypt: null }
+    status: { 
+      isOnline: false, isIrcOnline: false, hasNFC: false, 
+      isParanoid: false, isGoogleFull: false, isChainNode: false, isAdmin: false 
+    },
+    identity: { 
+      SECURE_ID: null, 
+      sha: null, 
+      meno: "Sammael", // Pôvodne name
+      kat: "Majster",  // Pôvodne kategoria/cat
+      lok: "Rákoš",    // Pôvodne lokalita
+      popis: "", 
+      tel: "", 
+      email: "", 
+      fb: "", 
+      tg: "", 
+      gal: "", 
+      isPublic: false, 
+      irc: "", 
+      poznamka: "", 
+      krypt: null,     // Pôvodne walletAddress/wallet
+      privateKey: null 
+    }
   });
 
-  // --- 🔥 VRATNÍK: ONBOARDING PROTOKOL (Doručenie LARIA) ---
+  // --- 🔥 VRATNÍK (Distribúcia LARIA) ---
   const onboardNewUser = async (newUserAddress) => {
     try {
-      console.log("🛠️ VRATNÍK: Štartujem distribúciu pre:", newUserAddress);
+      console.log("🛠️ VRATNÍK: Distribúcia pre:", newUserAddress);
       const provider = new ethers.JsonRpcProvider(rpcUrl);
       const architectKey = process.env.EXPO_PUBLIC_PRIVATE_KEY || process.env.PRIVATE_KEY;
 
       if (!architectKey) {
-        console.error("⚠️ VRATNÍK_ERROR: Chýba súkromný kľúč!");
+        console.error("⚠️ VRATNÍK_ERROR: Chýba kľúč architekta!");
         return;
       }
 
@@ -45,33 +66,24 @@ export const LariaProvider = ({ children }) => {
       
       console.log("✅ VRATNÍK: 0.001 LARIA doručených!");
       await syncWalletData(newUserAddress);
-      await syncWalletData(ownerAddress);
     } catch (error) {
       console.error("❌ VRATNÍK_ERROR:", error.message);
     }
   };
 
-  // --- 🔧 AUTO-REPAIR: Kontrola a oprava zostatku (S poistkou Nonce) ---
+  // --- 🔧 AUTO-REPAIR ---
   const checkAndRepairLariaAssets = async (address) => {
     if (!address) return;
     try {
       const provider = new ethers.JsonRpcProvider(rpcUrl);
-      
-      // 1. Zisťujeme zostatok
       const minABI = ["function balanceOf(address) view returns (uint256)"];
       const contract = new ethers.Contract(lariaContractAddress, minABI, provider);
       const balanceRaw = await contract.balanceOf(address);
       const balance = parseFloat(ethers.formatUnits(balanceRaw, 18));
-
-      // 2. Zisťujeme históriu aktivít (nonce)
       const nonce = await provider.getTransactionCount(address);
 
-      // PODMIENKA: Opravujeme len ak je nula A peňaženka nikdy nič neodoslala (panenská)
       if (balance < 0.001 && nonce === 0) {
-        console.log("🛠️ AUTO-REPAIR: Prvé zasvätenie identity. Volám Vratníka...");
         await onboardNewUser(address);
-      } else if (balance < 0.001 && nonce > 0) {
-        console.log("⚠️ MATRIX: Peňaženka už bola aktívna v minulosti. Onboarding zamietnutý.");
       }
     } catch (e) {
       console.log("❌ AUTO-REPAIR_FAIL:", e.message);
@@ -83,29 +95,30 @@ export const LariaProvider = ({ children }) => {
     const initializeVault = async () => {
       try {
         let savedIdentity = await loadFromVault('identity');
-        const hasSeal = false; 
         
         let rawDeviceId = Platform.OS === 'android' 
           ? (Application.androidId || Device.osBuildId || "S_DEVICE_A") 
           : await Application.getIosIdForVendorAsync();
 
-        const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.name || "Sammael");
+        // Generujeme SHA (Naše posvätné ID)
+        const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.meno || "Sammael");
 
         if (!savedIdentity) {
-          savedIdentity = { ...vault.identity, name: "Sammael", sha: currentSha };
+          savedIdentity = { 
+            ...vault.identity, 
+            sha: currentSha, 
+            SECURE_ID: currentSha // Na začiatku je SECURE_ID rovné SHA
+          };
         } else {
           savedIdentity.sha = currentSha;
         }
 
-        const updatedStatus = runLariaProtocol(savedIdentity, hasSeal);
+        const updatedStatus = runLariaProtocol(savedIdentity, false);
         setVault({ status: updatedStatus, identity: savedIdentity });
 
-        if (savedIdentity.walletAddress) {
-          syncWalletData(savedIdentity.walletAddress);
-          // Kontrola zostatku po 4 sekundách s novou poistkou
-          setTimeout(() => {
-            checkAndRepairLariaAssets(savedIdentity.walletAddress);
-          }, 4000);
+        if (savedIdentity.krypt) {
+          syncWalletData(savedIdentity.krypt);
+          setTimeout(() => checkAndRepairLariaAssets(savedIdentity.krypt), 4000);
         }
 
         await saveToVault('identity', savedIdentity);
@@ -120,9 +133,8 @@ export const LariaProvider = ({ children }) => {
   const reinkarnaciaIdentity = async (oldPrivateKey) => {
     const recovered = recoverWalletFromKey(oldPrivateKey);
     if (recovered) {
-      const updatedIdentity = { ...vault.identity, walletAddress: recovered.address, privateKey: recovered.privateKey };
+      const updatedIdentity = { ...vault.identity, krypt: recovered.address, privateKey: recovered.privateKey };
       await syncIdentity(updatedIdentity);
-      await syncWalletData(recovered.address);
       return true;
     }
     return false;
@@ -130,10 +142,10 @@ export const LariaProvider = ({ children }) => {
 
   // --- 3. ZROD IDENTITY ---
   const ensureLariaIdentity = async () => {
-    if (vault.identity.walletAddress) return vault.identity.walletAddress;
+    if (vault.identity.krypt) return vault.identity.krypt;
     const newWallet = await generateAutoWallet();
     if (newWallet) {
-      const updatedIdentity = { ...vault.identity, walletAddress: newWallet.address, privateKey: newWallet.privateKey };
+      const updatedIdentity = { ...vault.identity, krypt: newWallet.address, privateKey: newWallet.privateKey };
       await syncIdentity(updatedIdentity);
       setTimeout(() => onboardNewUser(newWallet.address), 2000);
       return newWallet.address;
@@ -141,7 +153,15 @@ export const LariaProvider = ({ children }) => {
     return null;
   };
 
-  // --- OSTATNÉ FUNKCIE ---
+  const syncIdentity = async (newIdentityData) => {
+    const currentAdminStatus = vault.status.isAdmin;
+    const updatedIdentity = { ...vault.identity, ...newIdentityData };
+    const newStatus = runLariaProtocol(updatedIdentity, currentAdminStatus);
+    setVault({ status: newStatus, identity: updatedIdentity });
+    await saveToVault('identity', updatedIdentity);
+  };
+
+  // Ostatné funkcie zostávajú...
   const unlockSeal = async (isCorrect) => {
     if (isCorrect) {
       const newStatus = runLariaProtocol(vault.identity, true);
@@ -155,21 +175,9 @@ export const LariaProvider = ({ children }) => {
     setVault(prev => ({ ...prev, status: runLariaProtocol(prev.identity, false) }));
   };
 
-  const syncIdentity = async (newIdentityData) => {
-    const currentAdminStatus = vault.status.isAdmin;
-    const updatedIdentity = { ...vault.identity, ...newIdentityData };
-    const newStatus = runLariaProtocol(updatedIdentity, currentAdminStatus);
-    setVault({ status: newStatus, identity: updatedIdentity });
-    await saveToVault('identity', updatedIdentity);
-  };
-
-  const updateVault = (category, data) => {
-    setVault(prev => ({ ...prev, [category]: { ...prev[category], ...data } }));
-  };
-
   return (
     <LariaContext.Provider value={{ 
-      vault, syncIdentity, updateVault, unlockSeal, lockSeal, ensureLariaIdentity, reinkarnaciaIdentity 
+      vault, syncIdentity, unlockSeal, lockSeal, ensureLariaIdentity, reinkarnaciaIdentity 
     }}>
       {children}
     </LariaContext.Provider>

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Linking, Alert, Platform } from 'react-native'; 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg'; 
 
-// --- IMPORT PRE NFC MODUL ---
+// --- NFC MODUL ---
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 
 // --- GLOBÁLNE ŠTÝLY A KONTEXTY ---
@@ -15,42 +15,50 @@ const CardScreen = ({ route, navigation }) => {
   const { vault } = useLaria();
   const { togglePin } = useContacts(); 
   const { contact } = route.params || {};
+  
+  // Sammael, tu určujeme, či sa pozeráš do zrkadla (isOwner) alebo na niekoho iného
   const isOwner = !contact;
   
   const [showQR, setShowQR] = useState(false);
   const [isNfcActive, setIsNfcActive] = useState(false);
 
-  // --- DÁTA IDENTITY ---
+  // --- MAPOVANIE IDENTITY v8.0 ---
+  // Používame premenné meno, kat, lok a krypt presne podľa Matrixu
   const item = isOwner ? {
-    kat: "MASTER CARPENTER",
-    meno: vault.identity.name || vault.identity.meno,
+    kat: vault.identity.kat || "MASTER CARPENTER",
+    meno: vault.identity.meno || "Sammael",
     lok: vault.identity.lok || "Rákoš / Rožňava / Revúca",
     popis: vault.identity.popis || "Rustic, steampunk a avantgardné stolárstvo.",
     tel: vault.identity.tel,
     email: vault.identity.email,
     sha: vault.identity.sha,
-    wallet: vault.identity.walletAddress,
+    krypt: vault.identity.krypt,
     pinned: true 
   } : {
     ...contact,
-    meno: contact.name,
-    sha: contact.id
+    // Ak je to kontakt z Matrixu, zjednotíme meno a id pre zobrazenie
+    meno: contact.meno || contact.name,
+    sha: contact.sha || contact.id,
+    krypt: contact.krypt || contact.wallet
   };
 
   const isVerified = isOwner || item.isVerified;
 
-  // --- NFC BEAM LOGIKA ---
+  // --- NFC BEAM LOGIKA (Vysielanie identity dotykom) ---
   const handleNfcBeam = async () => {
     if (isNfcActive) return;
     try {
       setIsNfcActive(true);
       await NfcManager.requestTechnology(NfcTech.Ndef);
-      const dataPayload = `LARIA:${item.meno}|${item.wallet || item.sha}|7.9.2`;
+      
+      // Protokol v8.0: Meno | SHA | Krypt (Wallet)
+      const dataPayload = `LARIA:${item.meno}|${item.sha}|${item.krypt || 'NO_KRYPT'}|v8.0`;
       const bytes = Ndef.encodeMessage([Ndef.textRecord(dataPayload)]);
+      
       if (bytes) {
         await NfcManager.ndefHandler.writeNdefMessage(bytes);
         if (Platform.OS === 'ios') {
-          Alert.alert("PEČAŤ PRENESENÁ", "Identita úspešne odoslaná cez NFC.");
+          Alert.alert("PEČAŤ PRENESENÁ", "Tvoja multidimenzionálna pečať bola odoslaná.");
         }
       }
     } catch (ex) {
@@ -63,25 +71,28 @@ const CardScreen = ({ route, navigation }) => {
 
   const handleTogglePin = async () => {
     if (!isOwner) {
-      await togglePin(item.id);
+      const contactId = item.sha || item.id;
+      await togglePin(contactId);
       navigation.setParams({ contact: { ...contact, pinned: !contact.pinned } });
     }
   };
 
+  // Dáta pre QR kód (Kompaktný formát pre Matrix skener)
   const qrValue = JSON.stringify({
-    n: item.meno,
-    a: item.wallet || item.sha,
-    v: "7.9.2"
+    m: item.meno,
+    s: item.sha,
+    k: item.krypt,
+    v: "8.0"
   });
 
   return (
     <SafeAreaView style={G.bg}>
       <ScrollView contentContainerStyle={G.scrollContent}>
         
-        {/* --- HLAVNÁ VIZITKA --- */}
+        {/* --- HLAVNÁ VIZITKA (Tvoj digitálny artefakt) --- */}
         <View style={[G.card, item.pinned && !isOwner && { borderColor: '#0FF', borderWidth: 1 }]}>
            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <Text style={G.tag}>{item.kat}</Text>
+            <Text style={G.tag}>{item.kat.toUpperCase()}</Text>
             {!isOwner && (
               <TouchableOpacity onPress={handleTogglePin} style={{ padding: 10 }}>
                 <Text style={{ fontSize: 24 }}>{item.pinned ? '📍' : '📌'}</Text>
@@ -89,33 +100,35 @@ const CardScreen = ({ route, navigation }) => {
             )}
           </View>
           
-          <Text style={[G.textWhite, { fontSize: 26, fontWeight: '700', marginBottom: 8 }]}>
+          <Text style={[G.textWhite, { fontSize: 28, fontWeight: '700', marginBottom: 8, letterSpacing: 1 }]}>
             {item.meno}
           </Text>
           <Text style={G.textDim}>📍 {item.lok}</Text>
           <View style={G.divider} />
-          <Text style={[G.textMain, { fontStyle: 'italic', lineHeight: 24, marginBottom: 35 }]}>
+          <Text style={[G.textMain, { fontStyle: 'italic', lineHeight: 26, marginBottom: 35, fontSize: 15 }]}>
             {item.popis}
           </Text>
           
-          {/* OPRAVENÉ: Tu bol ten div, teraz je tu View */}
+          {/* Akčné prvky (Volanie, Email, ID) */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, gap: 10 }}>
             <TouchableOpacity 
-              style={[G.btnAction, !isVerified && { opacity: 0.2 }]} 
-              disabled={!isVerified} 
+              style={[G.btnAction, !item.tel && { opacity: 0.2 }]} 
+              disabled={!item.tel} 
               onPress={() => item.tel && Linking.openURL(`tel:${item.tel.replace(/\s/g, '')}`)}
             >
-              <Text style={G.btnText}>Volat</Text>
+              <Text style={G.btnText}>Volať</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity 
               style={G.btnAction} 
-              onPress={() => Alert.alert('HDPN PEČAŤ', `SHA-256 ID: ${item.sha || 'MASTER_SOURCE'}`)}
+              onPress={() => Alert.alert('HDPN PEČAŤ v8.0', `SHA: ${item.sha}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}
             >
-              <Text style={G.btnText}>ID</Text>
+              <Text style={G.btnText}>Dáta</Text>
             </TouchableOpacity>
+
             <TouchableOpacity 
-              style={[G.btnAction, !isVerified && { opacity: 0.2 }]} 
-              disabled={!isVerified} 
+              style={[G.btnAction, !item.email && { opacity: 0.2 }]} 
+              disabled={!item.email} 
               onPress={() => item.email && Linking.openURL(`mailto:${item.email}`)}
             >
               <Text style={G.btnText}>Email</Text>
@@ -123,25 +136,27 @@ const CardScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* --- SEKCIA AKCIÍ --- */}
+        {/* --- SEKCIA INTERAKCIÍ --- */}
         <View style={{ width: '100%', marginTop: 30, gap: 15 }}>
           {isOwner ? (
             <>
+              {/* Tlačidlo pre úpravu vlastnej identity */}
               <TouchableOpacity 
                 style={{ padding: 18, alignItems: 'center', borderStyle: 'dashed', borderWidth: 1.5, borderColor: '#b19cd9', borderRadius: 12 }} 
                 onPress={() => navigation.navigate('CardEditor')}
               >
                 <Text style={[G.textCyber, { color: '#b19cd9', fontWeight: 'bold' }]}>
-                  [ UPRAVIŤ MOJU PEČAŤ ]
+                  [ PRETESAŤ MOJU PEČAŤ ]
                 </Text>
               </TouchableOpacity>
 
+              {/* QR a NFC vysielanie */}
               <TouchableOpacity 
                 style={{ padding: 18, alignItems: 'center', backgroundColor: showQR ? '#111' : '#040', borderWidth: 1, borderColor: showQR ? '#444' : '#0F0', borderRadius: 12 }} 
                 onPress={() => setShowQR(!showQR)}
               >
                 <Text style={[G.textCyber, { color: showQR ? '#AAA' : '#0F0', fontWeight: 'bold' }]}>
-                  [ {showQR ? 'SKRYŤ PEČAŤ' : 'VYSTAVIŤ PEČAŤ (QR / NFC)'} ]
+                  [ {showQR ? 'SKRYŤ PEČAŤ' : 'VYSTAVIŤ PEČAŤ PRE MATRIX'} ]
                 </Text>
               </TouchableOpacity>
 
@@ -157,19 +172,17 @@ const CardScreen = ({ route, navigation }) => {
                   }}>
                     <QRCode 
                       value={qrValue} 
-                      size={220} 
-                      quietZone={10}
-                      logo={require('../../assets/laria-seal.png')}
+                      size={200} 
+                      logo={require('../../assets/laria-seal.png')} // Sammael, over či máš tento asset!
                       logoSize={50} 
                       logoBackgroundColor='transparent'
-                      logoBorderRadius={0} 
                     />
                     
                     <Text style={{ color: '#000', marginTop: 15, fontSize: 16, fontWeight: 'bold', letterSpacing: 2 }}>
                       {item.meno.toUpperCase()}
                     </Text>
                     <Text style={{ color: '#666', fontSize: 10, marginTop: 4 }}>
-                      LARIA HDPN IDENTITY PROTOCOL v7.9.2
+                      LARIA HDPN PROTOCOL v8.0
                     </Text>
                   </View>
 
@@ -188,19 +201,20 @@ const CardScreen = ({ route, navigation }) => {
                     disabled={isNfcActive}
                   >
                     <Text style={[G.textCyber, { color: isNfcActive ? '#FFF' : '#0FF', fontSize: 12 }]}>
-                      {isNfcActive ? '📡 VYSIELAM PEČAŤ DOTYKOM...' : '📡 POSLAŤ CEZ NFC (DOTYKNÚŤ SA)'}
+                      {isNfcActive ? '📡 VYSIELAM PEČAŤ DOTYKOM...' : '📡 AKTIVOVAŤ NFC BEAM'}
                     </Text>
                   </TouchableOpacity>
                 </View>
               )}
             </>
           ) : (
+            // Ak pozeráš cudzí kontakt
             <TouchableOpacity 
               style={[G.ircButton, !isVerified && { borderColor: '#444', backgroundColor: '#111' }]} 
-              onPress={() => navigation.navigate('IRC')}
+              onPress={() => navigation.navigate('IRC', { target: item })}
             >
               <Text style={G.ircButtonText}>
-                {isVerified ? 'VSTÚPIŤ DO BEZPEČNÉHO IRC' : 'OVERIŤ IDENTITU V SMART CONTRACTE'}
+                {isVerified ? 'OTVORIŤ BEZPEČNÝ KANÁL' : 'OVERIŤ V MATRIXE'}
               </Text>
             </TouchableOpacity>
           )}
@@ -211,7 +225,7 @@ const CardScreen = ({ route, navigation }) => {
           onPress={() => navigation.goBack()}
         >
           <Text style={[G.textDim, { letterSpacing: 4, fontSize: 12 }]}>
-            [ SPÄŤ DO MATRIXU ]
+            [ NÁVRAT DO ATELIÉRU ]
           </Text>
         </TouchableOpacity>
 

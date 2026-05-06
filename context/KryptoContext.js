@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import { ethers } from 'ethers';
 
+// TIETO KONFIGURÁCIE SÚ PEVNÉ - BLOCKCHAIN NEPUSTÍ
 const KRYPTO_CONFIG = {
   apiKey: "R6h9kbHCWY2GxHhhQTgpMmY9mw4R7nGM", 
   projectId: "98074637-80ee-4f12-8f5e-f186a388d2da", 
@@ -13,8 +14,8 @@ const KRYPTO_CONFIG = {
 const KryptoContext = createContext();
 
 export const KryptoProvider = ({ children }) => {
-  // --- KANÁL A: USER (Identity) ---
-  const [walletAddress, setWalletAddress] = useState(null);
+  // --- KANÁL A: USER (Identity) podľa protokolu v8.0 ---
+  const [krypt, setKrypt] = useState(null); // Premapované z walletAddress
   const [lariaBalance, setLariaBalance] = useState("0");
   const [ethBalance, setEthBalance] = useState("0.0000");
 
@@ -24,12 +25,12 @@ export const KryptoProvider = ({ children }) => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- 🍫 ZROD IDENTITY ---
+  // --- 🍫 ZROD IDENTITY (Generovanie peňaženky) ---
   const generateAutoWallet = async () => {
     try {
       const newWallet = ethers.Wallet.createRandom();
       return {
-        address: newWallet.address,
+        address: newWallet.address,     // Toto pôjde do nášho 'krypt'
         privateKey: newWallet.privateKey,
         mnemonic: newWallet.mnemonic?.phrase
       };
@@ -39,21 +40,21 @@ export const KryptoProvider = ({ children }) => {
     }
   };
 
-  // --- 🔄 SYNCHRONIZÁCIA MATRIXU (S ROZDVOJOVAČOM) ---
+  // --- 🔄 SYNCHRONIZÁCIA MATRIXU (S premapovaním) ---
   const syncWalletData = async (targetAddress) => {
-    // Ak targetAddress nie je zadaná, skúsime walletAddress, inak ownerAddress
-    const addressToQuery = targetAddress || walletAddress || KRYPTO_CONFIG.ownerAddress;
+    // Ak targetAddress nie je zadaná, použijeme naše 'krypt', inak majiteľa
+    const addressToQuery = targetAddress || krypt || KRYPTO_CONFIG.ownerAddress;
     if (!addressToQuery) return;
 
     setIsLoading(true);
     try {
       const provider = new ethers.JsonRpcProvider(KRYPTO_CONFIG.rpcUrl);
 
-      // 1. ETH Balance
+      // 1. ETH Balance (Základné palivo siete Base)
       const rawEth = await provider.getBalance(addressToQuery);
       const formattedEth = parseFloat(ethers.formatEther(rawEth)).toFixed(6);
 
-      // 2. LARIA Balance
+      // 2. LARIA Balance (Náš SmartContract)
       const minABI = ["function balanceOf(address) view returns (uint256)"];
       const contract = new ethers.Contract(KRYPTO_CONFIG.lariaContractAddress, minABI, provider);
       const rawLaria = await contract.balanceOf(addressToQuery);
@@ -61,14 +62,12 @@ export const KryptoProvider = ({ children }) => {
       
       // --- ROZDVOJOVAČ LOGIKY ---
       if (addressToQuery.toLowerCase() === KRYPTO_CONFIG.ownerAddress.toLowerCase()) {
-        // Zapisujeme do kanála ARCHITECT
         setAdminEthBalance(formattedEth);
         setAdminLariaBalance(formattedLaria);
       } else {
-        // Zapisujeme do kanála USER
         setEthBalance(formattedEth);
         setLariaBalance(formattedLaria);
-        setWalletAddress(addressToQuery);
+        setKrypt(addressToQuery); // Zapisujeme do 'krypt' podľa protokolu
       }
 
     } catch (error) {
@@ -80,7 +79,8 @@ export const KryptoProvider = ({ children }) => {
 
   const kryptoVibe = {
     ...KRYPTO_CONFIG,
-    walletAddress,
+    krypt,              // Exportujeme už pod novým názvom
+    walletAddress: krypt, // Ponechané ako tieň pre kompatibilitu so SmartContract volaniami
     ethBalance,
     lariaBalance,
     adminEthBalance,

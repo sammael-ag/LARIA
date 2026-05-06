@@ -1,7 +1,7 @@
 /**
- * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v6.2
- * LOGIC: Dual-ID Mapping & Correct Payload Naming
- * FIX: Zjednotenie kľúčov pre bezchybné pridávanie kontaktov
+ * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v8.0
+ * STATUS: SYNCED / THE LAW
+ * FIX: Jednotné premenné podľa protokolu (sha, kat, krypt, lok...)
  */
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
@@ -9,57 +9,53 @@ const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlv
 let allData = []; 
 let currentCategory = 'vsetko';
 
-// --- 1. ŠTART A INTELIGENTNÉ OTVÁRANIE ---
+// --- 1. ŠTART ---
 window.onload = async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const targetId = urlParams.get('id'); 
     
     await loadDataFromGSheets(targetId);
 
-    // Ak prišiel cez priamy odkaz (QR/NFC), po krátkej pauze aktivujeme most
     if (targetId) {
         setTimeout(() => {
+            // Hľadáme podľa krátkeho ID alebo krypt peňaženky
             const item = allData.find(i => 
-                i.id === targetId || 
-                (i.wallet && i.wallet.toLowerCase() === targetId.toLowerCase())
+                i.fingerprint === targetId || 
+                (i.krypt && i.krypt.toLowerCase() === targetId.toLowerCase())
             );
-            if (item) smartAdd(item.id); 
+            if (item) smartAdd(item.fingerprint); 
         }, 1200); 
     }
 };
 
-// --- 2. NAČÍTANIE DÁT ---
+// --- 2. NAČÍTANIE DÁT Z MATRIXU ---
 async function loadDataFromGSheets(targetId = null) {
-    console.log("🚀 Matrix: Synchronizácia dát...");
+    console.log("🚀 Matrix: Synchronizácia dát podľa protokolu v8.0...");
     const container = document.getElementById('cards-container');
     
     try {
         const response = await fetch(READ_URL);
-        const textData = await response.text();
-        let rawData = JSON.parse(textData);
+        const rawData = await response.json();
 
         allData = rawData.map(item => {
-            const fingerprint = item.sha ? item.sha.substring(0, 12) : "no-sha";
+            // Krátky vizuálny kľúč pre web
+            const shortId = item.sha ? item.sha.substring(0, 12) : "no-sha";
             
             return {
-                id: fingerprint,        // Krátke ID pre web/URL
-                fullSha: item.sha,      // Plné SHA pre unikátnosť v appke
-                meno: item.meno || "Neznámy Majster",
-                kategoria: item.kat || "ine", // Tu fixujeme názov na 'kategoria'
+                fingerprint: shortId,    // Len pre URL a UI
+                sha: item.sha,          // POSVÄTNÉ PLNÉ SHA
+                meno: item.meno || "Pútnik",
+                kat: item.kat || "Majster",
                 lok: item.lok || "V sieti",
                 popis: item.popis || "",
                 gal: item.gal || "", 
-                wallet: item.krypt || "", // Odkladáme si krypt adresu
-                isPublic: item.public === true || String(item.public).toUpperCase() === "TRUE"
+                krypt: item.krypt || "", 
+                isPublic: item.ispublic === true || String(item.ispublic).toUpperCase() === "TRUE"
             };
         }).filter(item => item.isPublic);
 
         if (targetId) {
-            const soloItem = allData.find(i => 
-                i.id === targetId || 
-                (i.wallet && i.wallet.toLowerCase() === targetId.toLowerCase())
-            );
-            
+            const soloItem = allData.find(i => i.fingerprint === targetId || i.krypt === targetId);
             if (soloItem) {
                 renderCards([soloItem], true);
                 return;
@@ -89,23 +85,22 @@ function renderCards(data, isSolo = false) {
     data.forEach(item => {
         const card = document.createElement('div');
         card.className = isSolo ? 'card card-solo' : 'card';
-        if (!isSolo) card.style.cursor = 'pointer';
         
         card.onclick = (e) => {
             if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
-                window.location.href = `?id=${item.id}`;
+                window.location.href = `?id=${item.fingerprint}`;
             }
         };
 
         card.innerHTML = `
-            <span class="tag">${item.kategoria}</span>
+            <span class="tag">${item.kat}</span>
             <h2 class="card-title">${item.meno}</h2>
             <p class="card-loc">📍 ${item.lok}</p>
             <p class="card-desc">${aktivujOdkazy(item.popis)}</p>
             
             <div class="card-actions">
-                <button onclick="smartAdd('${item.id}')" class="btn-add">[ PRIDAŤ ]</button>
-                <button onclick="copyShareLink('${item.id}')" class="btn-share">[ LINK ]</button>
+                <button onclick="smartAdd('${item.fingerprint}')" class="btn-add">[ PRIDAŤ ]</button>
+                <button onclick="copyShareLink('${item.fingerprint}')" class="btn-share">[ LINK ]</button>
             </div>
 
             <div class="card-links">
@@ -116,20 +111,20 @@ function renderCards(data, isSolo = false) {
     });
 }
 
-// --- 4. MODÁLNY MOST (Kľúčová oprava tu!) ---
-function smartAdd(fingerprint) {
-    const item = allData.find(i => i.id === fingerprint);
+// --- 4. MODÁLNY MOST (Smer do Appky) ---
+function smartAdd(shortId) {
+    const item = allData.find(i => i.fingerprint === shortId);
     if (!item) return;
 
-    // PRÍPRAVA BALÍKA PRE APP (Musí ladiť s LariaContext.js a onMessage v appke)
+    // BALÍK PRESNE PODĽA PROTOKOLU
     const payload = {
-        sha: item.fullSha,         // Plné ID
-        meno: item.meno,           // Tu musí byť 'meno'
-        kategoria: item.kategoria, // Tu musí byť 'kategoria'
+        sha: item.sha,      // Celá pečať
+        meno: item.meno,
+        kat: item.kat,
         lok: item.lok,
         popis: item.popis,
         gal: item.gal,
-        krypt: item.wallet         // Mapujeme späť na 'krypt'
+        krypt: item.krypt
     };
 
     if (window.ReactNativeWebView) {
@@ -146,10 +141,9 @@ function smartAdd(fingerprint) {
 
     if (!modal) return;
 
-    fpLabel.innerText = fingerprint;
-    
+    fpLabel.innerText = shortId;
     openAppBtn.onclick = () => {
-        window.location.href = `laria://contact/${fingerprint}`;
+        window.location.href = `laria://contact/${shortId}`;
         closeLariaBridge();
     };
 
@@ -159,13 +153,6 @@ function smartAdd(fingerprint) {
 function closeLariaBridge() {
     const modal = document.getElementById('lariaBridge');
     if (modal) modal.style.display = 'none';
-}
-
-window.onclick = function(event) {
-    const modal = document.getElementById('lariaBridge');
-    if (event.target == modal) {
-        closeLariaBridge();
-    }
 }
 
 // --- POMOCNÉ FUNKCIE ---
@@ -178,7 +165,7 @@ const aktivujOdkazy = (text) => {
 function applyFilter() {
     const term = document.getElementById('searchInput')?.value || '';
     const filtered = allData.filter(item => {
-        const matchCat = (currentCategory === 'vsetko' || item.kategoria.toLowerCase() === currentCategory.toLowerCase());
+        const matchCat = (currentCategory === 'vsetko' || item.kat.toLowerCase() === currentCategory.toLowerCase());
         const searchContent = `${item.meno} ${item.lok} ${item.popis}`.toLowerCase();
         return matchCat && searchContent.includes(term.toLowerCase());
     });

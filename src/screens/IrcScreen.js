@@ -19,12 +19,12 @@ import { SignalService } from '../services/SignalService';
 const IRCScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0); 
-  const [confirmedIds, setConfirmedIds] = useState([]); // Sledovanie kliknutých tlačidiel
+  const [confirmedIds, setConfirmedIds] = useState([]); 
   const insets = useSafeAreaInsets(); 
   const flatListRef = useRef();
 
   const { incomingRequests, sendLariaPackage, isIrcConnected } = useSignal();
-  const { syncIdentity } = useLaria(); 
+  const { vault } = useLaria(); 
 
   const [chatLog, setChatLog] = useState([
     { id: '1', user: 'SYSTEM', text: 'Channel #LARIA_CORE established.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
@@ -57,16 +57,18 @@ const IRCScreen = ({ navigation }) => {
       });
       
       const viza = item.d; 
+      // PREMENNÉ PREMENOVANÉ PODĽA SAMMAEL STANDARD v8.0
       const newEntry = {
         id: item.cid || Date.now().toString(),
-        name: viza?.n || 'Neznámy Majster',
+        meno: viza?.n || 'Neznámy Majster',
         tel: viza?.t || '',
         email: viza?.e || '',
-        revo: viza?.ib || '', 
-        cat: 'Handshake',
-        loc: 'IRC Signal',
+        krypt: viza?.ib || '', 
+        kat: 'Handshake',
+        lok: 'IRC Signal',
         pinned: false,
         isVerified: true,
+        v: "8.0",
         timestamp: new Date().toISOString()
       };
 
@@ -78,13 +80,12 @@ const IRCScreen = ({ navigation }) => {
         await AsyncStorage.setItem('laria_contacts', JSON.stringify(updated));
       }
 
-      // TLAČIDLO ZMIZNI: Pridáme ID do zoznamu potvrdených
       setConfirmedIds(prev => [...prev, handshakeId]);
 
       setChatLog(prev => [...prev, {
         id: `CONF_MSG_${Date.now()}`,
         user: 'SYSTEM',
-        text: `Kontakt ${newEntry.name} oživený. Tlačidlo spálené v Matrixe.`,
+        text: `Kontakt ${newEntry.meno} oživený. Tlačidlo spálené v Matrixe.`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
 
@@ -96,7 +97,12 @@ const IRCScreen = ({ navigation }) => {
   const sendMessage = async () => {
     if (message.trim().length === 0) return;
     const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const newMessage = { id: Date.now().toString(), user: 'Sammael', text: message, time: timeNow };
+    const newMessage = { 
+        id: Date.now().toString(), 
+        user: vault.identity.meno || 'Sammael', 
+        text: message, 
+        time: timeNow 
+    };
     setChatLog(prev => [...prev, newMessage]);
     if (isIrcConnected) { await sendLariaPackage("0xTEST_TARGET", message); }
     setMessage('');
@@ -104,7 +110,6 @@ const IRCScreen = ({ navigation }) => {
   };
 
   const renderMessageContent = (item) => {
-    // Tlačidlo sa zobrazí len ak ide o handshake A ZÁROVEŇ ešte nebolo potvrdené
     const showButton = item.isHandshake && !confirmedIds.includes(item.id);
 
     return (
@@ -168,7 +173,7 @@ const IRCScreen = ({ navigation }) => {
           renderItem={({ item }) => (
             <View style={G.msgContainer}>
               <Text style={G.msgTime}>{`[${item.time}]`}</Text>
-              <Text style={item.user === 'Sammael' ? G.msgUserSammael : G.msgUserAria}>
+              <Text style={item.user === (vault.identity.meno || 'Sammael') ? G.msgUserSammael : G.msgUserAria}>
                   {`<${item.user}>`}
               </Text>
               {renderMessageContent(item)}

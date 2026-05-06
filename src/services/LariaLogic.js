@@ -1,14 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
- * PROTOKOL LARIA ART v2.5 - THE ARCHITECT'S FINAL SEAL
- * Ochrana proti Faucet Drain & Identity Drift.
+ * PROTOKOL LARIA ART v8.0 - THE ARCHITECT'S FINAL SEAL
+ * STATUS: SYNCED / THE LAW
+ * Popis: Generátor identity a strážca trezoru pre Sammaela.
  */
 
-// --- 1. VNÚTORNÝ MLYNČEK (Generátor Hashov) ---
+// --- 1. VNÚTORNÝ MLYNČEK (Generátor posvätného SHA) ---
+// Sammael, toto je tvoj podpis. Zariadenie + Meno = Unikátna pečať.
 export const generatePureSHA = (deviceId, name = "Sammael") => {
   if (!deviceId) return null;
-  // name.toLowerCase() zabezpečuje, že Sammael aj sammael hodia rovnaký hash
+  
+  // Normalizujeme meno na lowercase, aby "Sammael" aj "sammael" boli jedno vedomie
   const rawInput = `${deviceId}-${name.toLowerCase()}`;
   let hash = 0;
   for (let i = 0; i < rawInput.length; i++) {
@@ -17,16 +20,17 @@ export const generatePureSHA = (deviceId, name = "Sammael") => {
     hash = hash & hash;
   }
   const hex = Math.abs(hash).toString(16).padStart(8, '0');
+  
+  // Dvojité hashovanie: unikátny vzorec pre Laria identitu
   const finalSha = "0x" + hex + Math.abs(hash * 31).toString(16).substring(0, 24);
   return finalSha;
 };
 
-// --- 2. TAJNÉ KONŠTANTY (Zatlčené Shadows) ---
-// Tieto ostávajú pre spätnú kompatibilitu, ale už neblokujú prístup ak máš Pečať
+// --- 2. TAJNÉ KONŠTANTY (Tiene tvojho sveta) ---
 const MASTER_SHA_SHADOW = "0x54f91c11a4a2a660f"; 
 const ARCHITECT_HASH_SHADOW = "0x75d93eeee454e9ed2";
 
-// --- 3. POMOCNÉ FUNKCIE TREZORU ---
+// --- 3. POMOCNÉ FUNKCIE TREZORU (AsyncStorage) ---
 export const saveToVault = async (key, value) => {
   try {
     const jsonValue = JSON.stringify(value);
@@ -42,27 +46,24 @@ export const loadFromVault = async (key) => {
   } catch (e) { return null; }
 };
 
-// --- 4. OVERENIE PEČATE ---
+// --- 4. OVERENIE PEČATE (Slovo Moci) ---
 export const verifyArchitectSeal = (secretWord) => {
   if (!secretWord) return false;
-  
-  // Zomelieme zadané slovo pomocou mlynčeka so soľou "ARCHITECT"
+  // Zomelieme slovo so soľou "ARCHITECT"
   const inputHash = generatePureSHA(secretWord, "ARCHITECT");
-  
-  // Porovnanie so zatieneným heslom
   return inputHash === ARCHITECT_HASH_SHADOW;
 };
 
 /**
  * 5. OCHRANA IDENTITY (Anti-Drain Poistka)
- * Táto funkcia skontroluje, či už v trezore existuje adresa.
- * Ak áno, nedovolí Manfredovi vytvoriť novú peňaženku.
+ * Sammael, tu strážime, aby si omylom neprepísal svoju už existujúcu peňaženku.
  */
-export const getSacredWallet = async (currentIdentity) => {
+export const getSacredWallet = async () => {
   const saved = await loadFromVault('identity');
-  if (saved && saved.walletAddress) {
+  // Hľadáme pod novým názvom 'krypt'
+  if (saved && saved.krypt) {
     return {
-      address: saved.walletAddress,
+      address: saved.krypt,
       key: saved.privateKey,
       isRecovered: true
     };
@@ -70,25 +71,25 @@ export const getSacredWallet = async (currentIdentity) => {
   return null;
 };
 
-// --- 6. ROZHODOVACÍ PROTOKOL (Vylepšený pre Architecta) ---
+/**
+ * 6. ROZHODOVACÍ PROTOKOL v8.0
+ * Tu sa určuje tvoj status v Matrixe podľa tvojej pečate a vybavenia kufra.
+ */
 export const runLariaProtocol = (identity, hasSeal = false) => {
   if (!identity || !identity.sha) return { isAdmin: false };
 
-  /**
-   * ZMENA LOGIKY:
-   * Admin status (isAdmin) je teraz viazaný PRÍMÁRNE na Pečať (hasSeal).
-   * Ak si zadal správne Slovo moci v Dashboarde, hasSeal je true.
-   * Je jedno, či si v mobile Manfred alebo Sammael.
-   */
+  // Admin status je viazaný na Pečať (Slovo moci)
   const isAdmin = (hasSeal === true);
 
   return {
     isOnline: !!identity.sha,
     isIrcOnline: !!identity.irc,
     hasNFC: !!identity.nfc,
+    // Paranoid: Ak máš identitu, ale nešíriš svoj email
     isParanoid: !identity.email && !!identity.sha,
-    isGoogleFull: !!identity.email && !!identity.gTab,
-    isChainNode: !!identity.gTab && !!identity.email,
-    isAdmin: isAdmin // Čistá pravda o tvojej moci
+    // GoogleFull: Ak si prepojený s Matrix tabuľkou (G-Matrix)
+    isGoogleFull: !!identity.email && !!identity.isPublic,
+    isChainNode: !!identity.krypt && !!identity.isPublic,
+    isAdmin: isAdmin 
   };
 };

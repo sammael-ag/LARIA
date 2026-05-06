@@ -24,30 +24,39 @@ export const ContactProvider = ({ children }) => {
     loadContacts();
   }, []);
 
-  // --- UNIVERZÁLNA FUNKCIA NA PRIDANIE KONTAKTU (QR, NFC, IRC) ---
+  // --- UNIVERZÁLNA FUNKCIA NA PRIDANIE KONTAKTU ---
   const addContact = async (rawData) => {
     try {
       const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
 
-      if (!data.n || !(data.a || data.sha)) {
-        return { success: false, error: "Neplatný formát Laria pečate." };
+      // 🛡️ PRÍSNA KONTROLA PODĽA PROTOKOLU (Zákon: sha a meno sú povinné)
+      if (!data.sha || !data.meno) {
+        console.log("⚠️ PROTOKOL_VIOLATION: Chýba sha alebo meno", data);
+        return { success: false, error: "Neplatná pečať. Chýba sha alebo meno." };
       }
 
-      const contactId = data.a || data.sha || data.id;
-
-      if (contacts.find(c => (c.a === contactId || c.sha === contactId || c.id === contactId))) {
+      // 🔍 KONTROLA EXISTENCIE (Hľadáme už len podľa SHA)
+      if (contacts.find(c => c.sha === data.sha)) {
         return { success: false, error: "Túto identitu už v reťazci máš." };
       }
 
+      // ✨ VYTVORENIE NOVÉHO KONTAKTU (Presne podľa tvojho zoznamu)
       const newContact = {
-        id: contactId,
-        name: data.n,
-        cat: data.cat || 'Majster',
-        loc: data.loc || 'Matrix',
-        a: data.a || null,
-        sha: data.sha || null,
-        revo: data.revo || false,
-        isVerified: false, 
+        SECURE_ID: data.SECURE_ID || data.sha, // Ak nemá unikátne ID kontraktu, použijeme SHA
+        sha: data.sha,
+        meno: data.meno,
+        kat: data.kat || 'Majster',
+        lok: data.lok || 'Matrix',
+        popis: data.popis || '',
+        tel: data.tel || '',
+        email: data.email || '',
+        fb: data.fb || '',
+        tg: data.tg || '',
+        gal: data.gal || '',
+        isPublic: data.isPublic || false,
+        irc: data.irc || '',
+        poznamka: data.poznamka || 'Pridané cez Matrix Web',
+        krypt: data.krypt || '',
         pinned: false,
         addedAt: new Date().toISOString()
       };
@@ -59,15 +68,15 @@ export const ContactProvider = ({ children }) => {
       return { success: true, contact: newContact };
     } catch (e) {
       console.error("❌ CONTACT_ADD_ERROR:", e);
-      return { success: false, error: "Chyba pri ukladaní do trezoru." };
+      return { success: false, error: "Chyba pri zápise do trezoru." };
     }
   };
 
-  // --- FUNKCIA NA PRIPNUTIE/ODPINUTIE (Toggle Pin) ---
-  const togglePin = async (id) => {
+  // --- OSTATNÉ FUNKCIE (Aktualizované na sha) ---
+  const togglePin = async (sha) => {
     try {
       const updatedContacts = contacts.map(c => 
-        c.id === id ? { ...c, pinned: !c.pinned } : c
+        c.sha === sha ? { ...c, pinned: !c.pinned } : c
       );
       setContacts(updatedContacts);
       await AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts));
@@ -78,10 +87,9 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- FUNKCIA NA MAZANIE (Terminácia spojenia) ---
-  const deleteContact = async (id) => {
+  const deleteContact = async (sha) => {
     try {
-      const updatedContacts = contacts.filter(c => c.id !== id);
+      const updatedContacts = contacts.filter(c => c.sha !== sha);
       setContacts(updatedContacts);
       await AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts));
       return { success: true };

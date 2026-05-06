@@ -1,16 +1,7 @@
 import React, { useState } from 'react';
 import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView, 
-  StatusBar,
-  Alert,
-  Switch,
-  ActivityIndicator,
-  Modal,
-  FlatList
+  View, Text, TextInput, TouchableOpacity, ScrollView, StatusBar,
+  Alert, Switch, ActivityIndicator, Modal, FlatList
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -44,10 +35,11 @@ const CardEditorScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
+  // INICIALIZÁCIA - Presne podľa tvojho zadania a poradia
   const [cardData, setCardData] = useState({
     sha: vault.identity.sha, 
-    kategoria: vault.identity.kategoria || 'remesla', 
-    meno: vault.identity.name || vault.identity.meno || '',
+    kategoria: vault.identity.kat || vault.identity.kategoria || 'remesla', 
+    meno: vault.identity.meno || vault.identity.name || '',
     lok: vault.identity.lok || '',
     popis: vault.identity.popis || '',
     tel: vault.identity.tel || '',
@@ -55,9 +47,10 @@ const CardEditorScreen = ({ navigation }) => {
     fb: vault.identity.fb || '',
     tg: vault.identity.tg || '',
     gal: vault.identity.gal || '',
-    revo: vault.identity.revo || '',
-    kRod: vault.identity.kRod || '',
-    krypt: vault.identity.walletAddress || vault.identity.krypt || '', 
+    irc: vault.identity.irc || '', // Toto IDE do Matrixu
+    revo: vault.identity.revo || '', // LEN LOKÁL
+    kRod: vault.identity.kRod || '', // LEN LOKÁL
+    krypt: vault.identity.krypt || vault.identity.walletAddress || '', 
     isPublic: vault.status.isOnline || false 
   });
 
@@ -68,34 +61,35 @@ const CardEditorScreen = ({ navigation }) => {
 
   const handleSave = async () => {
     if (!cardData.sha) {
-      Alert.alert("Chyba identity", "Chýba bezpečná pečať (SHA).");
+      Alert.alert("Chyba identity", "Sammael, chýba tvoja bezpečná pečať (SHA).");
       return;
     }
 
     setLoading(true);
     try {
-      const currentWalletAddress = await ensureLariaIdentity();
+      const currentKrypt = await ensureLariaIdentity();
       
       const cleanPopis = cardData.popis ? cardData.popis.replace(/[\r\n\t]+/g, " ").trim() : "";
       const cleanTel = cardData.tel ? cardData.tel.toString().replace(/\s/g, '') : '';
 
-      // 1. DOMA - Kompletný balík pre lokálny trezor
+      // 1. LOKÁLNY TREZOR (Všetko vrátane revo a kRod)
       const localData = {
         ...cardData,
+        kat: cardData.kategoria, // Sync s naším zákonom
         popis: cleanPopis,
         tel: cleanTel,
-        krypt: currentWalletAddress || cardData.krypt,
+        krypt: currentKrypt || cardData.krypt,
         status: {
           ...vault.status,
           isOnline: cardData.isPublic
         }
       };
 
-      // 2. VONKU - Balík pre Vrátnika v7.9.2 (Kaviareň)
-      const matrixData = {
+      // 2. MATRIX PAYLOAD (Iba to, čo smie ísť von)
+      const matrixPayload = {
         sha: localData.sha,
         meno: localData.meno,
-        kategoria: localData.kategoria,
+        kat: localData.kategoria,
         lok: localData.lok,
         popis: localData.popis,
         tel: localData.tel,
@@ -103,30 +97,26 @@ const CardEditorScreen = ({ navigation }) => {
         fb: localData.fb,
         tg: localData.tg,
         gal: localData.gal,
+        irc: localData.irc, // IRC ID ide do sveta
         krypt: localData.krypt,
-        // Manfred v kaviarni explicitne hľadá 'isPublic'
         isPublic: cardData.isPublic 
       };
 
-      // Zapečatenie lokálneho trezoru
+      // Zápis domov
       await syncIdentity(localData);
 
-      // Vyslanie do Matrixu (vždy aktualizujeme stav v tabuľke)
-      const result = await saveToGMatrix(matrixData);
+      // Vyslanie k Vrátnikovi
+      const result = await saveToGMatrix(matrixPayload);
 
-      if (result && (result.result === "success" || result.success)) {
-        const successMsg = cardData.isPublic 
-          ? "Pečať vytesaná. Manfred v kaviarni potvrdil príjem!" 
-          : "Súkromne uložené. Matrix bol stiahnutý z obehu.";
-        Alert.alert("SYSTÉM LARIA", successMsg);
+      if (result && result.success) {
+        Alert.alert("SYSTÉM LARIA", cardData.isPublic ? "Pečať v Matrixe aktualizovaná." : "Uložené v súkromnom trezore.");
+        navigation.goBack();
       } else {
-        Alert.alert("LOKÁLNE ULOŽENÉ", "Trezor OK, ale spojenie s kaviarňou zaváhalo.");
+        Alert.alert("LOKÁLNE ULOŽENÉ", "Tvoj trezor je OK, ale Matrix je dočasne nedostupný.");
       }
-
-      navigation.goBack();
     } catch (error) {
       console.error("Chyba pri tesaní:", error);
-      Alert.alert("CHYBA SPOJENIA", "Vrátnik neodpovedá. Skontroluj Wi-Fi / Dáta.");
+      Alert.alert("CHYBA", "Spojenie s kaviareňou zlyhalo.");
     } finally {
       setLoading(false);
     }
@@ -146,7 +136,7 @@ const CardEditorScreen = ({ navigation }) => {
           <View style={{ width: 8, height: 8, backgroundColor: cardData.isPublic ? '#0FF' : '#F0F', borderRadius: 4 }} />
         </View>
 
-        {/* REŽIM SÚKROMIA */}
+        {/* REŽIM VYSIELANIA */}
         <View style={[G.terminalInput, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderLeftWidth: 3, borderLeftColor: cardData.isPublic ? '#0FF' : '#F0F', marginBottom: 25 }]}>
           <View style={{ flex: 1 }}>
             <Text style={G.textCyber}>REŽIM VYSIELANIA</Text>
@@ -179,11 +169,13 @@ const CardEditorScreen = ({ navigation }) => {
         <Text style={[G.textCyber, { color: '#0FF' }]}>GALÉRIA (LINK)</Text>
         <TextInput style={G.terminalInput} value={cardData.gal} onChangeText={(val) => setCardData({...cardData, gal: val})} placeholder="https://..." placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
 
+        <Text style={[G.textCyber, { color: '#0FF' }]}>IRC / REVOLUT NICK (VEREJNÉ)</Text>
+        <TextInput style={G.terminalInput} value={cardData.irc} onChangeText={(val) => setCardData({...cardData, irc: val})} placeholder="@nick pre Matrix..." placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
+
         <View style={G.divider} />
 
-        {/* SÚKROMNÉ ÚDAJE */}
+        {/* SÚKROMNÉ ÚDAJE (Handshake) */}
         <Text style={[G.textCyber, { color: '#b19cd9' }]}>SÚKROMNÝ KONTAKT (LEN PRE HANDSHAKE)</Text>
-        
         <TextInput style={[G.terminalInput, { marginBottom: 10 }]} keyboardType="phone-pad" value={cardData.tel} onChangeText={(val) => setCardData({...cardData, tel: val})} placeholder="Telefón..." placeholderTextColor={G.placeholderColor} />
         <TextInput style={[G.terminalInput, { marginBottom: 10 }]} value={cardData.email} onChangeText={(val) => setCardData({...cardData, email: val})} placeholder="E-mail..." placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
         <TextInput style={[G.terminalInput, { marginBottom: 10 }]} value={cardData.fb} onChangeText={(val) => setCardData({...cardData, fb: val})} placeholder="Facebook..." placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
@@ -191,9 +183,10 @@ const CardEditorScreen = ({ navigation }) => {
 
         <View style={G.divider} />
         
-        <Text style={[G.textCyber, { color: '#b19cd9' }]}>FINANCIE (IBA LOKÁL)</Text>
-        <TextInput style={[G.terminalInput, { marginBottom: 10 }]} value={cardData.revo} onChangeText={(val) => setCardData({...cardData, revo: val})} placeholder="Revolut @nick" placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
-        <TextInput style={G.terminalInput} value={cardData.kRod} onChangeText={(val) => setCardData({...cardData, kRod: val})} placeholder="KorunyROD účet" placeholderTextColor={G.placeholderColor} />
+        {/* FINANCIE - ABSOLÚTNE SÚKROMIE */}
+        <Text style={[G.textCyber, { color: '#b19cd9' }]}>FINANCIE (IBA LOKÁLNE - NIKDY NEVYSIELAŤ)</Text>
+        <TextInput style={[G.terminalInput, { marginBottom: 10 }]} value={cardData.revo} onChangeText={(val) => setCardData({...cardData, revo: val})} placeholder="Revolut @nick (Súkromné)" placeholderTextColor={G.placeholderColor} autoCapitalize="none" />
+        <TextInput style={G.terminalInput} value={cardData.kRod} onChangeText={(val) => setCardData({...cardData, kRod: val})} placeholder="KorunyROD účet (Súkromné)" placeholderTextColor={G.placeholderColor} />
 
         <TouchableOpacity 
           style={[G.ircButton, { marginTop: 30, borderColor: cardData.isPublic ? '#0FF' : '#F0F', opacity: loading ? 0.5 : 1, marginBottom: 50 }]} 
@@ -208,10 +201,9 @@ const CardEditorScreen = ({ navigation }) => {
             </Text>
           )}
         </TouchableOpacity>
-
       </ScrollView>
 
-      {/* MODAL PRE KATEGÓRIE */}
+      {/* MODAL PICKER - Ten ostáva nezmenený */}
       <Modal visible={showPicker} transparent={true} animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', padding: 20 }}>
           <View style={{ backgroundColor: '#111', borderWidth: 1, borderColor: '#333', maxHeight: '80%', borderRadius: 10 }}>
@@ -239,7 +231,6 @@ const CardEditorScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-
     </SafeAreaView>
   );
 };

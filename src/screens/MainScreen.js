@@ -6,72 +6,85 @@ import { G } from '../styles/styles';
 
 const MainScreen = ({ navigation }) => {
 
-  // TÁTO FUNKCIA JE MOST (BRIDGE) MEDZI WEBOM A APPKOU
+  // --- MOSTE MEDZI WEBOM A LOKÁLNYM JADROM ---
   const handleMessage = async (event) => {
     try {
-      // Rozbalíme dáta, ktoré prišli z webu
+      // Rozbalíme dáta prichádzajúce z hlbín tvojho GitHub portálu
       const data = JSON.parse(event.nativeEvent.data);
 
       if (data.type === 'ADD_CONTACT') {
-        const newContact = data.payload;
+        const payload = data.payload;
 
-        // 1. Vytiahneme existujúci zoznam z lokálnej pamäte
+        // 1. Vytiahneme reťazec z digitálneho betónu
         const stored = await AsyncStorage.getItem('laria_contacts');
         let contacts = stored ? JSON.parse(stored) : [];
 
-        // 2. Skontrolujeme, či už náhodou majstra v zozname nemáš
-        const exists = contacts.find(c => c.id === newContact.id);
+        // 2. Kontrola duplicity podľa ID alebo SHA
+        const exists = contacts.find(c => c.id === payload.id || (payload.sha && c.sha === payload.sha));
         
         if (exists) {
-          Alert.alert("Systém LARIA", "Tento majster už je vo tvojom reťazci.");
+          Alert.alert("SYSTÉM LARIA", "Tento majster už je súčasťou tvojho reťazca.");
           return;
         }
 
-        // 3. Pridáme nového majstra (predvolene nepripnutý a neoverený)
-        contacts.push({ 
-          ...newContact, 
+        // 3. MAPOVANIE NA ŠTANDARD v8.0 (meno, kat, lok)
+        const newContact = { 
+          id: payload.id || Date.now().toString(),
+          meno: payload.meno || payload.name || "Neznámy Pútnik", 
+          kat: payload.kat || payload.cat || "Majster",
+          lok: payload.lok || payload.loc || "Matrix",
+          tel: payload.tel || "",
+          email: payload.email || "",
+          krypt: payload.krypt || payload.revo || "",
           pinned: false, 
-          isVerified: false 
-        });
+          isVerified: false,
+          v: "8.0" 
+        };
 
-        // 4. Uložíme späť do "digitálneho betónu" (AsyncStorage)
+        contacts.push(newContact);
+
+        // 4. Zápis do pamäte
         await AsyncStorage.setItem('laria_contacts', JSON.stringify(contacts));
 
-        // 5. Potvrdenie pre užívateľa a skok do vizitkára
+        // 5. Potvrdenie a skok do vizitkára
         Alert.alert(
-          "Spojenie nadviazané", 
-          `${newContact.name} bol pridaný do tvojich kontaktov.`,
+          "[ SPOJENIE NADVIAZANÉ ]", 
+          `${newContact.meno} bol úspešne vtiahnutý do tvojej siete.`,
           [
             { 
-              text: "OK", 
+              text: "[ OTTVORIŤ VIZITKÁR ]", 
               onPress: () => navigation.navigate('Contacts') 
+            },
+            {
+              text: "[ ZOSTAŤ TU ]",
+              style: 'cancel'
             }
           ]
         );
       }
     } catch (error) {
       console.error("Chyba v kyber-prenose:", error);
-      Alert.alert("Error", "Dáta sa nepodarilo dešifrovať.");
+      Alert.alert("SYSTEM ERROR", "Dáta z webu sa nepodarilo dešifrovať.");
     }
   };
 
   return (
     <View style={G.bg}>
-      {/* Kybernetický status bar */}
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       
       <WebView 
-        // Cache-busting cez timestamp pre čerstvosť dát
+        // Timestamp zabezpečí, že sa vždy načíta najčerstvejšia verzia tvojho umenia
         source={{ uri: `https://sammael-ag.github.io/LARIA/?v=${Date.now()}` }} 
         style={{ flex: 1, backgroundColor: '#000' }}
         startInLoadingState={true}
         
-        // AKTIVÁCIA MOSTA:
+        // MOSTE AKTÍVNY
         onMessage={handleMessage}
         javaScriptEnabled={true}
+        domStorageEnabled={true}
         
-        // Ošetrenie pádov
-        renderError={(errorName) => <View style={G.bg} />}
+        // Ošetrenie pádov bez rušivých elementov
+        renderError={() => <View style={G.bg} />}
       />
     </View>
   );
