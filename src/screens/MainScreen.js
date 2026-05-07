@@ -6,85 +6,75 @@ import { G } from '../styles/styles';
 
 const MainScreen = ({ navigation }) => {
 
-  // --- MOSTE MEDZI WEBOM A LOKÁLNYM JADROM ---
   const handleMessage = async (event) => {
     try {
-      // Rozbalíme dáta prichádzajúce z hlbín tvojho GitHub portálu
       const data = JSON.parse(event.nativeEvent.data);
 
       if (data.type === 'ADD_CONTACT') {
         const payload = data.payload;
 
-        // 1. Vytiahneme reťazec z digitálneho betónu
-        const stored = await AsyncStorage.getItem('laria_contacts');
-        let contacts = stored ? JSON.parse(stored) : [];
-
-        // 2. Kontrola duplicity podľa ID alebo SHA
-        const exists = contacts.find(c => c.id === payload.id || (payload.sha && c.sha === payload.sha));
-        
-        if (exists) {
-          Alert.alert("SYSTÉM LARIA", "Tento majster už je súčasťou tvojho reťazca.");
+        // --- RADIKÁLNY REZ: CHÝBAJÚCI FING = KONIEC PRENOSU ---
+        if (!payload.fing) {
+          console.warn("[SECURITY_BREACH] Pokus o zápis identity bez FING pečate zamietnutý.");
+          Alert.alert(
+            "NELEGITÍMNY SIGNÁL", 
+            "Identita nemá platný FING kľúč. Spojenie nebolo nadviazané."
+          );
           return;
         }
 
-        // 3. MAPOVANIE NA ŠTANDARD v8.0 (meno, kat, lok)
+        const stored = await AsyncStorage.getItem('laria_contacts');
+        let contacts = stored ? JSON.parse(stored) : [];
+
+        // Kontrola duplicity UŽ LEN cez FING (SHA nás nezaujíma)
+        const exists = contacts.find(c => c.fing === payload.fing);
+        
+        if (exists) {
+          Alert.alert("SYSTÉM LARIA", "Tento majster s daným FING-om už je v reťazci.");
+          return;
+        }
+
+        // MAPOVANIE: Očistené od SHA nánosov
         const newContact = { 
-          id: payload.id || Date.now().toString(),
+          id: `F_${payload.fing}_${Date.now()}`, // ID viazané na FING
           meno: payload.meno || payload.name || "Neznámy Pútnik", 
           kat: payload.kat || payload.cat || "Majster",
           lok: payload.lok || payload.loc || "Matrix",
+          fing: payload.fing, // Povinné pole
+          krypt: payload.krypt || payload.revo || "", 
           tel: payload.tel || "",
           email: payload.email || "",
-          krypt: payload.krypt || payload.revo || "",
           pinned: false, 
           isVerified: false,
-          v: "8.0" 
+          v: "9.8-F" 
         };
 
         contacts.push(newContact);
-
-        // 4. Zápis do pamäte
         await AsyncStorage.setItem('laria_contacts', JSON.stringify(contacts));
 
-        // 5. Potvrdenie a skok do vizitkára
         Alert.alert(
           "[ SPOJENIE NADVIAZANÉ ]", 
-          `${newContact.meno} bol úspešne vtiahnutý do tvojej siete.`,
+          `Majster ${newContact.meno} bol bezpečne overený cez FING.`,
           [
-            { 
-              text: "[ OTTVORIŤ VIZITKÁR ]", 
-              onPress: () => navigation.navigate('Contacts') 
-            },
-            {
-              text: "[ ZOSTAŤ TU ]",
-              style: 'cancel'
-            }
+            { text: "[ VIZITKÁR ]", onPress: () => navigation.navigate('Contacts') },
+            { text: "[ OK ]", style: 'cancel' }
           ]
         );
       }
     } catch (error) {
-      console.error("Chyba v kyber-prenose:", error);
-      Alert.alert("SYSTEM ERROR", "Dáta z webu sa nepodarilo dešifrovať.");
+      console.error("Kritická chyba mostu:", error);
     }
   };
 
   return (
     <View style={G.bg}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
-      
       <WebView 
-        // Timestamp zabezpečí, že sa vždy načíta najčerstvejšia verzia tvojho umenia
         source={{ uri: `https://sammael-ag.github.io/LARIA/?v=${Date.now()}` }} 
         style={{ flex: 1, backgroundColor: '#000' }}
-        startInLoadingState={true}
-        
-        // MOSTE AKTÍVNY
         onMessage={handleMessage}
         javaScriptEnabled={true}
         domStorageEnabled={true}
-        
-        // Ošetrenie pádov bez rušivých elementov
-        renderError={() => <View style={G.bg} />}
       />
     </View>
   );

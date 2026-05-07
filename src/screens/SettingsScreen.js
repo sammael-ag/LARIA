@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
-import * as Clipboard from 'expo-clipboard'; // Používame expo-clipboard pre moderný build
+import { SafeAreaView } from 'react-native-safe-area-context';
+// Návrat k stabilnému riešeniu z jadra
+import { Clipboard } from 'react-native'; 
 import { useKrypto } from '../../context/KryptoContext';
 import { useLaria } from '../../context/LariaContext'; 
 import { G } from '../styles/styles'; 
@@ -18,31 +20,30 @@ const SettingsScreen = ({ navigation }) => {
     syncWalletData 
   } = useKrypto();
 
-  // Automatický refresh pri načítaní configu
   useEffect(() => {
     if (walletAddress) {
       syncWalletData(walletAddress);
     }
   }, [walletAddress]);
 
-  // Kopírovanie SHA Pečate (Obnova)
-  const copySHA = async () => {
+  // Kopírovanie SHA Pečate cez klasický Clipboard
+  const copySHA = () => {
     if (vault.identity.sha) {
-      await Clipboard.setStringAsync(vault.identity.sha);
+      Clipboard.setString(vault.identity.sha); // Stará dobrá synchrónna metóda
       Alert.alert(
         "[ PEČAŤ SKOPÍROVANÁ ]", 
-        "Tento kód je tvojím digitálnym odtlačkom v Matrixe. Uschovaj ho v bezpečí."
+        "Tento kód je tvojím digitálnym odtlačkom v Matrixe."
       );
     }
   };
 
-  // Kopírovanie Wallet Adresy (Node)
-  const copyWallet = async () => {
+  // Kopírovanie Wallet Adresy cez klasický Clipboard
+  const copyWallet = () => {
     if (walletAddress) {
-      await Clipboard.setStringAsync(walletAddress);
+      Clipboard.setString(walletAddress);
       Alert.alert(
         "[ NODE_ADDRESS SKOPÍROVANÁ ]", 
-        "Tvoja adresa pre príjem Laria artefaktov a paliva je v schránke."
+        "Tvoja adresa pre príjem Laria artefaktov je v schránke."
       );
     }
   };
@@ -52,7 +53,7 @@ const SettingsScreen = ({ navigation }) => {
     : "INICIALIZUJEM SPOJENIE...";
 
   return (
-    <SafeAreaView style={G.bg}>
+    <SafeAreaView style={[G.bg, { flex: 1 }]}>
       <ScrollView contentContainerStyle={{ padding: 25, paddingBottom: 60 }}>
         
         {/* HEADER */}
@@ -66,7 +67,7 @@ const SettingsScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* --- RECOVERY BLOCK (Unikátna Pečať) --- */}
+        {/* OBNOVA IDENTITY */}
         <Text style={[G.textDim, { letterSpacing: 2, marginBottom: 10, fontSize: 10 }]}>OBNOVA IDENTITY</Text>
         <TouchableOpacity 
           onPress={copySHA} 
@@ -92,7 +93,7 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         </TouchableOpacity>
 
-        {/* SEKCIA: FREKVENCIA BYTIA */}
+        {/* FREKVENCIA BYTIA */}
         <View style={{ marginBottom: 40, borderTopWidth: 1, borderTopColor: '#111', paddingTop: 25 }}>
           <Text style={[G.textDim, { letterSpacing: 3, marginBottom: 25, fontWeight: 'bold', color: '#444', fontSize: 11 }]}>FREKVENCIA BYTIA</Text>
           
@@ -123,14 +124,13 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* SEKCIA: AKTÍVNY UZOL (USER ASSETS) */}
+        {/* AKTÍVNY UZOL */}
         <View style={[G.card, { padding: 20, borderLeftWidth: 3, borderLeftColor: '#0FF', backgroundColor: 'rgba(0,255,255,0.02)', marginBottom: 40 }]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <Text style={[G.mono, { color: '#0FF', fontWeight: 'bold' }]}>ACTIVE_NODE_RESOURCES</Text>
             {isLoading && <ActivityIndicator size="small" color="#0FF" />}
           </View>
           
-          {/* Adresa uzla */}
           <TouchableOpacity 
             onPress={copyWallet}
             activeOpacity={0.6}
@@ -143,7 +143,6 @@ const SettingsScreen = ({ navigation }) => {
             </View>
           </TouchableOpacity>
 
-          {/* Balancie */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
             <Text style={G.textDim}>LARIA Assets:</Text>
             <Text style={[G.textWhite, { fontWeight: 'bold' }]}>
@@ -165,10 +164,7 @@ const SettingsScreen = ({ navigation }) => {
               borderRadius: 12, 
               borderWidth: 1, 
               borderColor: walletAddress && !isLoading ? '#0FF' : '#222',
-              alignItems: 'center',
-              shadowColor: '#0FF',
-              shadowOpacity: isLoading ? 0 : 0.2,
-              shadowRadius: 10
+              alignItems: 'center'
             }}
             onPress={() => syncWalletData(walletAddress)}
             disabled={!walletAddress || isLoading}
@@ -177,16 +173,6 @@ const SettingsScreen = ({ navigation }) => {
               {isLoading ? "POPRÁŠENÉ DÁTA..." : "OBNOVIŤ DÁTA Z MATRIXU"}
             </Text>
           </TouchableOpacity>
-        </View>
-
-        {/* SECURITY & BUILD INFO */}
-        <View style={{ marginBottom: 30, paddingHorizontal: 5 }}>
-          <Text style={[G.textDim, { letterSpacing: 2, marginBottom: 15, fontWeight: 'bold', fontSize: 11 }]}>SECURITY PROTOCOL</Text>
-          <View style={{ gap: 8 }}>
-            <Text style={[G.textCyber, { fontSize: 10, color: '#0F0' }]}>● NETWORK_LAYER: BASE_MAINNET_ACTIVE</Text>
-            <Text style={[G.textCyber, { fontSize: 10, color: '#0F0' }]}>● IDENTITY_STATUS: VERIFIED_CARPENTER</Text>
-            <Text style={[G.textCyber, { fontSize: 10, color: '#b19cd9' }]}>● ENCRYPTION: HDPN_256_STABLE</Text>
-          </View>
         </View>
 
         <View style={{ alignItems: 'center', marginTop: 20 }}>

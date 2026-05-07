@@ -1,30 +1,20 @@
 /**
- * LARIA G-MATRIX SERVICE v8.0
- * Status: SYNCED / THE LAW
- * Popis: Centralizovaný prístup k Matrixu so striktným mapovaním premenných.
+ * LARIA G-MATRIX SERVICE v8.3
+ * Status: SYNCED / THE LAW / HANDSHAKE READY
+ * Popis: Centralizovaný prístup k Matrixu so striktným mapovaním premenných (SECURE_ID, sha, date...).
  */
 
-// Link na čítanie (Renderer) - v8.0
 const G_MATRIX_READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
-
-// Link na zápis (Tvoj VRÁTNIK v8.0)
-// POZOR: Sem vlož nové URL z nasadenia skriptu LARIA WRITER v8.0, ak sa zmenilo
 const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbyD0INZlUfMJaBYFp8Q9ndgi9gQqYjPPyql9BjmulvvoF6LU6HLLP6gTRHHbrHbgZt6/exec";
 
 /**
- * 1. ČÍTANIE Z MATRIXU (Synchronizácia siete)
+ * 1. ČÍTANIE Z MATRIXU
  */
 export const fetchGMatrix = async () => {
     try {
-        // Cache Breaker zabezpečí, že nečítame staré dáta
         const response = await fetch(`${G_MATRIX_READ_URL}?v=${Date.now()}`);
         if (!response.ok) throw new Error('Matrix neodpovedá (HTTP ' + response.status + ')');
-        
-        const rawData = await response.json(); 
-        
-        // Tu môžeme pridať mapovanie, ak by Renderer vracal staré názvy, 
-        // ale náš Renderer v8.0 už vracia čisté dáta.
-        return rawData; 
+        return await response.json(); 
     } catch (error) {
         console.error("❌ Sammael, Matrix pri čítaní zlyhal:", error);
         return null;
@@ -32,33 +22,33 @@ export const fetchGMatrix = async () => {
 };
 
 /**
- * 2. ZÁPIS DO MATRIXU (Aktualizácia tvojej identity v sieti)
+ * 2. ZÁPIS DO MATRIXU (Striktné mapovanie A-P)
  */
 export const saveToGMatrix = async (identityData) => {
     try {
-        // TU SA DEJE MÁGIA MAPOVANIA (Z mobilu do Tabuľky)
-        // Musíme poslať presne to, čo náš skript v Tabuľke očakáva.
+        // --- PROTIKOL MAPOVANIA (PORADIE JE ZÁKON) ---
         const protocolPayload = {
-            SECURE_ID: identityData.SECURE_ID || identityData.sha,
-            sha: identityData.sha,
-            meno: identityData.meno,
-            kat: identityData.kat || 'Majster',
-            lok: identityData.lok || 'Matrix',
-            popis: identityData.popis || '',
-            tel: identityData.tel || '',
-            email: identityData.email || '',
-            fb: identityData.fb || '',
-            tg: identityData.tg || '',
-            gal: identityData.gal || '',
-            isPublic: identityData.isPublic || false,
-            irc: identityData.irc || '',
-            poznamka: identityData.poznamka || 'Odoslané z Laria Mobile v8.0',
-            krypt: identityData.krypt // Adresa peňaženky
+            SECURE_ID: identityData.SECURE_ID, // A (V editore nastavené na null)
+            sha: identityData.sha,             // B
+            date: identityData.date,           // C (Pridané!)
+            meno: identityData.meno,           // D
+            kat: identityData.kat,             // E
+            lok: identityData.lok,             // F
+            popis: identityData.popis,         // G
+            tel: identityData.tel,             // H
+            email: identityData.email,         // I
+            fb: identityData.fb,               // J
+            tg: identityData.tg,               // K
+            gal: identityData.gal,             // L
+            isPublic: identityData.isPublic,   // M
+            irc: identityData.irc,             // N
+            poznamka: identityData.poznamka,   // O (Tvoj FING)
+            krypt: identityData.krypt          // P
         };
 
         const uniqueWriteUrl = `${G_MATRIX_WRITE_URL}?nocache=${Date.now()}`;
         
-        console.log("📡 Sammael, odosielam tvoju pečať do Matrixu...");
+        console.log("📡 Sammael, odosielam tvoju pečať (v8.3) do Matrixu...");
 
         const response = await fetch(uniqueWriteUrl, {
             method: 'POST',
@@ -74,7 +64,7 @@ export const saveToGMatrix = async (identityData) => {
         
         if (result.result === "success") {
             console.log("✅ Matrix úspešne prijal tvoju energiu.");
-            return { success: true, message: result.message, system: result.system };
+            return { success: true, message: result.message };
         } else {
             console.warn("⚠️ Vrátnik v kaviarni má námietky:", result.message);
             return { success: false, error: result.message };

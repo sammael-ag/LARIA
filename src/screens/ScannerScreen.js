@@ -1,192 +1,157 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View, TouchableOpacity, Alert } from 'react-native';
+import { Text, View, TouchableOpacity, Alert, Platform } from 'react-native';
 import { G } from '../styles/styles';
 import { useContacts } from '../../context/ContactContext';
 import QRCode from 'react-native-qrcode-svg'; 
-
-// --- IMPORT PRE NFC ---
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 
 export default function ScannerScreen({ navigation }) {
   const { addContact } = useContacts();
   const [scannedData, setScannedData] = useState(null); 
+  const [displayInfo, setDisplayInfo] = useState(null);
 
-  // --- LOGIKA PRIJATIA A DEKÓDOVANIA PEČATE ---
+  // --- 📡 UNIFIKOVANÝ DEKODÉR (Handshake v9.9.6) ---
   const handleProcessSeal = async (rawData) => {
-    // Sammael, predpokladáme formát: Meno | SHA | Krypt | Verzia
-    const parts = rawData.split('|');
-    
-    const incomingData = {
-      meno: parts[0] || "Neznámy Pútnik",
-      sha: parts[1] || "0x000...",
-      krypt: parts[2] || "",
-      v: parts[3] || "8.0",
-      kat: "POZOROVATEĽ", // Predvolená kategória pre nových
-      lok: "V SIETI",
-      isVerified: false // Musí prejsť tvojím overením
-    };
+    let incomingData = null;
 
-    // Pripravíme dáta pre vizuálne potvrdenie (skratky m, s, k)
-    const displayPayload = JSON.stringify({
-      m: incomingData.meno,
-      s: incomingData.sha,
-      k: incomingData.krypt
-    });
+    try {
+      // PRÍPAD A: Signál z našej novej URL (QR foťák/web štýl)
+      if (rawData.includes('?id=')) {
+        const queryString = rawData.split('?')[1];
+        const params = new URLSearchParams(queryString);
+        
+        incomingData = {
+          fing: params.get('id'),
+          meno: decodeURIComponent(params.get('m') || "Pútnik"),
+          krypt: params.get('k') || "NO_KRYPT",
+          kat: "OBJAVITEĽ",
+          v: "9.9.6"
+        };
+      } 
+      // PRÍPAD B: Starší formát alebo čistý reťazec (keby niečo nevyšlo)
+      else if (rawData.includes('|')) {
+        const parts = rawData.split('|');
+        incomingData = {
+          meno: parts[0],
+          sha: parts[1],
+          krypt: parts[2],
+          fing: parts[3],
+          v: "9.9.6-legacy"
+        };
+      }
 
-    setScannedData(displayPayload);
+      // --- KONTROLA INTEGRITY ---
+      if (!incomingData || !incomingData.fing) {
+        throw new Error("Neúplná pečať");
+      }
 
-    setTimeout(() => {
-      Alert.alert(
-        '[ SYSTÉM: IDENTITA ZACHYTENÁ ]',
-        `Objekt: ${incomingData.meno}\nSHA: ${incomingData.sha.substring(0, 10)}...\nProtokol: v${incomingData.v}`,
-        [
-          { 
-            text: '[ ODMIETNUŤ ]', 
-            style: 'cancel', 
-            onPress: () => setScannedData(null) 
-          },
-          { 
-            text: '[ ULOŽIŤ DO ATELIÉRU ]', 
-            onPress: async () => {
-              const result = await addContact(incomingData);
-              if (result.success) {
-                navigation.goBack();
-              } else {
-                setScannedData(null);
-                Alert.alert('[ CHYBA MATRICE ]', result.error);
-              }
-            } 
-          }
-        ]
-      );
-    }, 800);
+      // Nastavenie vizuálu (Zobrazenie tvojej pečate v skeneri)
+      setDisplayInfo(incomingData);
+      setScannedData(JSON.stringify({
+        m: incomingData.meno,
+        f: incomingData.fing,
+        k: incomingData.krypt
+      }));
+
+      // --- POTVRDENIE ZÁPISU ---
+      setTimeout(() => {
+        Alert.alert(
+          '[ IDENTITA ZACHYTENÁ ]',
+          `Majster: ${incomingData.meno}\nFING: ${incomingData.fing}\nChceš túto pečať vtiahnuť do ateliéru?`,
+          [
+            { text: '[ ZRUŠIŤ ]', style: 'cancel', onPress: () => { setScannedData(null); setDisplayInfo(null); } },
+            { 
+              text: '[ ULOŽIŤ ]', 
+              onPress: async () => {
+                const result = await addContact(incomingData);
+                if (result.success) {
+                  navigation.navigate('Contacts');
+                } else {
+                  setScannedData(null);
+                  Alert.alert('[ CHYBA ]', result.error);
+                }
+              } 
+            }
+          ]
+        );
+      }, 500);
+
+    } catch (e) {
+      Alert.alert("[ CHYBA SIGNÁLU ]", "Matrix nedokáže túto pečať dekódovať.");
+      setScannedData(null);
+    }
   };
 
-  // --- NFC LISTENER (Počúvame na priloženie iného mobilu) ---
+  // --- NFC LISTENER (Unifikovaný) ---
   useEffect(() => {
     const startNfc = async () => {
       try {
         await NfcManager.start();
-        await NfcManager.requestTechnology(NfcTech.Ndef);
-        
-        NfcManager.setEventListener(NfcTech.Ndef, (tag) => {
-          if (tag.ndefMessage && tag.ndefMessage.length > 0) {
-            const payload = tag.ndefMessage[0].payload;
-            // Odstránenie prefixu (prvé 3 byty sú zvyčajne kód jazyka 'en')
-            const decoded = String.fromCharCode.apply(null, payload).substring(3);
-
-            if (decoded.startsWith("LARIA:")) {
-              const cleanData = decoded.replace("LARIA:", "");
-              handleProcessSeal(cleanData);
-            }
-          }
-        });
-      } catch (ex) {
-        console.log("NFC Skener čaká na signál...");
-      }
-    };
-
-    startNfc();
-
-    return () => {
-      const stopNfc = async () => {
-        try {
-          NfcManager.setEventListener(NfcTech.Ndef, null);
-          await NfcManager.cancelTechnologyRequest().catch(() => {});
-          await NfcManager.unregisterTagEvent().catch(() => {});
-        } catch (err) {
-          console.log("NFC senzor zaparkovaný.");
+        if (Platform.OS === 'android') {
+          await NfcManager.registerTagEvent();
         }
-      };
-      stopNfc();
+      } catch (ex) { console.log("NFC Standby"); }
     };
+    startNfc();
+    return () => NfcManager.cancelTechnologyRequest().catch(() => {});
   }, []);
 
+  // --- SIMULÁCIA PRE TESTOVANIE ---
   const simulateScan = () => {
-    // Sammael Test: Meno | SHA | Krypt | Verzia
-    const mockString = "Pútnik z Rákoša|SHA-TEST-999|0xKRYPT123|8.0";
-    handleProcessSeal(mockString);
+    const mockUrl = "https://sammael-ag.github.io/LARIA/?id=SAM-PRO-777&m=Testovaci%20Majster&k=0xALPHA";
+    handleProcessSeal(mockUrl);
   };
 
   return (
     <View style={G.bg}>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+      <View style={G.containerPaddingCenter}>
         
-        {/* HLAVNÝ STATUS BOX */}
-        <View style={[G.card, { width: '100%', alignItems: 'center', borderStyle: 'dashed', borderColor: scannedData ? '#0F0' : '#b19cd9' }]}>
-          <Text style={[G.tag, { 
-            backgroundColor: scannedData ? 'rgba(0, 255, 0, 0.1)' : 'rgba(177, 156, 217, 0.1)', 
-            color: scannedData ? '#0F0' : '#b19cd9', 
-            borderColor: scannedData ? '#0F0' : '#b19cd9' 
-          }]}>
-            {scannedData ? 'VÁKUUM_UZAVRETÉ' : 'OKO_LARIA_AKTÍVNE'}
+        <View style={[G.card, G.cardCyberBorder, { borderColor: scannedData ? '#0FF' : '#222' }]}>
+          <Text style={[G.tag, { color: scannedData ? '#0FF' : '#555' }]}>
+            {scannedData ? 'SIGNAL_LOCKED' : 'SCANNER_ACTIVE'}
           </Text>
           
-          <Text style={[G.textWhite, { fontSize: 22, fontWeight: '700', marginTop: 20, letterSpacing: 2 }]}>
-            {scannedData ? '[ PEČAŤ OVERENÁ ]' : '[ SYNCHRONIZÁCIA ]'}
-          </Text>
-          
-          <Text style={[G.textDim, { textAlign: 'center', marginTop: 10, marginBottom: 25, lineHeight: 18 }]}>
-            {scannedData 
-              ? 'Identita bola úspešne dekódovaná.\nUložte ju do svojho zoznamu.' 
-              : 'Namier na QR kód v inom mobile\nalebo prilož zariadenia k sebe.'}
+          <Text style={[G.headerTitle, { fontSize: 20, textAlign: 'center', marginTop: 10 }]}>
+            {scannedData ? '[ DEKÓDOVANÉ ]' : '[ SYNCHRONIZÁCIA ]'}
           </Text>
 
-          {/* VIZUÁLNY ZÁCHYT */}
-          <View style={{ 
-            width: 240, 
-            height: 240, 
-            borderWidth: 2, 
-            borderColor: scannedData ? '#0F0' : '#333', 
-            borderRadius: 20,
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: scannedData ? '#FFF' : 'rgba(0,0,0,0.3)',
-            overflow: 'hidden',
-            shadowColor: scannedData ? '#0F0' : '#000',
-            shadowRadius: 15,
-            shadowOpacity: 0.3
-          }}>
+          <View style={[G.qrWrapper, { 
+            marginTop: 30,
+            borderColor: scannedData ? '#0FF' : '#111',
+            backgroundColor: scannedData ? '#FFF' : '#050505',
+          }]}>
             {scannedData ? (
               <QRCode 
                 value={scannedData} 
-                size={200} 
-                quietZone={5}
-                logo={require('../../assets/laria-seal.png')}
-                logoSize={50}
-                logoBackgroundColor='transparent'
+                size={180} 
+                logo={require('../../assets/laria-seal.png')} 
+                logoSize={45}
+                logoBackgroundColor='white'
               />
             ) : (
-              <View style={{ alignItems: 'center' }}>
-                 <Text style={{ fontSize: 40, marginBottom: 10, opacity: 0.5 }}>👁️</Text>
-                 <Text style={[G.textCyber, { color: '#b19cd9', fontSize: 10, letterSpacing: 3 }]}>
-                   HĽADÁM SIGNÁL
-                 </Text>
+              <View style={G.center}>
+                 <Text style={{ fontSize: 40, opacity: 0.2 }}>👁️</Text>
+                 <Text style={[G.textCyber, { fontSize: 8, marginTop: 10, color: '#0FF' }]}>HĽADÁM FREKVENCIU</Text>
               </View>
             )}
           </View>
+
+          {displayInfo && (
+             <Text style={[G.mono, { marginTop: 20, color: '#0FF', fontSize: 10, textAlign: 'center' }]}>
+               ID: {displayInfo.fing}
+             </Text>
+          )}
         </View>
 
-        {/* TESTOVACIA INJEKCIA */}
         {!scannedData && (
-          <TouchableOpacity 
-            style={[G.btnAction, { marginTop: 40, width: '100%', borderColor: '#f1c40f' }]} 
-            onPress={simulateScan}
-          >
-            <Text style={[G.btnText, { color: '#f1c40f' }]}>
-              [ INJEKTOVAŤ TESTOVACIU PEČAŤ ]
-            </Text>
+          <TouchableOpacity style={[G.buttonOutline, { marginTop: 30, borderColor: '#F1C40F' }]} onPress={simulateScan}>
+            <Text style={{ color: '#F1C40F', fontWeight: 'bold' }}>[ INJEKTOVAŤ URL TEST ]</Text>
           </TouchableOpacity>
         )}
-
       </View>
 
-      {/* NÁVRAT */}
-      <TouchableOpacity 
-        style={{ marginBottom: 50, alignSelf: 'center', padding: 10 }} 
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={[G.textDim, { letterSpacing: 5, fontSize: 12 }]}>[ OPUSTIŤ SKENER ]</Text>
+      <TouchableOpacity style={G.footerSection} onPress={() => navigation.goBack()}>
+        <Text style={G.textDimTerminal}>← NÁVRAT</Text>
       </TouchableOpacity>
     </View>
   );

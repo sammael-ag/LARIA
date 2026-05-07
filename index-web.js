@@ -1,7 +1,7 @@
 /**
- * LARIA WEB ENGINE - BEZPEČNÁ ČAKRA v8.0
- * STATUS: SYNCED / THE LAW
- * FIX: Jednotné premenné podľa protokolu (sha, kat, krypt, lok...)
+ * LARIA WEB ENGINE - v9.9.8
+ * STATUS: SECURE / UNIFIED HANDSHAKE / AUTO-MODAL ACTIVATED
+ * FIX: 3s Auto-trigger pre Solo vizitky, vylepšená navigácia.
  */
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
@@ -9,53 +9,39 @@ const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlv
 let allData = []; 
 let currentCategory = 'vsetko';
 
-// --- 1. ŠTART ---
 window.onload = async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const targetId = urlParams.get('id'); 
     
-    await loadDataFromGSheets(targetId);
-
-    if (targetId) {
-        setTimeout(() => {
-            // Hľadáme podľa krátkeho ID alebo krypt peňaženky
-            const item = allData.find(i => 
-                i.fingerprint === targetId || 
-                (i.krypt && i.krypt.toLowerCase() === targetId.toLowerCase())
-            );
-            if (item) smartAdd(item.fingerprint); 
-        }, 1200); 
-    }
+    await loadDataFromMatrix(targetId);
 };
 
-// --- 2. NAČÍTANIE DÁT Z MATRIXU ---
-async function loadDataFromGSheets(targetId = null) {
-    console.log("🚀 Matrix: Synchronizácia dát podľa protokolu v8.0...");
+async function loadDataFromMatrix(targetId = null) {
     const container = document.getElementById('cards-container');
     
     try {
         const response = await fetch(READ_URL);
         const rawData = await response.json();
 
-        allData = rawData.map(item => {
-            // Krátky vizuálny kľúč pre web
-            const shortId = item.sha ? item.sha.substring(0, 12) : "no-sha";
-            
-            return {
-                fingerprint: shortId,    // Len pre URL a UI
-                sha: item.sha,          // POSVÄTNÉ PLNÉ SHA
+        allData = rawData.reduce((acc, item) => {
+            if (!item.poznamka || item.poznamka.trim() === "") return acc; 
+
+            acc.push({
+                sha: item.sha,
                 meno: item.meno || "Pútnik",
                 kat: item.kat || "Majster",
                 lok: item.lok || "V sieti",
                 popis: item.popis || "",
-                gal: item.gal || "", 
-                krypt: item.krypt || "", 
-                isPublic: item.ispublic === true || String(item.ispublic).toUpperCase() === "TRUE"
-            };
-        }).filter(item => item.isPublic);
+                gal: item.gal || "",
+                irc: item.irc || "",
+                fing: item.poznamka.trim(),
+                krypt: item.krypt || ""
+            });
+            return acc;
+        }, []);
 
         if (targetId) {
-            const soloItem = allData.find(i => i.fingerprint === targetId || i.krypt === targetId);
+            const soloItem = allData.find(i => i.fing === targetId || i.krypt === targetId);
             if (soloItem) {
                 renderCards([soloItem], true);
                 return;
@@ -63,23 +49,32 @@ async function loadDataFromGSheets(targetId = null) {
         }
         applyFilter();
     } catch (e) {
-        console.error("❌ Matrix offline:", e);
-        if (container) container.innerHTML = `<p style="color:#F0F; text-align:center; padding:50px;">[ CHYBA_MATRIXU ]</p>`;
+        if (container) container.innerHTML = `<p style="color:#0FF; text-align:center; padding:50px;">[ SYSTÉMOVÁ_CHYBA_MATRIXU ]</p>`;
     }
 }
 
-// --- 3. RENDER KARIET ---
+// --- 3. RENDER KARIET (S automatickým časovačom) ---
 function renderCards(data, isSolo = false) {
     const container = document.getElementById('cards-container');
     if (!container) return;
     container.innerHTML = '';
 
     if (isSolo) {
-        const backBtn = document.createElement('div');
-        backBtn.style.width = "100%";
-        backBtn.style.maxWidth = "500px";
-        backBtn.innerHTML = `<button onclick="window.location.href='index.html'" class="btn-share" style="margin-bottom: 20px; width:100%;">[ ↩ SPÄŤ DO SIETE ]</button>`;
-        container.appendChild(backBtn);
+        container.innerHTML = `
+            <div style="width: 100%; max-width: 500px; margin: 0 auto;">
+                <button onclick="window.location.href='index.html'" class="btn-share" style="margin-bottom: 25px; width:100%; border-color:#0FF; color:#0FF; background:transparent; cursor:pointer;">
+                    [ ↩ SPÄŤ DO SIETE ]
+                </button>
+            </div>`;
+            
+        // --- ⚡ AUTO-TRIGGER (3 SEKUNDY) ---
+        // Ak je to sólo vizitka v prehliadači, po 3 sekundách ponúkneme appku
+        if (!window.ReactNativeWebView) {
+            setTimeout(() => {
+                console.log("🚀 LARIA: Automatické vyvolanie mosta...");
+                smartAdd(data[0].fing);
+            }, 3000);
+        }
     }
 
     data.forEach(item => {
@@ -87,44 +82,48 @@ function renderCards(data, isSolo = false) {
         card.className = isSolo ? 'card card-solo' : 'card';
         
         card.onclick = (e) => {
-            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
-                window.location.href = `?id=${item.fingerprint}`;
+            if (!isSolo && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+                window.location.href = `?id=${item.fing}`;
             }
         };
 
         card.innerHTML = `
-            <span class="tag">${item.kat}</span>
-            <h2 class="card-title">${item.meno}</h2>
-            <p class="card-loc">📍 ${item.lok}</p>
-            <p class="card-desc">${aktivujOdkazy(item.popis)}</p>
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="tag" style="background: rgba(0, 255, 255, 0.1); color: #0FF; border: 1px solid #0FF;">${item.kat}</span>
+                <span style="color: #444; font-size: 9px;">FING: ${item.fing}</span>
+            </div>
+            <h2 class="card-title" style="margin: 15px 0 5px 0;">${item.meno}</h2>
+            <p class="card-loc" style="color: #888; font-size: 0.9em;">📍 ${item.lok}</p>
+            <p class="card-desc" style="margin: 15px 0;">${aktivujOdkazy(item.popis)}</p>
             
-            <div class="card-actions">
-                <button onclick="smartAdd('${item.fingerprint}')" class="btn-add">[ PRIDAŤ ]</button>
-                <button onclick="copyShareLink('${item.fingerprint}')" class="btn-share">[ LINK ]</button>
+            <div class="card-actions" style="display: flex; gap: 10px;">
+                <button onclick="smartAdd('${item.fing}')" class="btn-add" style="flex: 2; background: #0FF; color: #000; font-weight: bold; border: none; padding: 10px; cursor:pointer;">[ DO APPKY ]</button>
+                <button onclick="copyShareLink('${item.fing}')" class="btn-share" style="flex: 1; color: #0FF; border: 1px solid #0FF; background: transparent; cursor:pointer;">[ LINK ]</button>
             </div>
 
-            <div class="card-links">
-                ${item.gal ? `<a href="${item.gal}" target="_blank" style="color: #FF0; font-size: 10px;">[ GALÉRIA ARTEFAKTOV ]</a>` : ''}
-            </div>
+            ${item.gal ? `
+            <div style="margin-top: 15px; border-top: 1px solid #222; padding-top: 10px;">
+                <a href="${item.gal}" target="_blank" style="color: #0FF; font-size: 11px; text-decoration: none;">[ 🖼️ GALÉRIA ARTEFAKTOV ]</a>
+            </div>` : ''}
         `;
         container.appendChild(card);
     });
 }
 
-// --- 4. MODÁLNY MOST (Smer do Appky) ---
-function smartAdd(shortId) {
-    const item = allData.find(i => i.fingerprint === shortId);
+function smartAdd(fingId) {
+    const item = allData.find(i => i.fing === fingId);
     if (!item) return;
 
-    // BALÍK PRESNE PODĽA PROTOKOLU
     const payload = {
-        sha: item.sha,      // Celá pečať
+        fing: item.fing,
         meno: item.meno,
+        krypt: item.krypt,
         kat: item.kat,
+        sha: item.sha,
         lok: item.lok,
         popis: item.popis,
         gal: item.gal,
-        krypt: item.krypt
+        v: "9.9.8"
     };
 
     if (window.ReactNativeWebView) {
@@ -132,42 +131,34 @@ function smartAdd(shortId) {
             type: 'ADD_CONTACT', 
             payload: payload 
         }));
-        return;
+    } else {
+        const modal = document.getElementById('lariaBridge');
+        if (modal) {
+            // Ak je už modal otvorený, nebudeme ho "preblikávať"
+            if (modal.style.display === 'flex') return;
+
+            document.getElementById('modal-fingerprint').innerText = fingId;
+            document.getElementById('btn-open-app').onclick = () => {
+                window.location.href = `laria://id/${item.fing}`;
+                modal.style.display = 'none';
+            };
+            modal.style.display = 'flex';
+        }
     }
-
-    const modal = document.getElementById('lariaBridge');
-    const fpLabel = document.getElementById('modal-fingerprint');
-    const openAppBtn = document.getElementById('btn-open-app');
-
-    if (!modal) return;
-
-    fpLabel.innerText = shortId;
-    openAppBtn.onclick = () => {
-        window.location.href = `laria://contact/${shortId}`;
-        closeLariaBridge();
-    };
-
-    modal.style.display = 'flex';
 }
 
-function closeLariaBridge() {
-    const modal = document.getElementById('lariaBridge');
-    if (modal) modal.style.display = 'none';
-}
-
-// --- POMOCNÉ FUNKCIE ---
 const aktivujOdkazy = (text) => {
     if (!text) return "Bez popisu.";
     const urlPattern = /(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-    return text.replace(urlPattern, '<a href="$1" target="_blank" class="text-cyber">$1</a>');
+    return text.replace(urlPattern, '<a href="$1" target="_blank" style="color: #0FF;">$1</a>');
 };
 
 function applyFilter() {
-    const term = document.getElementById('searchInput')?.value || '';
+    const term = document.getElementById('searchInput')?.value.toLowerCase() || '';
     const filtered = allData.filter(item => {
         const matchCat = (currentCategory === 'vsetko' || item.kat.toLowerCase() === currentCategory.toLowerCase());
-        const searchContent = `${item.meno} ${item.lok} ${item.popis}`.toLowerCase();
-        return matchCat && searchContent.includes(term.toLowerCase());
+        const searchContent = `${item.meno} ${item.lok} ${item.popis} ${item.fing}`.toLowerCase();
+        return matchCat && searchContent.includes(term);
     });
     renderCards(filtered);
 }
@@ -179,6 +170,5 @@ window.setCategory = (cat) => {
 
 window.copyShareLink = (id) => {
     const url = `${window.location.origin}${window.location.pathname}?id=${id}`;
-    navigator.clipboard.writeText(url);
-    alert("[ LINK SKOPÍROVANÝ ]");
+    navigator.clipboard.writeText(url).then(() => alert("[ LINK ULOŽENÝ ]"));
 };

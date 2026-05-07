@@ -18,18 +18,18 @@ export const LariaProvider = ({ children }) => {
     lariaContractAddress 
   } = useKrypto();
 
-  // --- ✨ ŠTRUKTÚRA PODĽA ZÁKONA O PREMENNÝCH ---
+  // --- ✨ ŠTRUKTÚRA PODĽA ZÁKONA v8.0 (SECURE_ID Odpojené) ---
   const [vault, setVault] = useState({
     status: { 
       isOnline: false, isIrcOnline: false, hasNFC: false, 
       isParanoid: false, isGoogleFull: false, isChainNode: false, isAdmin: false 
     },
     identity: { 
-      SECURE_ID: null, 
+      SECURE_ID: null, // Pripravené na budúcnosť, momentálne neaktívne
       sha: null, 
-      meno: "Sammael", // Pôvodne name
-      kat: "Majster",  // Pôvodne kategoria/cat
-      lok: "Rákoš",    // Pôvodne lokalita
+      meno: "Sammael", 
+      kat: "Majster",  
+      lok: "Rákoš",    
       popis: "", 
       tel: "", 
       email: "", 
@@ -38,8 +38,8 @@ export const LariaProvider = ({ children }) => {
       gal: "", 
       isPublic: false, 
       irc: "", 
-      poznamka: "", 
-      krypt: null,     // Pôvodne walletAddress/wallet
+      poznamka: "", // Tu kotví náš 'fing' (v8.0)
+      krypt: null,     
       privateKey: null 
     }
   });
@@ -90,7 +90,7 @@ export const LariaProvider = ({ children }) => {
     }
   };
 
-  // --- 1. INICIALIZÁCIA MATRIXU ---
+  // --- 1. INICIALIZÁCIA MATRIXU (Len sha a fing) ---
   useEffect(() => {
     const initializeVault = async () => {
       try {
@@ -100,17 +100,22 @@ export const LariaProvider = ({ children }) => {
           ? (Application.androidId || Device.osBuildId || "S_DEVICE_A") 
           : await Application.getIosIdForVendorAsync();
 
-        // Generujeme SHA (Naše posvätné ID)
+        // Generujeme SHA
         const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.meno || "Sammael");
+        // Generujeme FING
+        const currentFing = currentSha.substring(0, 12);
 
         if (!savedIdentity) {
           savedIdentity = { 
             ...vault.identity, 
-            sha: currentSha, 
-            SECURE_ID: currentSha // Na začiatku je SECURE_ID rovné SHA
+            sha: currentSha,
+            poznamka: currentFing,
+            SECURE_ID: null // Explicitne null
           };
         } else {
           savedIdentity.sha = currentSha;
+          savedIdentity.poznamka = currentFing;
+          savedIdentity.SECURE_ID = null; // Vyčistenie starých hodnôt
         }
 
         const updatedStatus = runLariaProtocol(savedIdentity, false);
@@ -145,7 +150,14 @@ export const LariaProvider = ({ children }) => {
     if (vault.identity.krypt) return vault.identity.krypt;
     const newWallet = await generateAutoWallet();
     if (newWallet) {
-      const updatedIdentity = { ...vault.identity, krypt: newWallet.address, privateKey: newWallet.privateKey };
+      const currentFing = vault.identity.sha ? vault.identity.sha.substring(0, 12) : "";
+      const updatedIdentity = { 
+        ...vault.identity, 
+        krypt: newWallet.address, 
+        privateKey: newWallet.privateKey,
+        poznamka: currentFing,
+        SECURE_ID: null
+      };
       await syncIdentity(updatedIdentity);
       setTimeout(() => onboardNewUser(newWallet.address), 2000);
       return newWallet.address;
@@ -155,13 +167,18 @@ export const LariaProvider = ({ children }) => {
 
   const syncIdentity = async (newIdentityData) => {
     const currentAdminStatus = vault.status.isAdmin;
-    const updatedIdentity = { ...vault.identity, ...newIdentityData };
+    const updatedIdentity = { ...vault.identity, ...newIdentityData, SECURE_ID: null };
+    
+    // Poistka pre fing
+    if (updatedIdentity.sha && !updatedIdentity.poznamka) {
+      updatedIdentity.poznamka = updatedIdentity.sha.substring(0, 12);
+    }
+
     const newStatus = runLariaProtocol(updatedIdentity, currentAdminStatus);
     setVault({ status: newStatus, identity: updatedIdentity });
     await saveToVault('identity', updatedIdentity);
   };
 
-  // Ostatné funkcie zostávajú...
   const unlockSeal = async (isCorrect) => {
     if (isCorrect) {
       const newStatus = runLariaProtocol(vault.identity, true);

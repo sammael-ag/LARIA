@@ -1,5 +1,6 @@
-/* LARIA MATRIX ARCHITEKTÚRA v6.0 
-   Design: Bosonohá Aria (Sexy & Effective Edition)
+/* LARIA MATRIX ARCHITEKTÚRA v8.6 
+   Design: Bosonohá Aria (Master Carpenter Sync)
+   Status: THE LAW / FINAL LAK
 */
 
 :root {
@@ -8,12 +9,12 @@
     --text-main: #DDD;
     --text-dim: #666;    
     --text-white: #FFF;
-    --text-cyber: #0F0;  
+    --text-cyber: #0F0;  /* Zelená pre status a akcie */
     --border-dark: #333;
     --border-soft: #222;
     --border-action: #444;
     --max-sirka-vizitky: 500px;
-    --laria-fialova: #b19cd9;
+    --laria-fialova: #b19cd9; /* Tvoja posvätná farba */
 }
 
 body {
@@ -60,9 +61,9 @@ body {
 .status-indicator {
     width: 10px;
     height: 10px;
-    background-color: var(--text-cyber);
+    background-color: var(--laria-fialova); /* Zladené na fialovú */
     border-radius: 50%;
-    box-shadow: 0 0 10px var(--text-cyber);
+    box-shadow: 0 0 10px var(--laria-fialova);
     animation: blink 2s infinite;
 }
 
@@ -72,15 +73,13 @@ body {
     100% { opacity: 1; }
 }
 
-/* --- FILTRE A TERMINÁL (Opravená medzera) --- */
+/* --- FILTRE A TERMINÁL --- */
 .filter-container {
     width: 100%;
     max-width: var(--max-sirka-vizitky);
     margin: 0 auto 35px auto;
     padding: 0 20px;
     box-sizing: border-box;
-    
-    /* SYNERGICKÝ MOTOR PRE GAP */
     display: flex;
     flex-direction: column;
     gap: 15px; 
@@ -98,12 +97,12 @@ body {
     box-sizing: border-box;
     outline: none;
     transition: 0.3s;
-    appearance: none; /* Odstránenie default šípky v selecte pre čistý look */
+    appearance: none;
 }
 
 .terminal-input:focus {
-    border-color: var(--text-cyber);
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.15);
+    border-color: var(--laria-fialova);
+    box-shadow: 0 0 8px rgba(177, 156, 217, 0.15);
 }
 
 /* --- GRID KONTAJNER --- */
@@ -117,7 +116,7 @@ body {
     box-sizing: border-box;
 }
 
-/* --- VIZITKA (Majestátny look) --- */
+/* --- VIZITKA --- */
 .card {
     background-color: #111;
     width: 100%; 
@@ -129,13 +128,13 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); 
     box-sizing: border-box;
     transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    flex-shrink: 0;
+    cursor: pointer;
 }
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(0, 255, 0, 0.1);
-    border-color: var(--border-action);
+    border-color: var(--laria-fialova);
+    box-shadow: 0 15px 40px rgba(177, 156, 217, 0.1);
 }
 
 .card-title {
@@ -163,7 +162,7 @@ body {
 .card-solo {
     border: 1px solid var(--laria-fialova);
     box-shadow: 0 0 35px rgba(177, 156, 217, 0.15);
-    transform: scale(1.05);
+    cursor: default;
 }
 
 /* --- TLAČIDLÁ --- */
@@ -184,33 +183,30 @@ body {
     font-size: 11px;
     text-transform: uppercase;
     transition: 0.3s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .btn-add {
-    background-color: var(--text-cyber);
+    background-color: var(--laria-fialova);
     color: #000;
-    border-color: var(--text-cyber);
+    border: none;
 }
 
 .btn-share {
-    background-color: #222;
-    color: var(--text-white);
+    background-color: transparent;
+    color: var(--laria-fialova);
+    border-color: var(--laria-fialova);
 }
 
 .btn-add:hover { 
-    background-color: #0C0;
-    box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+    background-color: #c7b6e6;
+    transform: scale(1.02);
 }
 
 .btn-share:hover { 
-    border-color: var(--text-cyber);
-    color: var(--text-cyber);
+    background-color: rgba(177, 156, 217, 0.1);
 }
 
-/* --- GALÉRIA --- */
+/* --- GALÉRIA / TAGY --- */
 .card-links {
     border-top: 1px solid #222;
     padding-top: 20px;
@@ -218,62 +214,47 @@ body {
 }
 
 .card-links a {
-    color: var(--text-cyber);
+    color: var(--laria-fialova);
     font-size: 10px;
-    letter-spacing: 2px;
     text-decoration: none;
-    font-weight: bold;
     text-transform: uppercase;
-    padding: 10px;
 }
 
-/* --- TAGY --- */
 .tag {
-    color: var(--text-cyber);
+    color: var(--laria-fialova);
     font-size: 10px;
     letter-spacing: 2px;
     font-weight: bold;
     text-transform: uppercase;
-    margin-bottom: 12px;
     display: block;
 }
 
-/* --- RESPONSIVITA --- */
-@media (max-width: 600px) {
-    .card-solo {
-        transform: scale(1);
-        margin: 20px;
-    }
-    .card {
-        padding: 25px;
-    }
-}
-/* --- MODAL BRIDGE LOOK --- */
+/* --- MODAL BRIDGE (THE MOST) --- */
 .modal-overlay {
-    display: none; /* Skryté na začiatku */
+    display: none; /* JS prepne na 'flex' */
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.85); /* Stmavenie pozadia */
-    backdrop-filter: blur(5px); /* Jemné rozmazanie pre hĺbku */
-    z-index: 9999;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(8px);
+    z-index: 10000;
     align-items: center;
     justify-content: center;
 }
 
 .modal-content {
-    background: #080808;
-    border: 1px solid var(--text-cyber);
+    background: #0a0a0a;
+    border: 1px solid var(--laria-fialova);
     width: 90%;
-    max-width: 400px;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 0 50px rgba(0, 255, 0, 0.15);
-    animation: modalSlide 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-width: 420px;
+    padding: 35px;
+    border-radius: 18px;
+    box-shadow: 0 0 50px rgba(177, 156, 217, 0.2);
+    animation: modalSlide 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 @keyframes modalSlide {
-    from { transform: translateY(30px); opacity: 0; }
+    from { transform: translateY(40px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
 
@@ -281,19 +262,19 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 .modal-close {
     background: none; border: none;
     color: var(--text-dim);
-    font-size: 28px; cursor: pointer;
+    font-size: 32px; cursor: pointer;
 }
 
-.modal-close:hover { color: var(--text-cyber); }
+.modal-close:hover { color: var(--laria-fialova); }
 
-.modal-title { color: var(--text-white); margin-bottom: 5px; letter-spacing: 1px; }
-.modal-subtitle { color: var(--text-dim); font-size: 12px; margin-bottom: 25px; }
+.modal-title { color: #FFF; margin-bottom: 5px; }
+.modal-subtitle { color: var(--text-dim); font-size: 12px; margin-bottom: 30px; }
 
 .modal-grid {
     display: flex;
@@ -304,30 +285,42 @@ body {
 .modal-btn {
     background: #111;
     border: 1px solid var(--border-soft);
-    color: var(--text-main);
-    padding: 15px;
-    border-radius: 8px;
+    color: #CCC;
+    padding: 16px;
+    border-radius: 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 15px;
     transition: 0.2s;
     font-family: monospace;
-    font-weight: bold;
 }
 
 .modal-btn:hover {
-    border-color: var(--text-cyber);
-    background: #151515;
+    border-color: var(--laria-fialova);
+    background: #181818;
     transform: translateX(5px);
 }
 
 .modal-btn.main {
-    border-color: var(--text-cyber);
-    color: var(--text-cyber);
+    border-color: var(--laria-fialova);
+    background: rgba(177, 156, 217, 0.05);
+    color: var(--laria-fialova);
 }
 
-.modal-btn .icon { font-size: 20px; }
-.modal-btn .btn-label { font-size: 11px; letter-spacing: 1px; }
+.modal-btn .icon { font-size: 22px; }
+.modal-btn .btn-label { font-size: 12px; font-weight: bold; }
 
-.modal-footer { margin-top: 25px; text-align: center; font-size: 10px; }
+.modal-footer { 
+    margin-top: 30px; 
+    text-align: center; 
+    font-size: 10px; 
+    border-top: 1px solid #1a1a1a;
+    padding-top: 15px;
+}
+
+/* --- RESPONSIVITA --- */
+@media (max-width: 600px) {
+    .card { padding: 25px; }
+    .card-solo { transform: scale(1); }
+}

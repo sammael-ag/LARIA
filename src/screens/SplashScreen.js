@@ -47,7 +47,7 @@ const SplashScreen = ({ navigation }) => {
         {/* Tvoja Cyber Pečať - Symbol tvojej identity */}
         <Image 
           source={require('../../assets/cyber-pechat.jpeg')} 
-          style={[G.pechat, { width: width * 0.5, height: width * 0.5 }]}
+          style={[G.pechat, { width: width * 0.7, height: width * 0.7 }]}
           resizeMode="contain"
         />
 

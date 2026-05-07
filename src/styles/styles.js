@@ -136,6 +136,66 @@ export const G = StyleSheet.create({
     letterSpacing: 3,
     fontWeight: 'bold',
   },
+  // --- NOVÉ ŠTÝLY PRE PROTIKOL v8.2 ---
+  qrContainer: {
+    alignItems: 'center', 
+    marginTop: 25,
+    width: '100%'
+  },
+  qrWrapper: {
+    alignItems: 'center', 
+    padding: 25, 
+    backgroundColor: '#FFF', 
+    borderRadius: 20,
+    borderWidth: 4,
+    borderColor: '#b19cd9' 
+  },
+  qrMenoText: {
+    color: '#000', 
+    marginTop: 15, 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    letterSpacing: 2
+  },
+  qrSubText: {
+    color: '#666', 
+    fontSize: 10, 
+    marginTop: 4
+  },
+  miniBadgeContainer: {
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 10, 
+    marginBottom: 30
+  },
+  miniBadge: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 6,
+    backgroundColor: '#000'
+  },
+  miniBadgeText: {
+    color: '#AAA',
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 1
+  },
+  cardIdentityFing: {
+    color: '#444', 
+    fontSize: 10, 
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', 
+    marginBottom: 8
+  },
+  nfcButton: {
+    marginTop: 20, 
+    padding: 15, 
+    width: '100%', 
+    alignItems: 'center', 
+    borderRadius: 12, 
+    borderWidth: 1
+  },
 
   // Pomocné konštanty
   placeholderColor: '#444',

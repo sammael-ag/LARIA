@@ -30,6 +30,7 @@ const IRCScreen = ({ navigation }) => {
     { id: '1', user: 'SYSTEM', text: 'Channel #LARIA_CORE established.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
   ]);
 
+  // Sledovanie klávesnice pre plynulý posun inputu
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
@@ -45,37 +46,40 @@ const IRCScreen = ({ navigation }) => {
     };
   }, []);
 
+  /**
+   * [HANDSHAKE] - Potvrdenie kontraktu a uloženie vizitky
+   * Lícujeme na Svadbovač v9.2 (Address_A, Address_B, target_krypt)
+   */
   const confirmHandshake = async (item) => {
     const handshakeId = item.id;
-    console.log(`[HANDSHAKE] Oživujem kontrakt: ${item.cid}`);
+    console.log(`[MATRIX] Pečatím spojenie pre FING: ${item.fromFing}`);
     
     try {
+      // 1. ZÁPIS DO MATRIXU (Contract_ledger)
       await SignalService.manageContract('CONFIRM_CONTRACT', { 
-        Contract_ID: item.cid,
-        Address_B: item.from, 
-        Status_B: "1"
+        Address_A: item.fromFing,           // Partner, ktorý inicioval zmluvu
+        Address_B: vault.identity.poznamka, // Tvoj FING (Sammael)
+        target_krypt: vault.identity.krypt  // Tvoj KRYPT pre Final_Block
       });
       
-      const viza = item.d; 
-      // PREMENNÉ PREMENOVANÉ PODĽA SAMMAEL STANDARD v8.0
+      const viza = item.d; // Dáta z vizitky
+      
+      // 2. LOKÁLNE ULOŽENIE KONTAKTU (v9.2 Standard)
       const newEntry = {
-        id: item.cid || Date.now().toString(),
+        id: `CONTACT_${Date.now()}`,
         meno: viza?.n || 'Neznámy Majster',
-        tel: viza?.t || '',
-        email: viza?.e || '',
-        krypt: viza?.ib || '', 
+        krypt: viza?.kr || '',  // Krypt partnera
+        irc: viza?.ib || '',    // IRC/Revolut link
+        fing: item.fromFing,    // Jeho verejný FING
         kat: 'Handshake',
-        lok: 'IRC Signal',
-        pinned: false,
-        isVerified: true,
-        v: "8.0",
+        lok: 'IRC Matrix',
         timestamp: new Date().toISOString()
       };
 
       const storedJson = await AsyncStorage.getItem('laria_contacts');
       const currentContacts = storedJson ? JSON.parse(storedJson) : [];
       
-      if (!currentContacts.find(c => c.id === newEntry.id)) {
+      if (!currentContacts.find(c => c.fing === newEntry.fing)) {
         const updated = [...currentContacts, newEntry];
         await AsyncStorage.setItem('laria_contacts', JSON.stringify(updated));
       }
@@ -85,30 +89,44 @@ const IRCScreen = ({ navigation }) => {
       setChatLog(prev => [...prev, {
         id: `CONF_MSG_${Date.now()}`,
         user: 'SYSTEM',
-        text: `Kontakt ${newEntry.meno} oživený. Tlačidlo spálené v Matrixe.`,
+        text: `Kontakt ${newEntry.meno} spečatený. SmartContract je aktívny.`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
 
     } catch (err) {
-      console.error("Chyba pri oživovaní:", err);
+      console.error("[IRC_ERROR] Spečatenie zlyhalo:", err);
     }
   };
 
+  /**
+   * SEND MESSAGE - Odoslanie paketu cez IRC
+   */
   const sendMessage = async () => {
     if (message.trim().length === 0) return;
     const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const myName = vault.identity.meno || 'Sammael';
+
     const newMessage = { 
         id: Date.now().toString(), 
-        user: vault.identity.meno || 'Sammael', 
+        user: myName, 
         text: message, 
         time: timeNow 
     };
+
     setChatLog(prev => [...prev, newMessage]);
-    if (isIrcConnected) { await sendLariaPackage("0xTEST_TARGET", message); }
+
+    if (isIrcConnected) { 
+      // Tu by sa mal dynamicky doplniť FING cieľa, ak nie je broadcast
+      await sendLariaPackage("0xTARGET_FING", message); 
+    }
+
     setMessage('');
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
+  /**
+   * RENDERER: Obsah správy (Text + prípadné Handshake tlačidlo)
+   */
   const renderMessageContent = (item) => {
     const showButton = item.isHandshake && !confirmedIds.includes(item.id);
 
@@ -123,11 +141,11 @@ const IRCScreen = ({ navigation }) => {
             style={{ 
               marginTop: 12, paddingVertical: 10, paddingHorizontal: 15,
               borderWidth: 1, borderColor: '#0FF', borderRadius: 4,
-              backgroundColor: 'rgba(0, 255, 255, 0.05)', alignItems: 'center'
+              backgroundColor: 'rgba(0, 255, 255, 0.1)', alignItems: 'center'
             }}
           >
             <Text style={[G.textCyber, { color: '#0FF', fontSize: 13, fontWeight: 'bold' }]}>
-               [ PRIJAŤ KONTAKT A VIZITKU ]
+               [ PRIJAŤ KONTAKT A PEČAŤ KRYPT ]
             </Text>
           </TouchableOpacity>
         )}
@@ -141,16 +159,16 @@ const IRCScreen = ({ navigation }) => {
     );
   };
 
+  // Kombinácia lokálneho logu a prichádzajúcich signálov
   const combinedLog = [...chatLog, ...incomingRequests.map(req => ({
-    id: req.cid || (req.from + req.receivedAt),
-    user: `L_${req.from.substring(2, 8)}`,
+    id: req.id || (req.fing + req.receivedAt),
+    user: `L_${req.fing.substring(0, 8)}`, // Identifikácia cez FING
     text: req.msgOriginal || req.msg,
     translatedText: req.msg,
     time: req.receivedAt,
     isLariaPackage: true,
     isHandshake: req.isHandshake,
-    cid: req.cid,
-    from: req.from,
+    fromFing: req.fing,
     d: req.d 
   }))];
 
@@ -158,14 +176,21 @@ const IRCScreen = ({ navigation }) => {
     <SafeAreaView style={[G.bg, { flex: 1 }]} edges={['top']}>
       <StatusBar barStyle="light-content" />
       <View style={{ flex: 1 }}>
+        
+        {/* HEADER */}
         <View style={G.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={G.textDim}>[ ESC ]</Text>
           </TouchableOpacity>
           <Text style={G.headerTitle}>#LARIA_SECURE_IRC</Text>
-          <View style={{ width: 8, height: 8, backgroundColor: isIrcConnected ? '#0F0' : '#F00', borderRadius: 4 }} />
+          <View style={{ 
+            width: 8, height: 8, 
+            backgroundColor: isIrcConnected ? '#0F0' : '#F00', 
+            borderRadius: 4, shadowColor: isIrcConnected ? '#0F0' : '#F00', shadowRadius: 5, shadowOpacity: 1 
+          }} />
         </View>
 
+        {/* MESSAGES LIST */}
         <FlatList
           ref={flatListRef}
           data={combinedLog}
@@ -183,22 +208,24 @@ const IRCScreen = ({ navigation }) => {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
+        {/* INPUT AREA */}
         <View style={[G.inputArea, { paddingBottom: keyboardHeight > 0 ? 10 : Math.max(insets.bottom, 15) }]}>
           <Text style={[G.textCyber, { marginRight: 10 }]}>{'>'}</Text>
           <TextInput
             style={G.terminalInput}
             value={message}
             onChangeText={setMessage}
-            placeholder="Zadaj správu..."
-            placeholderTextColor="#444"
+            placeholder="Zadaj príkaz Matrixu..."
+            placeholderTextColor="#333"
             autoCorrect={false}
             autoCapitalize="none"
             onSubmitEditing={sendMessage}
           />
-          <TouchableOpacity onPress={sendMessage}>
+          <TouchableOpacity onPress={sendMessage} style={{ marginLeft: 10 }}>
             <Text style={[G.textCyber, { fontWeight: 'bold' }]}>[ SEND ]</Text>
           </TouchableOpacity>
         </View>
+
       </View>
     </SafeAreaView>
   );
