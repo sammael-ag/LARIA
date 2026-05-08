@@ -25,7 +25,7 @@ export const LariaProvider = ({ children }) => {
       isParanoid: false, isGoogleFull: false, isChainNode: false, isAdmin: false 
     },
     identity: { 
-      SECURE_ID: null, // Pripravené na budúcnosť, momentálne neaktívne
+      SECURE_ID: null, 
       sha: null, 
       meno: "Sammael", 
       kat: "Majster",  
@@ -38,7 +38,7 @@ export const LariaProvider = ({ children }) => {
       gal: "", 
       isPublic: false, 
       irc: "", 
-      poznamka: "", // Tu kotví náš 'fing' (v8.0)
+      poznamka: "", 
       krypt: null,     
       privateKey: null 
     }
@@ -90,19 +90,28 @@ export const LariaProvider = ({ children }) => {
     }
   };
 
-  // --- 1. INICIALIZÁCIA MATRIXU (Len sha a fing) ---
+  // --- 1. INICIALIZÁCIA MATRIXU (S podporou pre Linux/Electron) ---
   useEffect(() => {
     const initializeVault = async () => {
       try {
         let savedIdentity = await loadFromVault('identity');
         
-        let rawDeviceId = Platform.OS === 'android' 
-          ? (Application.androidId || Device.osBuildId || "S_DEVICE_A") 
-          : await Application.getIosIdForVendorAsync();
+        let rawDeviceId;
 
-        // Generujeme SHA
+        // MULTIDIMENZIONÁLNA IDENTIFIKÁCIA ZARIADENIA
+        if (Platform.OS === 'android') {
+          rawDeviceId = Application.androidId || Device.osBuildId || "S_DEVICE_A";
+        } else if (Platform.OS === 'ios') {
+          rawDeviceId = await Application.getIosIdForVendorAsync();
+        } else {
+          // ARCHITEKTOVA PEČAŤ PRE DESKTOP (Linux/Electron)
+          // Generujeme stabilné ID z mena zariadenia a systémových parametrov
+          rawDeviceId = `LINUX-${Device.deviceName || 'HP-LAPTOP'}-${Device.osBuildId || 'SAM-CORE'}`;
+        }
+
+        // Generujeme SHA cez tvoj LariaLogic mlynček
         const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.meno || "Sammael");
-        // Generujeme FING
+        // Generujeme FING (odtlačok)
         const currentFing = currentSha.substring(0, 12);
 
         if (!savedIdentity) {
@@ -110,12 +119,12 @@ export const LariaProvider = ({ children }) => {
             ...vault.identity, 
             sha: currentSha,
             poznamka: currentFing,
-            SECURE_ID: null // Explicitne null
+            SECURE_ID: null 
           };
         } else {
           savedIdentity.sha = currentSha;
           savedIdentity.poznamka = currentFing;
-          savedIdentity.SECURE_ID = null; // Vyčistenie starých hodnôt
+          savedIdentity.SECURE_ID = null;
         }
 
         const updatedStatus = runLariaProtocol(savedIdentity, false);
@@ -169,7 +178,6 @@ export const LariaProvider = ({ children }) => {
     const currentAdminStatus = vault.status.isAdmin;
     const updatedIdentity = { ...vault.identity, ...newIdentityData, SECURE_ID: null };
     
-    // Poistka pre fing
     if (updatedIdentity.sha && !updatedIdentity.poznamka) {
       updatedIdentity.poznamka = updatedIdentity.sha.substring(0, 12);
     }
