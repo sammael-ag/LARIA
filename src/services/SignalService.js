@@ -1,7 +1,7 @@
 /**
- * LARIA SIGNAL SERVICE v9.3
- * STATUS: ULTIMATE SYNC / FING-KRYPT PROTOCOL
- * FIX: Plná podpora pre Svadbovač v9.2 a Hyperspeed v9.1.
+ * LARIA SIGNAL SERVICE v9.4
+ * STATUS: ULTIMATE SYNC / ONLY-FING PROTOCOL
+ * FIX: Plná podpora pre Hyperspeed (Signal_Buffer_1) a Matchmaker (Contract_ledger).
  */
 
 import axios from 'axios';
@@ -23,18 +23,20 @@ export const SignalService = {
   },
 
   /**
-   * 2. [BUFFER_MANAGEMENT] - Zápis do Hyperspeed Recyclera
+   * 2. [HYPERSPEED] - Zápis do Signal_Buffer_1 (onlyFING)
    * RowData: [MSG_ID, sender_fing, target_fing, msg_text, status, timestamp]
    */
   writeToBuffer: async (bufferName, msgData) => {
     try {
-      console.log(`[SIGNAL_SERVICE] Zapisujem atóm do Matrixu...`);
+      console.log(`[SIGNAL_SERVICE] Hyperspeed zápis (onlyFING: ${bufferName})...`);
       
-      const rowData = [
-        msgData.rowData?.[0] || `MSG_${Date.now()}`, 
-        msgData.rowData?.[1] || msgData.sender_fing || msgData.from_fing, 
-        msgData.rowData?.[2] || msgData.target_fing,
-        msgData.rowData?.[3] || msgData.msg_text || msgData.msg,
+      // Ak posielame rowData priamo (zo SignalContextu), použijeme ich
+      // Inak ich vyskladáme z jednotlivých polí
+      const rowData = msgData.rowData || [
+        `MSG_${Date.now()}`, 
+        (msgData.sender_fing || '').replace('0x', ''), 
+        (msgData.target_fing || '').replace('0x', ''),
+        msgData.msg_text || msgData.msg,
         '0', 
         new Date().toISOString()
       ];
@@ -47,21 +49,19 @@ export const SignalService = {
 
       return { success: response.data.status === "success" };
     } catch (error) {
-      console.error("[SIGNAL_SERVICE] Havária pri zápise:", error);
+      console.error("[SIGNAL_SERVICE] Hyperspeed havária:", error);
       return { success: false, error: error.message };
     }
   },
 
   /**
-   * 3. [CONTRACT_MANAGEMENT] - Pečatenie v Contract_ledger
-   * Lícujeme priamo na Svadbovač v9.2 (Address_A, Address_B, target_krypt)
+   * 3. [MATCHMAKER] - Pečatenie v Contract_ledger
+   * Matchmaker skript spracováva objekt 'data' a ukladá ho do tabuľky.
    */
   manageContract: async (action, contractData) => {
     try {
-      console.log(`[SIGNAL_SERVICE] Mením status zmluvy: ${action}`);
+      console.log(`[SIGNAL_SERVICE] Matchmaker akcia: ${action}`);
       
-      // Ak posielame dáta z IRCScreenu, použijeme ich priamo, 
-      // inak zachováme spätnú kompatibilitu pre INIT
       const response = await axios.post(HYPERSPEED_SCRIPT_URL, {
         action: action, 
         sheetName: 'Contract_ledger',
@@ -69,13 +69,13 @@ export const SignalService = {
       });
 
       if (response.data.status === "success") {
-        console.log(`[SIGNAL_SERVICE] ${action} úspešne zapísaný.`);
+        console.log(`[SIGNAL_SERVICE] Matchmaker: ${action} úspešne potvrdený.`);
         return { success: true };
       } else {
-        throw new Error(response.data.message);
+        throw new Error(response.data.message || 'Neznáma chyba Matchmakera');
       }
     } catch (error) {
-      console.error("[SIGNAL_SERVICE] Chyba pečatenia:", error);
+      console.error("[SIGNAL_SERVICE] Matchmaker chyba:", error);
       return { success: false, error: error.message };
     }
   },
@@ -86,7 +86,6 @@ export const SignalService = {
   disposeMessage: async (bufferName, msgId) => {
     try {
       console.log(`[SIGNAL_SERVICE] Recyklujem záznam ID: ${msgId}`);
-      // Lícujeme na params.msgId v Hyperspeed v9.1
       const response = await axios.post(HYPERSPEED_SCRIPT_URL, {
         action: 'CLEAN_MSG',
         sheetName: bufferName,

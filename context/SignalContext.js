@@ -1,19 +1,29 @@
 /**
- * LARIA SIGNAL CONTEXT v8.8
- * STATUS: ULTRA-PURE / THE LAW
- * LOGIKA: IRC Nick = FING. Žiadne SecureID, žiadne SHA v éteri.
- * PORADIE: sha, meno, kat, lok, popis, gal, irc, poznamka (fing), krypt
+ * LARIA SIGNAL CONTEXT v9.2
+ * STATUS: FULL-SYNC / NOTIFICATION ENABLED
+ * LOGIKA: IRC (FING identity) + Expo Notifications (Systémový zvuk).
+ * Lícované na Matchmaker v9.3 a IRCScreen v9.5.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import TcpSocket from 'react-native-tcp-socket';
+import * as Notifications from 'expo-notifications';
 import { useLaria } from './LariaContext';
 import { SignalService } from '../src/services/SignalService';
 
 const SignalContext = createContext();
 
 const IRC_HOST = 'irc.libera.chat'; 
-const IRC_PORT = 6667;
+const IRC_PORT = 6665; 
+
+// Konfigurácia správania notifikácií (keď je appka otvorená)
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export const SignalProvider = ({ children }) => {
   const { vault } = useLaria(); 
@@ -21,30 +31,87 @@ export const SignalProvider = ({ children }) => {
   const [isIrcConnected, setIsIrcConnected] = useState(false);
   const [incomingRequests, setIncomingRequests] = useState([]);
 
-  // --- 1. PRIPOJENIE DO IRC (Verejná identita FING) ---
+  // --- 1. INICIALIZÁCIA NOTIFIKÁCIÍ ---
+  useEffect(() => {
+    const setupNotifications = async () => {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        console.log('[SIGNAL] Povolenie na notifikácie nebolo udelené.');
+      }
+    };
+
+    setupNotifications();
+
+    // Listener pre kliknutie na notifikáciu
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log("[SIGNAL] Používateľ klikol na notifikáciu - smer Matrix.");
+      // Tu môžeš pridať navigáciu cez ref, ak budeš chcieť automatický skok na IRCScreen
+    });
+
+    return () => responseSubscription.remove();
+  }, []);
+
+  // --- 2. FUNKCIA PRE VYVOLANIE NOTIFIKÁCIE ---
+  const triggerNotification = async (senderFing, text) => {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `🛰️ Laria Signál: ${senderFing.substring(0, 10)}`,
+          body: text.length > 50 ? text.substring(0, 47) + "..." : text,
+          sound: 'default',
+          data: { type: 'IRC_MSG' },
+        },
+        trigger: null, // Okamžite
+      });
+    } catch (err) {
+      console.error("[SIGNAL] Notifikácia zlyhala:", err);
+    }
+  };
+
+  // --- 3. PRIPOJENIE DO IRC ---
   const connectToIrc = (fing) => { 
     if (client || !fing) return;
 
-    console.log(`[SIGNAL] Štýlujem potrubie pre FING: ${fing}`);
+    const cleanFing = fing.replace('0x', '');
+    console.log(`[SIGNAL] Štýlujem potrubie pre FING: ${cleanFing}`);
 
     const newClient = TcpSocket.createConnection({
       host: IRC_HOST,
       port: IRC_PORT,
     }, () => {
-      // IRC Nickname je odvodený z tvojho verejného FINGu
-      const nick = `L_${fing.substring(0, 15)}`; 
+      console.log(`[SIGNAL] Socket otvorený! Posielam NICK a USER...`);
+      const nick = `L_${cleanFing}`; 
       newClient.write(`NICK ${nick}\r\n`);
-      newClient.write(`USER ${nick} 8 * :LariaNode_${fing}\r\n`);
-      newClient.write(`JOIN #LARIA_CORE\r\n`);
-      setIsIrcConnected(true);
+      newClient.write(`USER ${nick} 8 * :LariaNode_${cleanFing}\r\n`);
     });
 
     newClient.on('data', async (data) => {
       const msg = data.toString();
+      
+      // Diagnostika servera
+      if (msg.includes('NOTICE')) console.log(`[IRC_RAW]: ${msg.substring(0, 60)}`);
+
+      // PING-PONG (Udržiavanie spojenia)
       if (msg.startsWith('PING')) {
-        newClient.write(`PONG ${msg.split(' ')[1]}\r\n`);
+        const pingId = msg.split(' ')[1];
+        newClient.write(`PONG ${pingId}\r\n`);
       }
+
+      // Kód 001 - Vitajte na serveri
+      if (msg.includes(' 001 ')) {
+        console.log(`[SIGNAL] Sme dnu! Vstupujem do #LARIA_CORE...`);
+        newClient.write(`JOIN #LARIA_CORE\r\n`);
+        setIsIrcConnected(true);
+      }
+
+      // Detekcia Laria Balíka (#LRQ#)
       if (msg.includes('#LRQ#')) {
+        console.log(`[SIGNAL] Zachytený prichádzajúci signál!`);
         await handleIncomingLariaPackage(msg);
       }
     });
@@ -58,28 +125,30 @@ export const SignalProvider = ({ children }) => {
     setClient(newClient);
   };
 
-  // --- 2. SPRACOVANIE PRICHÁDZAJÚCEHO BALÍKA ---
+  // --- 4. SPRACOVANIE BALÍKA A NOTIFIKÁCIA ---
   const handleIncomingLariaPackage = async (rawMsg) => {
     try {
       const payloadPart = rawMsg.split('#LRQ#')[1];
       const data = JSON.parse(payloadPart);
       
-      // Aria spracuje logiku správy
       const ariaResponse = await SignalService.processAriaLogic(data.msg);
       
-      // ZÁPIS DO BUFFERA (Synchronizácia s G-Matrix)
-      // rowData podľa protokolu: [ID, sender_sha, target_sha, msg, status, time]
+      // 1. Zápis do G-Matrix (onlyFING)
       const rowData = [
         `MSG_${Date.now()}`,
-        data.sha,              // SHA odosielateľa (vnútri balíka)
-        vault.identity.sha,    // Moje SHA (príjemca)
-        ariaResponse.msg,      // Odpoveď alebo správa
-        '0',                   // Status: doručené/neprečítané
+        data.fing.replace('0x', ''),
+        vault.identity.poznamka.replace('0x', ''),
+        ariaResponse.msg,
+        '0',
         new Date().toISOString()
       ];
 
       await SignalService.writeToBuffer('Signal_Buffer_1', { rowData });
 
+      // 2. Vyvolanie systémovej notifikácie
+      await triggerNotification(data.fing, ariaResponse.msg);
+
+      // 3. Aktualizácia lokálneho stavu pre obrazovku
       const enrichedData = {
         ...data,
         receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -92,39 +161,45 @@ export const SignalProvider = ({ children }) => {
     }
   };
 
-  // --- 3. ODOSIELANIE VIZITKY (HANDSHAKE) ---
+  // --- 5. ODOSIELANIE ---
   const sendLariaPackage = async (targetFing, targetSha, personalMessage) => {
     if (!client || !isIrcConnected) return { success: false, error: 'NOT_CONNECTED' };
 
     try {
-      // Priama inicializácia kontraktu v G-Matrix bez zbytočného SecureID
+      const myCleanFing = vault.identity.poznamka.replace('0x', '');
+      const targetCleanFing = targetFing.replace('0x', '');
+
+      // Pečatíme v Matchmakeri
       await SignalService.manageContract('INIT_CONTRACT', {
-        sha: vault.identity.sha,
-        target_sha: targetSha,
+        fing_a: myCleanFing,
+        fing_b: targetCleanFing,
+        krypt_a: vault.identity.krypt,
         status_a: "1",
-        status_b: "0"
+        status_b: "0",
+        sha_a: vault.identity.sha,
+        sha_b: targetSha
       });
 
-      // Balenie dát - Čistý Laria Protokol v3
+      // Balíme pre IRC
       const lariaPackage = {
         h: "LRQ_V3",
         type: "HANDSHAKE_REQ",
-        sha: vault.identity.sha,       // SHA posielame len koncovému bodu
-        fing: vault.identity.poznamka, // Náš verejný FING
+        sha: vault.identity.sha,
+        fing: myCleanFing, 
         msg: personalMessage,
         d: {
-            n: vault.identity.meno,    // meno
-            ib: vault.identity.irc,    // irc/revolut
-            kr: vault.identity.krypt   // krypt peňaženka
+            n: vault.identity.meno,
+            ib: vault.identity.irc,
+            kr: vault.identity.krypt
         }
       };
 
-      // Cieľový Nick na IRC je FING adresáta
-      const targetNick = `L_${targetFing.substring(0, 15)}`; 
+      const targetNick = `L_${targetCleanFing}`; 
       const payload = JSON.stringify(lariaPackage);
       
       client.write(`PRIVMSG ${targetNick} :#LRQ#${payload}\r\n`);
       
+      console.log(`[SIGNAL] Signál odpálený na ${targetNick}`);
       return { success: true };
 
     } catch (err) {
@@ -133,20 +208,15 @@ export const SignalProvider = ({ children }) => {
     }
   };
 
-  // --- 4. WATCHDOG PRE PRIPOJENIE ---
   useEffect(() => {
-    const myFing = vault.identity.poznamka; // FING je uložený v poznámke
+    const myFing = vault.identity.poznamka;
     if (myFing && !client) {
       connectToIrc(myFing);
     }
   }, [vault.identity.poznamka]);
 
   return (
-    <SignalContext.Provider value={{
-      isIrcConnected,
-      incomingRequests,
-      sendLariaPackage,
-    }}>
+    <SignalContext.Provider value={{ isIrcConnected, incomingRequests, sendLariaPackage }}>
       {children}
     </SignalContext.Provider>
   );
