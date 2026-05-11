@@ -31,7 +31,7 @@ const AppNavigator = () => {
   return (
     <NavigationContainer theme={LariaTheme}>
       <Stack.Navigator
-        initialRouteName="Splash"
+        initialRouteName="Dashboard"
         screenOptions={{
           headerShown: false,
           animation: 'fade',

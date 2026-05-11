@@ -1,6 +1,7 @@
 import { StyleSheet, Platform, Dimensions } from 'react-native';
 
-const { width } = Dimensions.get('window');
+// Ošetríme rozmery tak, aby v prípade chyby v Electrone mali záložný plán
+const windowWidth = Dimensions.get('window')?.width || 1280;
 
 export const G = StyleSheet.create({
   // --- ZÁKLADNÁ ARCHITEKTÚRA ---
@@ -20,43 +21,54 @@ export const G = StyleSheet.create({
 
   // --- TEXTOVÉ ŠTANDARDY ---
   mono: {
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
   },
   textMain: {
     color: '#DDD', 
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
     fontSize: 14,
   },
   textDim: {
     color: '#666', 
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
     fontSize: 11,
   },
   textWhite: {
     color: '#FFF',
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
   },
   textCyber: {
     color: '#0F0',
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
     fontSize: 10,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
 
-  // --- OBJEKT: KARTA / VIZITKA (Ten tvoj obľúbený look) ---
+  // --- OBJEKT: KARTA / VIZITKA ---
   card: {
     backgroundColor: '#111',
     width: '100%',
+    maxWidth: 500, // Poistka, aby ti na monitore karta "neutiekla" do šírky
     padding: 25,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#333',
-    // Tieňovanie pre hĺbku
-    shadowColor: '#0F0',
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
+    // Tieňovanie pre hĺbku - ošetrené pre každý svet (iOS/Android/Web)
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0F0',
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 10,
+      },
+      web: {
+        // Tu je ten liek pre Electron!
+        boxShadow: '0px 0px 20px rgba(0, 255, 0, 0.1)',
+      }
+    }),
   },
   tag: {
     color: '#0F0',
@@ -64,7 +76,7 @@ export const G = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 10,
     fontWeight: 'bold',
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
   },
   divider: {
     height: 1,
@@ -88,7 +100,7 @@ export const G = StyleSheet.create({
     color: '#FFF',
     fontSize: 11,
     fontWeight: 'bold',
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
   },
   ircButton: {
     borderWidth: 1,
@@ -102,7 +114,7 @@ export const G = StyleSheet.create({
   ircButtonText: {
     color: '#0F0',
     fontWeight: 'bold',
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
@@ -116,7 +128,7 @@ export const G = StyleSheet.create({
     padding: 12,
     fontSize: 15,
     borderRadius: 6,              
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
     marginBottom: 15,
     marginTop: 5,
   },
@@ -131,11 +143,12 @@ export const G = StyleSheet.create({
   },
   headerTitle: {
     color: '#FFF',
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
     fontSize: 14,
     letterSpacing: 3,
     fontWeight: 'bold',
   },
+
   // --- NOVÉ ŠTÝLY PRE PROTIKOL v8.2 ---
   qrContainer: {
     alignItems: 'center', 
@@ -185,7 +198,7 @@ export const G = StyleSheet.create({
   cardIdentityFing: {
     color: '#444', 
     fontSize: 10, 
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', 
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
     marginBottom: 8
   },
   nfcButton: {

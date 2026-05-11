@@ -1,3 +1,4 @@
+console.log("🌟 LARIA: Srdce začalo biť! Ak toto vidíš v termináli, Metro ma našlo!");
 import 'react-native-get-random-values';
 import 'fast-text-encoding'; 
 import { Buffer } from 'buffer'; 
@@ -22,7 +23,12 @@ import { LariaProvider } from './context/LariaContext';
 import { KryptoProvider } from './context/KryptoContext';
 import { SignalProvider } from './context/SignalContext'; 
 // PRIDÁVAME NOVÝ SKLAD KONTAKTOV
-import { ContactProvider } from './context/ContactContext'; 
+import { ContactProvider } from './context/ContactContext';
+
+if (Platform.OS === 'web') {
+  // Toto povie Metru: "Som web, neskúšaj na mňa žiadne natívne triky!"
+  global.__expo_packager_proxy_url = undefined; 
+}
 
 const queryClient = new QueryClient();
 

@@ -1,0 +1,36 @@
+name: LARIA v2 Deployer
+
+on:
+  push:
+    branches:
+      - main  # Sleduje tvoju hlavnú vetvu
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v3
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🛠️ Build PWA (Expo Web)
+        run: npx expo export:web
+
+      - name: 🚀 Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist  # Expo exportuje web do priečinka 'dist'
+          branch: gh-pages # Miesto, kde sa uloží hotový web
+          clean: true

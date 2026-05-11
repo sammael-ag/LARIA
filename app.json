@@ -1,12 +1,18 @@
 {
   "expo": {
-    "name": "LARIA",
-    "slug": "LARIA",
+    "name": "laria",
+    "slug": "laria",
     "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "entryPoint": "./App.js",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -29,7 +35,8 @@
       "package": "sk.laria.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
     "plugins": [
       "react-native-nfc-manager"
