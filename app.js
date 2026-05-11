@@ -8,6 +8,14 @@ const config = {
     currentLang: navigator.language.split('-')[0] || 'sk'
 };
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('Laria: Service Worker pripravený!', reg))
+      .catch(err => console.log('Laria: Service Worker zlyhal...', err));
+  });
+}
+
 // 2. Náš lokálny buffer prekladov (neskôr kŕmený z G-Sheets)
 let dictionary = {
     'sk': {
