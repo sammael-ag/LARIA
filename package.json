@@ -1,16 +1,16 @@
 {
   "name": "laria",
   "version": "1.0.0",
+  "homepage": "https://sammael-ag.github.io/LARIA",
   "expo": {
     "entryPoint": "./index.js"
   },
   "type": "module",
-  "main": "electron-core/main.cjs",
+  "main": "index.js",
   "scripts": {
     "start": "expo start --web",
-    "electron:dev": "export BROWSER=none && export EXPO_NO_BROWSER=1 && concurrently -k \"npx expo start --web --clear\" \"sleep 12 && electron ./electron-core/main.cjs\"",
-    "electron": "electron .",
-    "expo:web": "export BROWSER=none && export EXPO_NO_BROWSER=1 && npx expo start --web --clear"
+    "build:web": "npx expo export --platform web",
+    "clear": "npx expo start --clear"
   },
   "dependencies": {
     "@coinbase/cdp-sdk": "^1.48.2",
@@ -63,11 +63,8 @@
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.4",
     "@types/react": "~18.2.79",
     "babel-preset-expo": "~11.0.15",
-    "concurrently": "^9.2.1",
     "dotenv": "^17.4.2",
-    "electron": "^31.0.0",
     "hardhat": "^2.22.0",
-    "is-dev": "^0.2.1",
     "typescript": "~5.3.3"
   },
   "private": true
