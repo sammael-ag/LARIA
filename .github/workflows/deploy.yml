@@ -3,7 +3,7 @@ name: LARIA v2 Deployer
 on:
   push:
     branches:
-      - main  # Sleduje tvoju hlavnú vetvu
+      - legacy-full  # Sleduje vetvu legacy-full
 
 permissions:
   contents: write
