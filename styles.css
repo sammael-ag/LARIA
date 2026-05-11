@@ -1,0 +1,111 @@
+/* 1. OVLÁDACÍ PULT (Globálne premenné) */
+:root {
+    --bg-color: #1a1a1a;
+    --text-color: #e0e0e0;
+    --accent-color: #c5a059; /* Jemná mosadzná / Art Deco zlatá */
+    --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --transition-speed: 0.3s;
+}
+
+/* 2. ZÁKLADNÝ RESET (Poriadok na stole) */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-main);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* 3. KONTAJNER APKY (Tekutosť) */
+#app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 85vh; /* Trochu priestoru pre dýchanie */
+    text-align: center;
+}
+
+/* 4. LOGO A TYPOGRAFIA (Art Deco vibe) */
+.logo {
+    font-size: clamp(2rem, 8vw, 4rem); /* Tekutá veľkosť podľa displeja */
+    letter-spacing: 8px;
+    color: var(--accent-color);
+    margin-top: 40px;
+    text-transform: uppercase;
+    font-weight: 300;
+}
+
+.content h2 {
+    font-weight: 300;
+    margin-bottom: 30px;
+    color: var(--text-color);
+}
+
+/* 5. ŠTÁTNE PRVKY (Formuláre a Buttony) */
+button {
+    font-family: var(--font-main);
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all var(--transition-speed) ease;
+}
+
+/* Hlavné tlačidlo - ten náš "žiarič" */
+.primary-btn {
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    border: 1px solid var(--accent-color);
+    background: transparent;
+    color: var(--accent-color);
+    padding: 15px 40px;
+    text-transform: uppercase;
+}
+
+.primary-btn:hover {
+    background: var(--accent-color);
+    color: #000;
+    box-shadow: 0 0 20px var(--accent-color);
+}
+
+/* Štandardné vstupy */
+input, select, textarea {
+    width: 100%;
+    padding: 12px;
+    background-color: #2a2a2a;
+    border: 1px solid #3d3d3d;
+    color: #fff;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    outline: none;
+}
+
+input:focus {
+    border-color: var(--accent-color);
+}
+
+/* 6. DOPLNKY (Statusy a pätička) */
+.status-text {
+    margin: 20px 0;
+    color: var(--accent-color);
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+footer {
+    opacity: 0.6;
+    font-size: 0.8rem;
+    padding-bottom: 10px;
+}
