@@ -28,17 +28,9 @@ jobs:
       - name: 🛠️ Build PWA (Expo Web)
         run: npx expo export --platform web --output-dir dist
 
-      - name: 📂 The "Master Move" (Reorganize for GitHub)
-        # Tu robíme ten poriadok s fúrikom
-        run: |
-          # Vytvoríme záložnú kópiu všetkého do priečinka LARIA vnútri dist
-          mkdir -p dist/LARIA
-          cp -r dist/_expo dist/LARIA/ 2>/dev/null || true
-          cp dist/index.html dist/LARIA/index.html 2>/dev/null || true
-          cp dist/manifest.json dist/LARIA/manifest.json 2>/dev/null || true
-          # Poistka proti Jekyllu
-          touch dist/.nojekyll
-          touch dist/LARIA/.nojekyll
+      - name: 🛡️ Fix GitHub Jekyll Issue
+        # Tento krok vytvorí .nojekyll priamo v dist priečinku tesne pred deployom
+        run: touch dist/.nojekyll
 
       - name: 🚀 Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
@@ -46,5 +38,6 @@ jobs:
           folder: dist
           branch: gh-pages
           clean: true
+          # Pridávame poistku, aby zachoval skryté súbory
           clean-exclude: |
             .nojekyll

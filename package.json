@@ -1,7 +1,7 @@
 {
   "name": "laria",
   "version": "1.0.0",
-  "homepage": "https://sammael-ag.github.io/LARIA",
+  "homepage": "",
   "expo": {
     "entryPoint": "./index.js"
   },
