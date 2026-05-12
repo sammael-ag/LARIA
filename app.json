@@ -37,7 +37,7 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "baseUrl": ""
+      "baseUrl": "/LARIA"
     },
     "plugins": [
       "react-native-nfc-manager"
