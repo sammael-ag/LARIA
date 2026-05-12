@@ -26,7 +26,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: 🛠️ Build PWA (Expo Web)
-        run: npx expo export --platform web --output-dir dist
+        run: npx expo export --platform web --output-dir dist --public-url https://sammael-ag.github.io/LARIA/
 
       - name: 🛡️ Fix GitHub Jekyll Issue
         # Tento krok vytvorí .nojekyll priamo v dist priečinku tesne pred deployom
