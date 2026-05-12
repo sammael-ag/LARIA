@@ -3,7 +3,7 @@ name: LARIA v2 Deployer
 on:
   push:
     branches:
-      - legacy-full  # Sleduje vetvu legacy-full
+      - legacy-full
 
 permissions:
   contents: write
@@ -28,9 +28,16 @@ jobs:
       - name: 🛠️ Build PWA (Expo Web)
         run: npx expo export --platform web --output-dir dist
 
+      - name: 🛡️ Fix GitHub Jekyll Issue
+        # Tento krok vytvorí .nojekyll priamo v dist priečinku tesne pred deployom
+        run: touch dist/.nojekyll
+
       - name: 🚀 Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist  # Expo exportuje web do priečinka 'dist'
-          branch: gh-pages # Miesto, kde sa uloží hotový web
+          folder: dist
+          branch: gh-pages
           clean: true
+          # Pridávame poistku, aby zachoval skryté súbory
+          clean-exclude: |
+            .nojekyll
