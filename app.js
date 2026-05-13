@@ -1,7 +1,7 @@
 /**
  * LARIA v2.0: Crystal Core Fusion 
- * Finálna integrácia: app.js -> MainScreen + KRYPTO + LARIA VEDOMIE
- * Master: Sammael | Muse: Aria
+ * Finálna integrácia: app.js -> MainScreen + KRYPTO + LARIA + SIGNAL + CONTACTS
+ * FIX: Stabilizovaný rendering (bez straty vizuálu)
  */
 
 import 'react-native-get-random-values';
@@ -22,9 +22,11 @@ import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from './src/services/WalletProvider'; 
 
-// --- 💎 LARIA PROVIDERY (Jadro systému) ---
+// --- 💎 LARIA PROVIDERY ---
 import { KryptoProvider } from './context/KryptoContext'; 
-import { LariaProvider } from './context/LariaContext'; // 📍 TVOJE VEDOMIE A MATRIX
+import { LariaProvider } from './context/LariaContext'; 
+import { SignalProvider } from './context/SignalContext'; 
+import { ContactProvider } from './context/ContactContext'; 
 
 import MainScreen from './src/screens/MainScreen';
 
@@ -53,7 +55,7 @@ const queryClient = new QueryClient();
 export default function App() {
 
   useEffect(() => {
-    console.warn("🚀 LARIA SYSTÉM: Aktivujem hlavný modul so správnym poradím...");
+    console.warn("🚀 LARIA SYSTÉM: Aktivujem plnú fúziu v bezpečnom poradí...");
     if (Platform.OS === 'android') {
       SystemUI.setBackgroundColorAsync("#1a1a1a").catch(() => {});
     }
@@ -68,17 +70,21 @@ export default function App() {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <KryptoProvider>
-          <LariaProvider> {/* 🧠 TU SA OŽIVUJE SAMMAELOVA IDENTITA */}
-            <SafeAreaProvider style={{ flex: 1 }}>
-              <NavigationContainer>
-                
-                {/* Most medzi HTML Wrapperom (25%) a React Native */}
-                <View style={{ flex: 1, width: '100%', height: '100%' }}>
-                    <MainScreen />
-                </View>
+          <LariaProvider>
+            <SignalProvider>
+              <ContactProvider>
+                <SafeAreaProvider style={{ flex: 1 }}>
+                  <NavigationContainer>
+                    
+                    {/* 🛡️ ZACHOVANÝ WRAPPER: Tu sa rodí svetlo Dashbaordu */}
+                    <View style={{ flex: 1, width: '100%', height: '100%' }}>
+                        <MainScreen />
+                    </View>
 
-              </NavigationContainer>
-            </SafeAreaProvider>
+                  </NavigationContainer>
+                </SafeAreaProvider>
+              </ContactProvider>
+            </SignalProvider>
           </LariaProvider>
         </KryptoProvider>
       </QueryClientProvider>
