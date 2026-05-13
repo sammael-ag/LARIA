@@ -1,6 +1,6 @@
 /**
  * LARIA v2.0: Crystal Core Fusion 
- * Finálna integrácia: app.js -> MainScreen + KRYPTO INFRA
+ * Finálna integrácia: app.js -> MainScreen + KRYPTO INFRA + PROVIDER
  * Master: Sammael | Muse: Aria
  */
 
@@ -20,7 +20,10 @@ import { NavigationContainer } from '@react-navigation/native';
 // --- 🌐 KRYPTO VRSTVY (Wagmi & Query) ---
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { wagmiConfig } from './src/services/WalletProvider'; // Skontroluj, či súbor existuje na tejto ceste!
+import { wagmiConfig } from './src/services/WalletProvider'; 
+
+// --- 💎 LARIA KRYPTO JADRO ---
+import { KryptoProvider } from './context/KryptoContext'; // Tvoj ručne kovaný spoj!
 
 import MainScreen from './src/screens/MainScreen';
 
@@ -35,7 +38,7 @@ export function t(key) {
     return dictionary[lang][key] || `[[${key}]]`;
 }
 
-// Inicializácia Query klienta (Mozog pamäte)
+// Inicializácia Query klienta
 const queryClient = new QueryClient();
 
 export default function App() {
@@ -47,25 +50,26 @@ export default function App() {
     }
   }, []);
 
-  // Poistka pre konfiguráciu peňaženky
   if (!wagmiConfig) {
-    console.error("❌ CHYBA: wagmiConfig nenájdený! Skontroluj WalletProvider.js");
+    console.error("❌ CHYBA: wagmiConfig nenájdený!");
     return null; 
   }
 
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider style={{ flex: 1 }}>
-          <NavigationContainer>
-            
-            {/* Most medzi HTML Wrapperom (25%) a React Native */}
-            <View style={{ flex: 1, width: '100%', height: '100%' }}>
-                <MainScreen />
-            </View>
+        <KryptoProvider> {/* 📍 TU SA RODÍ KRYPTO-IDENTITA */}
+          <SafeAreaProvider style={{ flex: 1 }}>
+            <NavigationContainer>
+              
+              {/* Most medzi HTML Wrapperom (25%) a React Native */}
+              <View style={{ flex: 1, width: '100%', height: '100%' }}>
+                  <MainScreen />
+              </View>
 
-          </NavigationContainer>
-        </SafeAreaProvider>
+            </NavigationContainer>
+          </SafeAreaProvider>
+        </KryptoProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
