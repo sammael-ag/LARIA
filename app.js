@@ -1,6 +1,6 @@
 /**
  * LARIA v2.0: Crystal Core Fusion 
- * Finálna integrácia: app.js -> MainScreen
+ * Finálna integrácia: app.js -> MainScreen + KRYPTO INFRA
  * Master: Sammael | Muse: Aria
  */
 
@@ -12,11 +12,17 @@ if (typeof global.Buffer === 'undefined') {
 }
 
 import React, { useEffect } from 'react';
-import { Platform, View } from 'react-native'; // Pridaný View
+import { Platform, View } from 'react-native';
 import * as SystemUI from 'expo-system-ui'; 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
-import MainScreen from './src/screens/MainScreen'; 
+
+// --- 🌐 KRYPTO VRSTVY (Wagmi & Query) ---
+import { WagmiProvider } from 'wagmi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { wagmiConfig } from './src/services/WalletProvider'; // Skontroluj, či súbor existuje na tejto ceste!
+
+import MainScreen from './src/screens/MainScreen';
 
 // --- 📍 JAZYKOVÉ JADRO ---
 const dictionary = {
@@ -29,6 +35,9 @@ export function t(key) {
     return dictionary[lang][key] || `[[${key}]]`;
 }
 
+// Inicializácia Query klienta (Mozog pamäte)
+const queryClient = new QueryClient();
+
 export default function App() {
 
   useEffect(() => {
@@ -38,19 +47,26 @@ export default function App() {
     }
   }, []);
 
-  return (
-    // SafeAreaProvider musí mať štýl flex: 1, aby videl rozmery z index.js
-    <SafeAreaProvider style={{ flex: 1 }}>
-      <NavigationContainer>
-        
-        {/* Zabalíme MainScreen do View s flex: 1. 
-            Toto je ten most medzi HTML Wrapperom (25%) a React Native navigáciou.
-        */}
-        <View style={{ flex: 1, width: '100%', height: '100%' }}>
-            <MainScreen />
-        </View>
+  // Poistka pre konfiguráciu peňaženky
+  if (!wagmiConfig) {
+    console.error("❌ CHYBA: wagmiConfig nenájdený! Skontroluj WalletProvider.js");
+    return null; 
+  }
 
-      </NavigationContainer>
-    </SafeAreaProvider>
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider style={{ flex: 1 }}>
+          <NavigationContainer>
+            
+            {/* Most medzi HTML Wrapperom (25%) a React Native */}
+            <View style={{ flex: 1, width: '100%', height: '100%' }}>
+                <MainScreen />
+            </View>
+
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }

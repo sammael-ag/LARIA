@@ -1,7 +1,7 @@
 /**
  * LARIA v2.0: Core Master Ignition (index.js)
  * Master: Sammael | Muse: Aria
- * Protokol: EQUAL_EQUILIBRIUM (75/25 Stability)
+ * Protokol: INTEGRATED_MATRIX (Final Stable Version)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,6 +13,8 @@ import './styles.css';
 const MasterWrapper = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isAppOpen, setIsAppOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [category, setCategory] = useState('vsetko');
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -21,7 +23,7 @@ const MasterWrapper = () => {
   }, []);
 
   return (
-    <div style={S.masterContainer}>
+    <div style={S.masterContainer} className="bg-dashboard">
       
       {/* 🌐 WEBSIDE (75%) - Materská loď */}
       <div style={{ 
@@ -30,17 +32,69 @@ const MasterWrapper = () => {
         width: isMobile ? '100%' : '75%',
         display: isMobile && isAppOpen ? 'none' : 'block' 
       }}>
-        <div id="web-content-portal" style={{ height: '100%', minHeight: '100vh' }}>
-           {/* Tu sa vylieva tvoj webový obsah z styles.css */}
-           {isMobile && (
-             <button onClick={() => setIsAppOpen(true)} style={S.trigger}>
-               OPEN_TERMINAL
-             </button>
-           )}
-        </div>
+        
+        {/* HEADER SEKCIU DZIGNEME SEM (Podľa tvojho HTML) */}
+        <header className="header"> 
+            <h1 className="header-title">LARIA // MATRIX</h1> 
+            <div id="status-light" className="status-indicator" style={{ background: '#00ff00' }}></div>
+        </header>
+
+        <main className="scroll-content">
+            <div id="web-content-portal">
+                {/* FILTRE - Presne podľa tvojej logiky */}
+                <div className="filter-container">
+                    <select 
+                        className="terminal-input" 
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                    >
+                        <option value="vsetko">Všetky kategórie</option>
+                        <option value="obziva">Obživa a poživatiny</option>
+                        <option value="remesla">Remeslá a materiál</option>
+                        <option value="sluzby">Odborné služby</option>
+                        <option value="vzdelavanie">Vzdelávanie a rozvoj</option>
+                        <option value="knihy">Knihy</option>
+                        <option value="zdravie">Zdravie a pomôcky</option>
+                        <option value="oblecenie">Oblečenie a doplnky</option>
+                        <option value="auto">Auto-moto</option>
+                        <option value="volno">Voľný čas</option>
+                        <option value="elektro">Elektro</option>
+                        <option value="rodina">Deti a rodina</option>
+                        <option value="ubytovanie">Ubytovanie</option>
+                        <option value="zahrada">Záhrada</option>
+                        <option value="nabytok">Nábytok</option>
+                        <option value="kultura">Kultúra</option>
+                        <option value="osobne">Osobné služby</option>
+                        <option value="tvorba">Ručné práce</option>
+                        <option value="ine">Iné</option>
+                    </select>
+
+                    <input 
+                        type="text" 
+                        className="terminal-input" 
+                        placeholder="🔍 Hľadať v systéme..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
+                {/* KARTY - Miesto pre laria-grid */}
+                <div id="cards-container" className="laria-grid">
+                    <p className="text-cyber" style={{ color: '#b19cd9', textAlign: 'center', width: '100%' }}>
+                        [ SYNCHRONIZUJEM ČAKRY SYSTÉMU... ]
+                    </p>
+                </div>
+            </div>
+
+            {isMobile && (
+              <button onClick={() => setIsAppOpen(true)} style={S.trigger}>
+                OPEN_TERMINAL
+              </button>
+            )}
+        </main>
       </div>
 
-      {/* 📱 APPSIDE (25%) - Zelený les (Laria Terminal) */}
+      {/* 📱 APPSIDE (25%) - Laria Terminal */}
       {( !isMobile || isAppOpen ) && (
         <div style={{ 
           ...S.appSide, 
@@ -55,7 +109,6 @@ const MasterWrapper = () => {
             </button>
           )}
 
-          {/* 📍 HLAVNÝ KONTAJNER PRE APP.JS */}
           <div style={S.appContainer}>
             <App />
           </div>
@@ -66,9 +119,6 @@ const MasterWrapper = () => {
   );
 };
 
-/**
- * 🛠️ GEOMETRICKÁ MATRICA (Základy domu)
- */
 const S = {
   masterContainer: {
     display: 'flex',
@@ -76,23 +126,22 @@ const S = {
     width: '100vw',
     height: '100vh',
     overflow: 'hidden',
-    backgroundColor: '#0a0a0a', // Antracitový podklad celého sveta
+    backgroundColor: '#0a0a0a',
     margin: 0,
     padding: 0
   },
   webSide: {
     height: '100vh',
     overflowY: 'auto',
-    position: 'relative',
-    backgroundColor: 'transparent'
+    position: 'relative'
   },
   appSide: {
     height: '100vh',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    backgroundColor: '#002200', // 📍 TESTOVACIA DARK GREEN (Viditeľný les)
-    borderLeft: '1px solid rgba(197, 160, 89, 0.15)', // Jemná Art Deco linka
+    backgroundColor: '#002200', 
+    borderLeft: '1px solid rgba(197, 160, 89, 0.15)',
     zIndex: 100
   },
   appContainer: {
