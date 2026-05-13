@@ -36,9 +36,6 @@ html, body {
     background-color: var(--bg-color) !important;
     margin: 0 !important;
     padding: 0 !important;
-    /* Zlatý rámik na poistenie okraja */
-    outline: 2px solid var(--accent-color);
-    outline-offset: -2px;
 }
 
 .main-container {

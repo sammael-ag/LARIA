@@ -12,7 +12,7 @@ if (typeof global.Buffer === 'undefined') {
 }
 
 import React, { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native'; // Pridaný View
 import * as SystemUI from 'expo-system-ui'; 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
@@ -39,28 +39,16 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
+    // SafeAreaProvider musí mať štýl flex: 1, aby videl rozmery z index.js
+    <SafeAreaProvider style={{ flex: 1 }}>
       <NavigationContainer>
         
-        {/* TU JE TVOJA SCHOVANÁ MATRICA PROVIDEROV V PRESNOM PORADÍ.
-          Keď budeme oživovať, budeme odkrývať odvrchu:
+        {/* Zabalíme MainScreen do View s flex: 1. 
+            Toto je ten most medzi HTML Wrapperom (25%) a React Native navigáciou.
         */}
-
-        {/* <WagmiProvider config={wagmiConfig}> */}
-          {/* <QueryClientProvider client={queryClient}> */}
-            {/* <KryptoProvider> */}
-              {/* <LariaProvider> */}
-                {/* <SignalProvider> */}
-                  {/* <ContactProvider> */}
-                  
-                    <MainScreen />
-                    
-                  {/* </ContactProvider> */}
-                {/* </SignalProvider> */}
-              {/* </LariaProvider> */}
-            {/* </KryptoProvider> */}
-          {/* </QueryClientProvider> */}
-        {/* </WagmiProvider> */}
+        <View style={{ flex: 1, width: '100%', height: '100%' }}>
+            <MainScreen />
+        </View>
 
       </NavigationContainer>
     </SafeAreaProvider>

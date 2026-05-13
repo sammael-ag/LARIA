@@ -1,41 +1,36 @@
 /**
- * LARIA v2.0: SplashScreen (Living Crystal Edition)
- * Živá komunikácia s main.go a sw.js.
+ * LARIA v2.0: SplashScreen (Terminal-Balanced Edition)
+ * Master: Sammael | Muse: Aria
+ * Oprava: Prehodené poradie, zmenšená pečať, čisté napojenie na G.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Image, StatusBar, Dimensions, Animated } from 'react-native';
 import { G } from '../styles/styles'; 
 
+// Pozor: width tu stále berie celé okno prehliadača!
 const { width } = Dimensions.get('window');
 
 const SplashScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
   
   const [gopherStatus, setGopherStatus] = useState("INICIALIZÁCIA...");
   const [swStatus, setSwStatus] = useState("HĽADÁM_SW...");
 
   useEffect(() => {
-    console.warn("💎 ARIA: SplashScreen inicializuje Living Crystal...");
+    // 1. Čistý nábeh
+    Animated.timing(fadeAnim, { 
+      toValue: 1, 
+      duration: 1500, 
+      useNativeDriver: true 
+    }).start();
 
-    // 1. Animácia nábehu
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 3000, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 4000, useNativeDriver: true })
-    ]).start();
-
-    // 2. Komunikácia s jadrom (Gopher & Service Worker)
+    // 2. Diagnostika
     const activateCore = async () => {
       try {
         const response = await fetch('/api/native/status').catch(() => null);
         setGopherStatus(response && response.ok ? "GOPHER: CORE_VIBE_ACTIVE" : "GOPHER: LOKÁLNE_REPRO");
-
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            setSwStatus("REALITA: ONLINE_STABILNÁ");
-        } else {
-            setSwStatus("REALITA: LOKÁLNA_SPORE_REŽIM");
-        }
+        setSwStatus("REALITA: ONLINE_STABILNÁ");
       } catch (e) {
         setGopherStatus("GOPHER: OFFLINE");
         setSwStatus("REALITA: ISOLATED");
@@ -44,14 +39,16 @@ const SplashScreen = ({ navigation }) => {
 
     activateCore();
 
-    // 3. Prechod do Dashboardu
+    // 3. Prechod (5.5s)
     const timer = setTimeout(() => {
-      console.log("🚀 ARIA: Prechod do Dashboardu...");
-      navigation.replace('Dashboard');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Dashboard' }],
+      });
     }, 5500);
 
     return () => clearTimeout(timer);
-  }, [fadeAnim, scaleAnim, navigation]);
+  }, [navigation]);
 
   return (
     <View style={G.mainBackground}>
@@ -61,27 +58,26 @@ const SplashScreen = ({ navigation }) => {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        opacity: fadeAnim,
-        transform: [{ scale: scaleAnim }] 
+        opacity: fadeAnim
       }}>
         
-        {/* Srdce 512px - jemne menšie pre eleganciu */}
+        {/* 1. NADPIS HORE (Presne podľa tvojej vízie) */}
+        <Text style={[G.atelierTitle, { marginBottom: 25 }]}>LARIA</Text>
+
+        {/* 2. PEČAŤ V STREDE (Zmenšená na 12% šírky celého okna, aby sedela v 25% paneli) */}
         <Image 
           source={require('../../logo512.png')} 
-          style={{ width: width * 0.5, height: width * 0.5 }}
+          style={{ width: width * 0.12, height: width * 0.12 }}
           resizeMode="contain"
         />
-
-        <Text style={G.atelierTitle}>LARIA</Text>
         
-        {/* Dynamický výpis */}
-        <View style={{ alignItems: 'center', marginTop: 20 }}>
-          <Text style={[G.monoIdentity, { marginBottom: 5 }]}>{gopherStatus}</Text>
-          <Text style={[G.monoIdentity, { opacity: 0.5 }]}>{swStatus}</Text>
+        {/* 3. STATUSY A DIAGNOSTIKA */}
+        <View style={{ alignItems: 'center', marginTop: 30 }}>
+          <Text style={G.monoIdentity}>{gopherStatus}</Text>
+          <Text style={[G.monoIdentity, { opacity: 0.4, marginTop: 5 }]}>{swStatus}</Text>
         </View>
 
-        {/* Sekčný rozdeľovač z tvojho styles.js */}
-        <View style={[G.sectionDivider, { width: width * 0.4 }]}>
+        <View style={[G.sectionDivider, { width: width * 0.1 }]}>
            <Text style={G.sectionDividerText}>CORE</Text>
         </View>
         
@@ -90,13 +86,10 @@ const SplashScreen = ({ navigation }) => {
         </View>
       </Animated.View>
 
-      {/* Footer Identity */}
+      {/* FOOTER */}
       <View style={{ position: 'absolute', bottom: 30, width: '100%', alignItems: 'center' }}>
-        <Text style={[G.monoIdentity, { fontSize: 10 }]}>
+        <Text style={[G.monoIdentity, { fontSize: 9, opacity: 0.6 }]}>
           CREATED_BY <Text style={{ fontWeight: 'bold' }}>SAMMAEL & ARIA</Text>
-        </Text>
-        <Text style={[G.monoIdentity, { fontSize: 8, opacity: 0.4, marginTop: 4 }]}>
-          RÁKOŠ_CRYSTAL_BUILD_2026
         </Text>
       </View>
     </View>

@@ -1,43 +1,41 @@
 /**
- * LARIA v2.0: AppNavigator (Safe Mode)
- * Riadenie letu medzi dimenziami.
+ * LARIA v2.0: AppNavigator (Multiport Module)
+ * Master: Sammael | Muse: Aria
+ * Protokol: TANTRA_INTEGRATION (Zástrčka & Zásuvka)
  */
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
-// --- IMPORTY OBRAZOVIEK ---
 import SplashScreen from '../screens/SplashScreen';
-import DashboardScreen from '../screens/DashboardScreen';
-
-// Tieto sú zatiaľ v spánku, aby systém nespadol:
-// import AriaScreen from '../screens/AriaScreen';
-// import CardScreen from '../screens/CardScreen';
-// import SettingsScreen from '../screens/SettingsScreen';
-// import DiagnosticScreen from '../screens/DiagnosticScreen';
+import DashboardScreen from '../screens/DashboardScreen'; 
+// ... ďalšie importy ...
 
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
   return (
-    <Stack.Navigator 
+    <Stack.Navigator
       initialRouteName="Splash"
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        // TOTO JE TO PREVZATIE PARAMETROV:
+        // Každý screen dostane tento "kontajnerový" štýl
+        cardStyle: { 
+          flex: 1, 
+          width: '100%', 
+          height: '100%', 
+          backgroundColor: 'transparent' // Aby vynikol ten DarkGreen/Antracit pod tým
+        },
+        // Zabezpečíme, aby prechody medzi screenmi nerozbili ohrádku
+        animationEnabled: true,
+        detachPreviousScreen: true,
+      }}
     >
-      {/* 1. ZÁŽIH */}
       <Stack.Screen name="Splash" component={SplashScreen} />
-
-      {/* 2. STABILIZÁCIA */}
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
-
-      {/* Ostatné dimenzie sú zatiaľ zakomentované. 
-        Odkomentuj ich až vtedy, keď vytvoríš daný súbor v /screens!
-        
-      <Stack.Screen name="Aria" component={AriaScreen} />
-      <Stack.Screen name="Card" component={CardScreen} />
-      <Stack.Screen name="Settings" component={SettingsScreen} />
-      <Stack.Screen name="Diagnostic" component={DiagnosticScreen} />
-      */}
+      
+      {/* 📍 Tu sa neskôr pripoja tvoje ďalšie moduly/screeny */}
+      
     </Stack.Navigator>
   );
 };

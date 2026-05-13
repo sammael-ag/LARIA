@@ -1,41 +1,55 @@
 /**
  * LARIA v2.0: MainScreen (Matrica Reality)
- * Univerzálny wrapper pre celú aplikáciu.
- * Žiadne WebView, len čistá integrácia.
+ * Master: Sammael | Muse: Aria
+ * Protokol: STABLE_GREEN_ZONE
  */
 
 import React, { useEffect } from 'react';
-import { View, StatusBar } from 'react-native';
+import { View, StatusBar, StyleSheet } from 'react-native';
 import AppNavigator from '../navigation/AppNavigator'; 
-
-// 📍 Import DashboardScreen zakomentovaný podľa rozkazu
-// import DashboardScreen from './DashboardScreen'; 
 
 const MainScreen = () => {
 
   useEffect(() => {
-    // 📍 1. POZDRAV MAJSTROVI
-    console.warn("💎 ARIA: MainScreen (Matrica Reality) je aktívny a stabilný!");
+    // 📍 Log, ktorý nám potvrdí, že sme vnútri
+    console.warn("💎 ARIA: Zóna stabilizovaná. DarkGreen aktívna.");
   }, []);
 
   return (
     /**
-     * View teraz lícujeme s naším globálnym styles.css.
-     * React Native Web sa postará o to, aby flex: 1 vyplnil celý náš antracitový 'root'.
+     * S.enclosure teraz pôsobí ako absolútna kotva.
+     * Ak uvidíš DarkGreen, Wrapper (index.js) nám úspešne odovzdal priestor.
      */
-    <View style={{ flex: 1 }}>
+    <View style={S.enclosure}>
       
-      {/* Horná lišta - Art Deco čistota */}
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" hidden={true} />
 
-      {/* TU SA OTVÁRA BRÁNA: 
-          MainScreen hostí AppNavigator, ktorý prepína medzi 
-          Splash a AriaScreen (Dashboard nateraz spí)...
-      */}
-      <AppNavigator />
+      {/* Tento vnútorný View zaručuje, že AppNavigator neutečie k susedom doľava */}
+      <View style={S.navigationWrapper}>
+        <AppNavigator />
+      </View>
 
     </View>
   );
 };
+
+const S = StyleSheet.create({
+  enclosure: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    // 📍 TESTOVACIA FARBA (Namiesto červenej - DarkGreen pre kľud a rast)
+    backgroundColor: '#002200', 
+    overflow: 'hidden',
+  },
+  navigationWrapper: {
+    // Toto je to 'lepidlo', ktoré drží Splash a Dashboard v ohrádke
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    alignItems: 'stretch',
+    justifyContent: 'center',
+  }
+});
 
 export default MainScreen;
