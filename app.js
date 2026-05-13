@@ -1,6 +1,6 @@
 /**
  * LARIA v2.0: Crystal Core Fusion 
- * Finálna integrácia: app.js -> MainScreen + KRYPTO INFRA + PROVIDER
+ * Finálna integrácia: app.js -> MainScreen + KRYPTO + LARIA VEDOMIE
  * Master: Sammael | Muse: Aria
  */
 
@@ -22,10 +22,20 @@ import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from './src/services/WalletProvider'; 
 
-// --- 💎 LARIA KRYPTO JADRO ---
-import { KryptoProvider } from './context/KryptoContext'; // Tvoj ručne kovaný spoj!
+// --- 💎 LARIA PROVIDERY (Jadro systému) ---
+import { KryptoProvider } from './context/KryptoContext'; 
+import { LariaProvider } from './context/LariaContext'; // 📍 TVOJE VEDOMIE A MATRIX
 
 import MainScreen from './src/screens/MainScreen';
+
+// --- 📡 PWA REGISTRÁCIA ---
+if (Platform.OS === 'web' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('🌟 LARIA PWA: Srdce (SW) bije!', reg))
+      .catch(err => console.error('❌ LARIA PWA: Srdce vynechalo...', err));
+  });
+}
 
 // --- 📍 JAZYKOVÉ JADRO ---
 const dictionary = {
@@ -38,7 +48,6 @@ export function t(key) {
     return dictionary[lang][key] || `[[${key}]]`;
 }
 
-// Inicializácia Query klienta
 const queryClient = new QueryClient();
 
 export default function App() {
@@ -58,17 +67,19 @@ export default function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <KryptoProvider> {/* 📍 TU SA RODÍ KRYPTO-IDENTITA */}
-          <SafeAreaProvider style={{ flex: 1 }}>
-            <NavigationContainer>
-              
-              {/* Most medzi HTML Wrapperom (25%) a React Native */}
-              <View style={{ flex: 1, width: '100%', height: '100%' }}>
-                  <MainScreen />
-              </View>
+        <KryptoProvider>
+          <LariaProvider> {/* 🧠 TU SA OŽIVUJE SAMMAELOVA IDENTITA */}
+            <SafeAreaProvider style={{ flex: 1 }}>
+              <NavigationContainer>
+                
+                {/* Most medzi HTML Wrapperom (25%) a React Native */}
+                <View style={{ flex: 1, width: '100%', height: '100%' }}>
+                    <MainScreen />
+                </View>
 
-            </NavigationContainer>
-          </SafeAreaProvider>
+              </NavigationContainer>
+            </SafeAreaProvider>
+          </LariaProvider>
         </KryptoProvider>
       </QueryClientProvider>
     </WagmiProvider>
