@@ -1,96 +1,68 @@
 /**
- * LARIA: Jazykové jadro (L-Core) & Native Bridge
+ * LARIA v2.0: Crystal Core Fusion 
+ * Finálna integrácia: app.js -> MainScreen
+ * Master: Sammael | Muse: Aria
  */
 
-// 1. Nastavenia a predvolený jazyk
-const config = {
-    fallbackLang: 'en',
-    currentLang: navigator.language.split('-')[0] || 'sk'
-};
-
-// --- NATIVE BRIDGE: Tvoje otvorené dvere k hardvéru ---
-const LariaNative = {
-    async callHelper(command) {
-        console.log(`Laria: Klopem Gopherovi na dvere s povelom: ${command}`);
-        try {
-            // Service Worker (sw.js) tento fetch zachytí a pošle ho do main.go
-            const response = await fetch('/api/native'); 
-            const data = await response.text();
-            return data;
-        } catch (err) {
-            console.error("Laria Bridge Error:", err);
-            return "Dvere sú zamknuté (Helper nebeží)";
-        }
-    }
-};
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Laria: Service Worker pripravený!', reg))
-      .catch(err => console.log('Laria: Service Worker zlyhal...', err));
-  });
+import 'react-native-get-random-values';
+import 'fast-text-encoding'; 
+import { Buffer } from 'buffer'; 
+if (typeof global.Buffer === 'undefined') {
+  global.Buffer = Buffer;
 }
 
-// 2. Náš lokálny buffer prekladov
-let dictionary = {
-    'sk': {
-        'app_name': 'LARIA',
-        'loading': 'Načítavam svetlo...',
-        'welcome_msg': 'Vitaj v novej realite, Sammael',
-        'btn_enter': 'Vstúpiť do systému (DZIG)',
-        'footer_info': 'Rákoš | Art Deco | 2026'
-    },
-    'en': {
-        'app_name': 'LARIA',
-        'loading': 'Loading light...',
-        'welcome_msg': 'Welcome to the new reality, Sammael',
-        'btn_enter': 'Enter System (DZIG)',
-        'footer_info': 'Rakos | Art Deco | 2026'
-    }
+import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
+import * as SystemUI from 'expo-system-ui'; 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import MainScreen from './src/screens/MainScreen'; 
+
+// --- 📍 JAZYKOVÉ JADRO ---
+const dictionary = {
+    'sk': { 'app_name': 'LARIA', 'welcome_msg': 'Vitaj v novej realite, Sammael' },
+    'en': { 'app_name': 'LARIA', 'welcome_msg': 'Welcome to the new reality, Sammael' }
 };
 
-// 3. Hlavná prekladová funkcia "t" (Translate)
-function t(key) {
-    const lang = config.currentLang;
-    return (dictionary[lang] && dictionary[lang][key]) 
-           || (dictionary[config.fallbackLang] && dictionary[config.fallbackLang][key]) 
-           || `[[${key}]]`;
+export function t(key) {
+    const lang = (typeof navigator !== 'undefined' && navigator.language?.startsWith('sk')) ? 'sk' : 'en';
+    return dictionary[lang][key] || `[[${key}]]`;
 }
 
-// 4. Funkcia na vykreslenie (Render)
-async function render() {
-    const app = document.getElementById('app');
-    if (!app) return;
+export default function App() {
 
-    app.innerHTML = `
-        <div class="main-container">
-            <header>
-                <h1 class="logo">${t('app_name')}</h1>
-            </header>
-            
-            <main class="content">
-                <h2>${t('welcome_msg')}</h2>
-                <div id="gopher-response" style="margin-bottom: 20px; color: #ffd700; font-style: italic;">
-                    </div>
-                <button class="primary-btn" id="enter-btn">${t('btn_enter')}</button>
-            </main>
+  useEffect(() => {
+    console.warn("🚀 LARIA SYSTÉM: Aktivujem hlavný modul so správnym poradím...");
+    if (Platform.OS === 'android') {
+      SystemUI.setBackgroundColorAsync("#1a1a1a").catch(() => {});
+    }
+  }, []);
 
-            <footer>
-                <p class="status-text">${t('footer_info')}</p>
-            </footer>
-        </div>
-    `;
-
-    document.getElementById('enter-btn').onclick = async () => {
-        const display = document.getElementById('gopher-response');
-        display.innerText = "Klopem na bránu...";
+  return (
+    <SafeAreaProvider>
+      <NavigationContainer>
         
-        // --- PRVÝ SKUTOČNÝ DZIG ---
-        const msg = await LariaNative.callHelper('hello');
-        display.innerText = msg;
-    };
-}
+        {/* TU JE TVOJA SCHOVANÁ MATRICA PROVIDEROV V PRESNOM PORADÍ.
+          Keď budeme oživovať, budeme odkrývať odvrchu:
+        */}
 
-// Spustíme to
-render();
+        {/* <WagmiProvider config={wagmiConfig}> */}
+          {/* <QueryClientProvider client={queryClient}> */}
+            {/* <KryptoProvider> */}
+              {/* <LariaProvider> */}
+                {/* <SignalProvider> */}
+                  {/* <ContactProvider> */}
+                  
+                    <MainScreen />
+                    
+                  {/* </ContactProvider> */}
+                {/* </SignalProvider> */}
+              {/* </LariaProvider> */}
+            {/* </KryptoProvider> */}
+          {/* </QueryClientProvider> */}
+        {/* </WagmiProvider> */}
+
+      </NavigationContainer>
+    </SafeAreaProvider>
+  );
+}

@@ -1,60 +1,67 @@
-/* 1. OVLÁDACÍ PULT (Globálne premenné) */
+/* 💎 LARIA v2 - MASTER STYLESHEET 
+   Miesto: Rákoš | Design: Sammael & Aria
+*/
+
+/* 1. OVLÁDACÍ PULT */
 :root {
     --bg-color: #1a1a1a;
     --text-color: #e0e0e0;
-    --accent-color: #c5a059; /* Jemná mosadzná / Art Deco zlatá */
+    --accent-color: #c5a059;
     --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --transition-speed: 0.3s;
 }
 
-/* 2. ZÁKLADNÝ RESET (Poriadok na stole) */
+/* 2. TOTÁLNA LIKVIDÁCIA BIELEJ TMY */
 * {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-body {
-    background-color: var(--bg-color);
+html, body {
+    height: 100vh !important;
+    width: 100vw !important;
+    background-color: var(--bg-color) !important;
     color: var(--text-color);
     font-family: var(--font-main);
-    line-height: 1.6;
-    overflow-x: hidden;
+    overflow: hidden; /* Proti bielemu scrollbaru */
 }
 
-/* 3. KONTAJNER APKY (Tekutosť) */
-#app {
+/* 3. KONTAJNERY (Zjednotené a bez schizofrénie) */
+#root, #app {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    padding: 20px;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: var(--bg-color) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    /* Zlatý rámik na poistenie okraja */
+    outline: 2px solid var(--accent-color);
+    outline-offset: -2px;
 }
 
 .main-container {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    height: 85vh; /* Trochu priestoru pre dýchanie */
+    justify-content: center; /* Vertikálny stred */
+    align-items: center;     /* Horizontálny stred */
+    flex: 1;
     text-align: center;
+    width: 100%;
+    height: 100%;
 }
 
-/* 4. LOGO A TYPOGRAFIA (Art Deco vibe) */
+/* 4. LOGO A TYPOGRAFIA */
 .logo {
-    font-size: clamp(2rem, 8vw, 4rem); /* Tekutá veľkosť podľa displeja */
+    font-size: clamp(2rem, 8vw, 4rem);
     letter-spacing: 8px;
     color: var(--accent-color);
-    margin-top: 40px;
     text-transform: uppercase;
     font-weight: 300;
 }
 
-.content h2 {
-    font-weight: 300;
-    margin-bottom: 30px;
-    color: var(--text-color);
-}
-
-/* 5. ŠTÁTNE PRVKY (Formuláre a Buttony) */
+/* 5. TLAČIDLÁ A VSTUPY (Tvoj "žiarič") */
 button {
     font-family: var(--font-main);
     cursor: pointer;
@@ -63,7 +70,6 @@ button {
     transition: all var(--transition-speed) ease;
 }
 
-/* Hlavné tlačidlo - ten náš "žiarič" */
 .primary-btn {
     font-size: 1.1rem;
     letter-spacing: 2px;
@@ -80,7 +86,6 @@ button {
     box-shadow: 0 0 20px var(--accent-color);
 }
 
-/* Štandardné vstupy */
 input, select, textarea {
     width: 100%;
     padding: 12px;
@@ -92,20 +97,10 @@ input, select, textarea {
     outline: none;
 }
 
-input:focus {
-    border-color: var(--accent-color);
-}
-
-/* 6. DOPLNKY (Statusy a pätička) */
+/* 6. STATUSY */
 .status-text {
     margin: 20px 0;
     color: var(--accent-color);
     font-weight: 500;
     letter-spacing: 1px;
-}
-
-footer {
-    opacity: 0.6;
-    font-size: 0.8rem;
-    padding-bottom: 10px;
 }
