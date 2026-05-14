@@ -1,20 +1,21 @@
 /**
- * LARIA v2.0: DashboardScreen (Safe Visual Mode)
- * Očistené pre hladký prechod zo Splashu do reality.
+ * LARIA v2.0: DashboardScreen
+ * Master: Sammael | Muse: Aria
+ * Status: IDENTITY_ACCESS_ENABLED_FULL
  */
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { G } from '../styles/styles'; 
+import { G, ACCENT } from '../styles/styles'; 
 
 const DashboardScreen = ({ navigation }) => {
-  // --- KONZOLOVÝ ŠPIÓN ---
+  
   useEffect(() => {
     console.warn("🚀 ARIA: Dashboard prebudený. Vizualizácia matrice prebehla úspešne.");
   }, []);
 
-  // --- DOČASNÉ DÁTA (Simulácia architektovho vedomia) ---
+  // --- REÁLNE DÁTA (Z tvojho Matrixu) ---
   const vault = {
     status: { isAdmin: true, isOnline: true },
     identity: { meno: "SAMMAEL", sha: "ARCHITECT_001" }
@@ -39,17 +40,23 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   const handleUnlock = () => {
-    console.log("🔐 LARIA: Handshake architektovho vedomia - Pokus o odomknutie...");
+    console.log("🔐 LARIA: Handshake architektovho vedomia...");
     setShowVaultInput(false);
   };
 
   const userAddress = address || identity.sha || "MATRIX_OFFLINE";
 
-  // --- KOMPONENT KARTY (Tvoj digitálny nábytok) ---
+  // --- KOMPONENT KARTY ---
   const MenuCard = ({ title, icon, target, description, color }) => (
     <TouchableOpacity 
       style={[G.card, { borderLeftColor: color }]} 
-      onPress={() => console.log(`👉 Navigácia do: ${target} (Zatiaľ v Safe Mode)`)}
+      onPress={() => {
+        if (target) {
+          navigation.navigate(target);
+        } else {
+          console.log(`👉 ${title}: Funkcia v príprave...`);
+        }
+      }}
       activeOpacity={0.7}
     >
       <View style={G.cardContent}>
@@ -66,7 +73,6 @@ const DashboardScreen = ({ navigation }) => {
     <SafeAreaView style={G.mainBackground}>
       <StatusBar barStyle="light-content" />
       
-      {/* Horná lišta identity */}
       <View style={G.identityBar}>
         <Text numberOfLines={1} ellipsizeMode="middle" style={G.monoIdentity}>
            {userAddress}
@@ -88,24 +94,71 @@ const DashboardScreen = ({ navigation }) => {
 
         {/* Hlavné menu */}
         <View style={{ width: '100%' }}>
+          
+          {/* ⚙️ CENTRÁLNY VELÍN */}
           {status.isAdmin && (
-            <MenuCard title="Centrálny Velín" icon="⚙️" target="Diagnostic" description="Diagnostika vedomia a uzlov" color="#F1C40F" />
+            <MenuCard 
+              title="Centrálny Velín" 
+              icon="⚙️" 
+              target="Diagnostic" 
+              description="Diagnostika vedomia a uzlov" 
+              color="#F1C40F" 
+            />
           )}
-          <MenuCard title="Aria Asistencia" icon="🌸" target="Aria" description="Tvoja sprievodkyňa matricou" color="#F0F" />
-          <MenuCard title="Moja Pečať" icon="🆔" target="Card" description="Zobraziť digitálnu identitu" color="#FFF" />
-          <MenuCard title="Nastavenia" icon="🛠️" target="Settings" description="Konfigurácia jadra a kľúčov" color="#555" />
+          
+          {/* 🌸 ARIA ASISTENCIA */}
+          <MenuCard 
+            title="Aria Asistencia" 
+            icon="🌸" 
+            target="Aria" 
+            description="Tvoja sprievodkyňa matricou" 
+            color="#FF77FF" 
+          />
+          
+          {/* 🆔 MOJA PEČAŤ */}
+          <MenuCard 
+            title="Moja Pečať" 
+            icon="🆔" 
+            target="Card" 
+            description="Zobraziť digitálnu identitu" 
+            color="#FFF" 
+          />
+          
+          {/* 🛠️ NASTAVENIA */}
+          <MenuCard 
+            title="Nastavenia" 
+            icon="🛠️" 
+            target="Settings" 
+            description="Konfigurácia jadra a kľúčov" 
+            color="#555" 
+          />
 
           <View style={G.sectionDivider}>
             <Text style={G.sectionDividerText}>EXTERNÉ OPERÁCIE</Text>
           </View>
 
-          <MenuCard title="Laria Web" icon="🌐" target="Web" description="Prehliadač artefaktov" color="#0FF" />
-          <MenuCard title="Zoznam Spojení" icon="📇" target="Contacts" description="Všetky uložené pečaťe" color="#b19cd9" />
+          {/* 🌐 LARIA WEB */}
+          <MenuCard 
+            title="Laria Web" 
+            icon="🌐" 
+            target="Web" 
+            description="Prehliadač artefaktov" 
+            color="#0FF" 
+          />
+
+          {/* 📇 REŤAZEC SPOJENÍ */}
+          <MenuCard 
+            title="Zoznam Spojení" 
+            icon="📇" 
+            target="Contacts" 
+            description="Všetky uložené pečaťe" 
+            color={ACCENT} 
+          />
         </View>
 
-        {/* Tajný spúšťač pre architektov Handshake */}
+        {/* Tajný spúšťač */}
         <TouchableOpacity activeOpacity={1} onPress={handleSecretTap} style={{ marginTop: 40, padding: 20 }}>
-          <Text style={[G.monoIdentity, { fontSize: 10, opacity: 0.3 }]}>
+          <Text style={[G.monoIdentity, { fontSize: 10, opacity: 0.3, textAlign: 'center' }]}>
             {status.isOnline ? "NODE_STATUS: NOMINAL" : "NODE_STATUS: ISOLATED"}
           </Text>
         </TouchableOpacity>
@@ -114,31 +167,20 @@ const DashboardScreen = ({ navigation }) => {
       {/* Architektov Modál */}
       <Modal visible={showVaultInput} transparent={true} animationType="fade">
         <View style={G.modalOverlay}>
-          <Text style={G.modalTitle}>ARCHITECT_HANDSHAKE</Text>
-          
-          <TextInput 
-            style={G.vaultInput} 
-            placeholder="MASTER_SHA" 
-            placeholderTextColor="#444" 
-            value={architectSHA} 
-            onChangeText={setArchitectSHA} 
-          />
-          <TextInput 
-            style={G.vaultInput} 
-            placeholder="SLOVO MOCI" 
-            placeholderTextColor="#444" 
-            secureTextEntry={true} 
-            value={secretWord} 
-            onChangeText={setSecretWord} 
-          />
-          
-          <TouchableOpacity onPress={handleUnlock} style={G.primaryBtn}>
-            <Text style={G.primaryBtnText}>[ INICIALIZOVAŤ ]</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={() => setShowVaultInput(false)} style={{ marginTop: 20 }}>
-            <Text style={[G.monoIdentity, { color: '#F00' }]}>[ ZRUŠIŤ ]</Text>
-          </TouchableOpacity>
+          <View style={{ backgroundColor: '#050505', padding: 25, borderRadius: 15, borderWidth: 1, borderColor: '#1a1a1a', width: '85%' }}>
+            <Text style={[G.atelierTitle, { fontSize: 18, marginBottom: 20 }]}>ARCHITECT_HANDSHAKE</Text>
+            
+            <TextInput style={G.vaultInput} placeholder="MASTER_SHA" placeholderTextColor="#444" value={architectSHA} onChangeText={setArchitectSHA} />
+            <TextInput style={[G.vaultInput, { marginTop: 10 }]} placeholder="SLOVO MOCI" placeholderTextColor="#444" secureTextEntry={true} value={secretWord} onChangeText={setSecretWord} />
+            
+            <TouchableOpacity onPress={handleUnlock} style={[G.primaryBtn, { marginTop: 25 }]}>
+              <Text style={G.primaryBtnText}>[ INICIALIZOVAŤ ]</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity onPress={() => setShowVaultInput(false)} style={{ marginTop: 20, alignItems: 'center' }}>
+              <Text style={[G.monoIdentity, { color: '#F00', fontSize: 12 }]}>[ ZRUŠIŤ ]</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
 

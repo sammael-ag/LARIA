@@ -163,6 +163,133 @@ export const G = StyleSheet.create({
     marginBottom: 40,
     fontWeight: '300',
     textTransform: 'uppercase',
+  },
+
+  // --- ROZŠÍRENIE PRE ŠPECIFICKÉ MODULY (Pridaj do G) ---
+  iconHeader: {
+    fontSize: 50,
+    textShadowColor: ACCENT,
+    textShadowRadius: 20,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  quoteCard: {
+    borderLeftColor: '#FF77FF', // Tvoj ružový akcent pre múzu/duchovno
+    backgroundColor: 'rgba(197, 160, 89, 0.05)',
+    padding: 25,
+    marginVertical: 20,
+  },
+  italicQuote: {
+    color: '#e0e0e0',
+    fontStyle: 'italic',
+    lineHeight: 24,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  highlightText: {
+    color: ACCENT,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+  // Špeciálne tlačidlo pre Cloud/Externé služby
+  externalServiceBtn: {
+    backgroundColor: ACCENT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 0,
+    marginTop: 10,
+  },
+  externalServiceIconBox: {
+    width: 24,
+    height: 24,
+    backgroundColor: BG,
+    marginRight: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  externalServiceBtnText: {
+    color: BG,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  footerNote: {
+    color: '#555',
+    fontSize: 10,
+    textAlign: 'center',
+    lineHeight: 16,
+    letterSpacing: 1,
+    marginTop: 30,
+    paddingHorizontal: 20,
+  },
+
+  // --- DIAGNOSTIK PREMIE (Pridaj do G v styles.js) ---
+  terminalLog: {
+    backgroundColor: '#0d0d0d',
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+    marginTop: 10,
+  },
+  textTerminal: {
+    color: '#0F0', // Klasický zelený Matrix pre logy
+    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
+    fontSize: 10,
+    lineHeight: 16,
+  },
+  balanceValue: {
+    color: '#fff',
+    fontSize: 22,
+    letterSpacing: 3,
+    fontWeight: '300',
+    marginVertical: 5,
+  },
+
+  // --- PEČAŤ & VIZITKA (Pridaj do G v styles.js) ---
+  tagBadge: {
+    backgroundColor: 'rgba(197, 160, 89, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: ACCENT,
+    alignSelf: 'flex-start',
+    marginBottom: 15,
+  },
+  tagBadgeText: {
+    color: ACCENT,
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#333',
+    width: '100%',
+    marginVertical: 20,
+  },
+  qrWrapper: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 0, // Čistý štvorec
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 20,
+  },
+  miniBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#444',
+    paddingVertical: 10,
+    alignItems: 'center',
   }
 });
 
