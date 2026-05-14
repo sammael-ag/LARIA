@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "LARIA",
+    "slug": "laria",
+    "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "orientation": "portrait",
+    "icon": "./logo192.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "entryPoint": "./index.js",
+    "splash": {
+      "image": "./logo192.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "sk.laria.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./logo192.png",
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": false,
+      "navigationBar": {
+        "backgroundColor": "#000000",
+        "barStyle": "light-content"
+      },
+      "package": "sk.laria.app"
+    },
+    "web": {
+      "favicon": "./favicon.png",
+      "bundler": "metro",
+      "baseUrl": "./",
+      "title": "LARIA 3D",
+      "description": "Sieť Majstrov a tvorcov novej reality",
+      "config": {
+        "pwa": {
+          "manifest": {
+            "icons": [
+              {
+                "src": "./logo192.png",
+                "sizes": "192x192",
+                "type": "image/png"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "plugins": [
+      "react-native-nfc-manager"
+    ]
+  }
+}
