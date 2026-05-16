@@ -83,7 +83,7 @@ const DashboardScreen = ({ navigation }) => {
         
         {/* Hlavička Dashboardu */}
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <Text style={G.atelierTitle}>ATELIÉR LARIA</Text>
+          <Text style={G.atelierTitle}>Ateliér</Text>
           <View style={G.statusIndicatorRow}>
             <View style={[G.statusDot, { backgroundColor: status.isOnline ? '#0F0' : '#F00' }]} />
             <Text style={G.statusTextSmall}>

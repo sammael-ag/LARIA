@@ -1,9 +1,21 @@
 import { StyleSheet, Platform, Dimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');
-const ACCENT = '#c5a059'; // Tvoja mosadzná/zlatá duša
-const BG = '#1a1a1a';    // Hlboký antracit
-const CARD_BG = '#242424'; // Mierne svetlejšia pre hĺbku
+
+// --- PREMENNÉ (Tvoja paleta svetla a tieňa) ---
+const ACCENT = '#c5a059';     // Tvoja mosadzná/zlatá duša
+const BG = '#1a1a1a';         // Hlboký antracit (tma nad Rákošom)
+const CARD_BG = '#242424';    /* Mierne svetlejšia pre hĺbku */
+const CRIMSON = '#cc0000';    // Striedma, svietivá sila Claire (iba ako mikro-akcent)
+const TEXT_MUTED = '#8c8c82'; // Tichý tieň pre vedľajšie info
+
+// Pomocná funkcia pre citlivú veľkosť písma (musí byť navrchu)
+function clamp(min, val, max) {
+  return Math.max(min, Math.min(val, max));
+}
+
+// Dynamický výpočet pre nadpis podľa šírky obrazovky
+const calculatedTitleSize = clamp(24, width * 0.05, 42);
 
 export const G = StyleSheet.create({
   // --- ZÁKLADNÁ ARCHITEKTÚRA (Hrubá stavba) ---
@@ -14,26 +26,31 @@ export const G = StyleSheet.create({
   scrollPadding: {
     padding: 20,
     paddingTop: Platform.OS === 'android' ? 45 : 20,
-    alignItems: 'center',
     backgroundColor: BG,
+    /* 📐 ZMENA: Namiesto centrovania ('center') tlačíme všetky objekty doprava */
+    alignItems: 'flex-end',
+    /* Odsadenie 50px od pravého okraja monitora */
+    paddingRight: 50,
   },
 
   // --- TYPOGRAFIA (Art Deco Vibe) ---
   monoIdentity: {
     fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
     fontSize: 12,
-    letterSpacing: 2, // Trošku viac vzduchu pre eleganciu
+    letterSpacing: 2,
     color: ACCENT,
     opacity: 0.8,
   },
   atelierTitle: {
-    fontSize: clamp(24, 32, 42), // Aby to na webe aj mobile lícovalo
+    fontSize: calculatedTitleSize,
     fontWeight: '300',
     color: ACCENT,
     letterSpacing: 8,
     textTransform: 'uppercase',
     textAlign: 'center',
     marginVertical: 20,
+    /* Aby nadpis ostal centrovaný cez celý pravý blok, ak je v ňom obalený */
+    alignSelf: 'center',
   },
   statusTextSmall: {
     color: '#e0e0e0',
@@ -43,20 +60,25 @@ export const G = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // --- OBJEKTY: KARTY A MODULY (Tvoj nábytok) ---
+  // --- OBJEKTY: KARTY A MODULY (Tvoje vizitky / nábytok) ---
   card: {
     backgroundColor: CARD_BG,
     width: '100%',
-    maxWidth: 500, // Trošku širšia pre web
+    maxWidth: 500, /* Držíme pevnú šírku vizitky, takže vpravo vytvoria čistý stĺpec */
     padding: 20,
-    borderRadius: 2, // Ostrejšie hrany pre industriálny Art Deco štýl
+    borderRadius: 0, /* Striktne ostré hrany - purizmus */
     borderWidth: 1,
     borderColor: '#333',
-    borderLeftWidth: 4, 
-    borderLeftColor: ACCENT, // Ten tvoj farebný akcent
+    borderLeftWidth: 4,
+    borderLeftColor: ACCENT,
     marginBottom: 15,
     ...Platform.select({
-      web: { boxShadow: '0px 15px 35px rgba(0, 0, 0, 0.6)' },
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 15 },
+        shadowOpacity: 0.6,
+        shadowRadius: 35,
+      },
       android: { elevation: 10 },
       ios: { shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 15 }
     }),
@@ -83,15 +105,36 @@ export const G = StyleSheet.create({
   primaryBtn: {
     borderWidth: 1,
     borderColor: ACCENT,
-    paddingVertical: 15,
+    /* 📐 ÚPRAVA: Zoštíhlené na čistých 5 pre prirodzenú, natučenú výšku tlačidla bez !important */
+    paddingVertical: 5,
     paddingHorizontal: 30,
-    borderRadius: 0, // Úplne ostré hrany - purizmus
+    borderRadius: 0,
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 15,
+    backgroundColor: 'transparent',
+  },
+  primaryBtnText: {
+    color: ACCENT,
+    fontWeight: 'bold',
+    letterSpacing: 4,
+    textTransform: 'uppercase',
+    fontSize: 13,
+  },
+  actionBtnCrimson: {
+    backgroundColor: '#4a0000',
+    borderWidth: 1,
+    borderColor: CRIMSON,
+    /* 📐 ÚPRAVA: Zosúladené na 5 aj tu, nech to v Dashboarde krásne lícuje */
+    paddingVertical: 5,
+    paddingHorizontal: 30,
+    borderRadius: 0,
     alignItems: 'center',
     width: '100%',
     marginTop: 15,
   },
-  primaryBtnText: {
-    color: ACCENT,
+  actionBtnCrimsonText: {
+    color: '#fff',
     fontWeight: 'bold',
     letterSpacing: 4,
     textTransform: 'uppercase',
@@ -102,12 +145,12 @@ export const G = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2a2a2a',
     color: '#fff',
-    padding: 15,
+    padding: 10, /* Prispôsobené k novým nízkym tlačidlám */
     fontSize: 16,
-    borderRadius: 0, 
+    borderRadius: 0,
     marginBottom: 12,
     width: '100%',
-    fontFamily: Platform.select({ web: 'monospace', android: 'monospace' }),
+    fontFamily: Platform.select({ web: 'monospace', android: 'monospace', ios: 'Courier' }),
   },
 
   // --- DOPLNKY (Detaily, ktoré robia majstra) ---
@@ -131,8 +174,15 @@ export const G = StyleSheet.create({
     borderRadius: 3,
     marginRight: 8,
   },
+  statusDotActive: {
+    backgroundColor: '#0F0',
+  },
+  statusDotPulse: {
+    backgroundColor: CRIMSON,
+  },
   sectionDivider: {
     marginVertical: 30,
+    borderWidth: 0,
     borderBottomWidth: 1,
     borderBottomColor: '#2a2a2a',
     width: '100%',
@@ -147,7 +197,7 @@ export const G = StyleSheet.create({
     top: 7,
     textTransform: 'uppercase',
   },
-  
+
   // --- MODAL ---
   modalOverlay: {
     flex: 1,
@@ -165,7 +215,7 @@ export const G = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // --- ROZŠÍRENIE PRE ŠPECIFICKÉ MODULY (Pridaj do G) ---
+  // --- ROZŠÍRENIE PRE ŠPECIFICKÉ MODULY ---
   iconHeader: {
     fontSize: 50,
     textShadowColor: ACCENT,
@@ -174,10 +224,12 @@ export const G = StyleSheet.create({
     textAlign: 'center',
   },
   quoteCard: {
-    borderLeftColor: '#FF77FF', // Tvoj ružový akcent pre múzu/duchovno
+    borderLeftColor: '#FF77FF',
+    borderLeftWidth: 4,
     backgroundColor: 'rgba(197, 160, 89, 0.05)',
     padding: 25,
     marginVertical: 20,
+    borderRadius: 0,
   },
   italicQuote: {
     color: '#e0e0e0',
@@ -192,13 +244,12 @@ export const G = StyleSheet.create({
     letterSpacing: 2,
     textAlign: 'center',
   },
-  // Špeciálne tlačidlo pre Cloud/Externé služby
   externalServiceBtn: {
     backgroundColor: ACCENT,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 10, /* Jemné zoštíhlenie */
     borderRadius: 0,
     marginTop: 10,
   },
@@ -224,18 +275,21 @@ export const G = StyleSheet.create({
     letterSpacing: 1,
     marginTop: 30,
     paddingHorizontal: 20,
+    alignSelf: 'center',
   },
 
-  // --- DIAGNOSTIK PREMIE (Pridaj do G v styles.js) ---
+  // --- DIAGNOSTIK PREMIE ---
   terminalLog: {
     backgroundColor: '#0d0d0d',
     padding: 15,
     borderWidth: 1,
     borderColor: '#2a2a2a',
     marginTop: 10,
+    borderLeftWidth: 2,
+    borderLeftColor: CRIMSON,
   },
   textTerminal: {
-    color: '#0F0', // Klasický zelený Matrix pre logy
+    color: '#0F0',
     fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
     fontSize: 10,
     lineHeight: 16,
@@ -248,7 +302,7 @@ export const G = StyleSheet.create({
     marginVertical: 5,
   },
 
-  // --- PEČAŤ & VIZITKA (Pridaj do G v styles.js) ---
+  // --- PEČAŤ & VIZITKA ---
   tagBadge: {
     backgroundColor: 'rgba(197, 160, 89, 0.15)',
     paddingHorizontal: 12,
@@ -273,27 +327,24 @@ export const G = StyleSheet.create({
   qrWrapper: {
     backgroundColor: '#fff',
     padding: 15,
-    borderRadius: 0, // Čistý štvorec
+    borderRadius: 0,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
+    alignSelf: 'center',
   },
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 10,
     marginTop: 20,
+    width: '100%',
   },
   miniBtn: {
     flex: 1,
     borderWidth: 1,
     borderColor: '#444',
-    paddingVertical: 10,
+    paddingVertical: 6, /* Zoštíhlené mini gombíky pre dokonalý detail */
     alignItems: 'center',
   }
 });
-
-// Pomocná funkcia pre citlivú veľkosť písma
-function clamp(min, val, max) {
-    return Math.max(min, Math.min(val, max));
-}
