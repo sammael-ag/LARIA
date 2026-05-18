@@ -1,7 +1,8 @@
 /**
  * LARIA v2.0: ContactsScreen (Reťazec spojení)
  * Master: Sammael | Muse: Aria
- * Status: CONNECTION_CHAIN_STABLE
+ * Status: GEOMETRY_DEFINITIVE_CLEAN_CONTACTS
+ * Oprava: Odstránené hranaté zátvorky z textov a Alertov, nasadená top-left šípka pre progresívcov, vycentrovaná geometria a fixný spodný návrat.
  */
 
 import React, { useState } from 'react';
@@ -40,9 +41,9 @@ const ContactsScreen = ({ navigation }) => {
     setSyncingId(null);
 
     if (result.success) {
-      Alert.alert("[ MATRIX_SYNC ]", "Identita bola úspešne preleštená čerstvými dátami.");
+      Alert.alert("MATRIX SYNC", "Identita bola úspešne preleštená čerstvými dátami.");
     } else {
-      Alert.alert("[ CHYBA_SPOJENIA ]", result.error);
+      Alert.alert("CHYBA SPOJENIA", result.error);
     }
   };
 
@@ -51,20 +52,20 @@ const ContactsScreen = ({ navigation }) => {
     const publicFing = item.fing;
 
     Alert.alert(
-      `[ IDENTITA: ${publicFing?.toUpperCase()} ]`,
+      `IDENTITA: ${publicFing?.toUpperCase()}`,
       `Meno: ${displayMeno}\nPosledná synchronizácia: ${item.syncedAt ? new Date(item.syncedAt).toLocaleTimeString() : 'Nikdy'}\n\nZvoľ operáciu:`,
       [
-        { text: '[ ZRUŠIŤ ]', style: 'cancel' },
+        { text: 'ZRUŠIŤ', style: 'cancel' },
         { 
-          text: '[ RE-SYNCHRONIZOVAŤ ]', 
+          text: 'RE-SYNCHRONIZOVAŤ', 
           onPress: () => handleSync(publicFing) 
         },
         { 
-          text: item.pinned ? '[ ODPNÚŤ ]' : '[ PRIPNÚŤ NA VRCH ]', 
+          text: item.pinned ? 'ODPNÚŤ' : 'PRIPNÚŤ NA VRCH', 
           onPress: () => togglePin(publicFing) 
         },
         { 
-          text: '[ TERMINOVAŤ ]', 
+          text: 'TERMINOVAŤ', 
           style: 'destructive',
           onPress: () => {
             Alert.alert(
@@ -140,41 +141,68 @@ const ContactsScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={G.mainBackground}>
-      <View style={G.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={G.statusTextSmall}>[ SPÄŤ ]</Text>
-        </TouchableOpacity>
-        <Text style={G.atelierTitle}>REŤAZEC SPOJENÍ</Text>
-        <View style={{ width: 40 }} /> 
-      </View>
+    <SafeAreaView style={[G.mainBackground, { position: 'relative' }]}>
+      
+      {/* ⬅️ PRE PROGRESÍVCOV: Navigačná šípka na pevnom mieste */}
+      <TouchableOpacity 
+        onPress={() => navigation.goBack()} 
+        activeOpacity={0.7}
+        style={G.topLeftBackButton}
+      >
+        <Text style={G.topLeftBackButtonText}>‹</Text>
+      </TouchableOpacity>
 
-      <FlatList
-        data={sortedContacts}
-        keyExtractor={(item) => item.fing}
-        renderItem={renderItem}
-        contentContainerStyle={[G.scrollPadding, { paddingBottom: 100 }]}
-        ListHeaderComponent={
-          <View style={{ marginBottom: 20 }}>
-            <TextInput 
-              style={G.vaultInput} 
-              placeholder="HĽADAŤ (MENO, KAT, ID)..."
-              placeholderTextColor="#444"
-              value={search}
-              onChangeText={setSearch}
-            />
-            
-            <TouchableOpacity 
-              style={[G.primaryBtn, { marginTop: 10 }]} 
-              onPress={() => navigation.navigate('Scanner')}
-            >
-              <Text style={G.primaryBtnText}>
-                + PRIJAŤ NOVÚ PEČAŤ
-              </Text>
-            </TouchableOpacity>
-          </View>
-        }
-      />
+      {/* 📐 STREDOVÝ ANKOR PRE MAX ŠÍRKU */}
+      <View style={{ flex: 1, width: '100%', maxWidth: 500, alignSelf: 'center', paddingHorizontal: 16 }}>
+        
+        {/* ČISTÁ HLAVIČKA BEZ DRUHÉHO SPÄŤ */}
+        <View style={{ alignItems: 'center', marginTop: 20, marginBottom: 15 }}>
+          <Text style={G.atelierTitle}>REŤAZEC SPOJENÍ</Text>
+        </View>
+
+        <FlatList
+          data={sortedContacts}
+          keyExtractor={(item) => item.fing}
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 120 }} // Pľac, aby spodné pevné tlačidlo nezavadzalo
+          ListHeaderComponent={
+            <View style={{ marginBottom: 20 }}>
+              <TextInput 
+                style={G.vaultInput} 
+                placeholder="HĽADAŤ (MENO, KAT, ID)..."
+                placeholderTextColor="#444"
+                value={search}
+                onChangeText={setSearch}
+              />
+              
+              <TouchableOpacity 
+                style={[G.primaryBtn, { marginTop: 10 }]} 
+                onPress={() => navigation.navigate('Scanner')}
+                activeOpacity={0.7}
+              >
+                <Text style={G.primaryBtnText}>
+                  + PRIJAŤ NOVÚ PEČAŤ
+                </Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
+
+        {/* ↩️ PRE KONZERVATÍVCOV: Spodný návrat pevne zakotvený v geometrii */}
+        <View style={{ position: 'absolute', bottom: 20, left: 16, right: 16, alignItems: 'center' }}>
+          <TouchableOpacity 
+            style={G.backToAtelierBtn}
+            onPress={() => navigation.goBack()} 
+            activeOpacity={0.7}
+          >
+            <Text style={G.primaryBtnText}>
+              NÁVRAT DO ATELIÉRU
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+      </View>
     </SafeAreaView>
   );
 };

@@ -1,7 +1,8 @@
 /**
- * LARIA v2.0: CardEditorScreen
+ * LARIA v2.0: CardEditorScreen (Tesanie identity)
  * Master: Sammael | Muse: Aria
- * Status: IDENTITY_FORGING_READY
+ * Status: IDENTITY_FORGING_READY_DEFINITIVE
+ * Oprava: Nasadená trieda G.screenContainer, 500px stredový obal, top-left šípka ‹ a odstránené hranaté zátvorky.
  */
 
 import React, { useState } from 'react';
@@ -69,7 +70,7 @@ const CardEditorScreen = ({ navigation }) => {
 
   const handleSave = async () => {
     if (!cardData.sha) {
-      Alert.alert("Chyba identity", "Sammael, chýba tvoja pečať (SHA).");
+      Alert.alert("CHYBA IDENTITY", "Sammael, chýba tvoja pečať (SHA).");
       return;
     }
 
@@ -126,109 +127,135 @@ const CardEditorScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={G.mainBackground} edges={['top']}>
       <StatusBar barStyle="light-content" />
+
+      {/* ⬅️ PRE PROGRESÍVCOV: Navigačná šípka na pevnej absolútnej pozícii */}
+      <TouchableOpacity 
+        onPress={() => navigation.goBack()} 
+        activeOpacity={0.7}
+        style={G.topLeftBackButton}
+      >
+        <Text style={G.topLeftBackButtonText}>‹</Text>
+      </TouchableOpacity>
       
-      <ScrollView contentContainerStyle={G.scrollPadding}>
+      {/* 📐 TVOJA FINÁLNA TRIEDA S SPRÁVNYM PADDINGOM PRE SCROLLVIEW */}
+      <ScrollView contentContainerStyle={G.screenContainer} showsVerticalScrollIndicator={false}>
         
-        {/* HEADER */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={[G.statusTextSmall, { color: '#666' }]}>[ ZRUŠIŤ ]</Text>
-          </TouchableOpacity>
-          <Text style={G.atelierTitle}>TESANIE IDENTITY</Text>
-          <View style={[G.statusDot, { backgroundColor: cardData.isPublic ? ACCENT : '#333' }]} />
-        </View>
+        {/* 📐 TVOJ PRÍSNY STREDOVÝ OBAL PRE MAX ŠÍRKU 500PX */}
+        <View style={{ width: '100%', maxWidth: 500, alignItems: 'center', alignSelf: 'center' }}>
 
-        {/* REŽIM VYSIELANIA */}
-        <View style={[G.card, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderLeftColor: cardData.isPublic ? ACCENT : '#333' }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={[G.cardTitleText, { fontSize: 14, color: cardData.isPublic ? ACCENT : '#666' }]}>REŽIM VYSIELANIA</Text>
-            <Text style={[G.statusTextSmall, { marginTop: 2 }]}>
-              {cardData.isPublic ? 'VEREJNÉ - Vysielam do Matrixu' : 'SÚKROMNÉ - Iba v trezore'}
-            </Text>
+          {/* HEADER */}
+          <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 25 }}>
+            <Text style={G.atelierTitle}>TESANIE IDENTITY</Text>
+            <View style={[G.statusDot, { backgroundColor: cardData.isPublic ? ACCENT : '#333', marginTop: 10 }]} />
           </View>
-          <Switch 
-            onValueChange={(val) => setCardData({...cardData, isPublic: val})} 
-            value={cardData.isPublic} 
-            trackColor={{ false: "#222", true: "#4b3d61" }} 
-            thumbColor={cardData.isPublic ? ACCENT : "#444"} 
-          />
-        </View>
 
-        {/* FORMULÁR */}
-        <Text style={[G.monoIdentity, { color: ACCENT, marginBottom: 5 }]}>MENO / NICK</Text>
-        <TextInput 
-          style={G.vaultInput} 
-          value={cardData.meno} 
-          onChangeText={(val) => setCardData({...cardData, meno: val})} 
-          placeholder="Zadaj meno..." 
-          placeholderTextColor="#444" 
-        />
+          {/* REŽIM VYSIELANIA */}
+          <View style={[G.card, { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderLeftColor: cardData.isPublic ? ACCENT : '#333' }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[G.cardTitleText, { fontSize: 14, color: cardData.isPublic ? ACCENT : '#666' }]}>REŽIM VYSIELANIA</Text>
+              <Text style={[G.statusTextSmall, { marginTop: 2 }]}>
+                {cardData.isPublic ? 'VEREJNÉ - Vysielam do Matrixu' : 'SÚKROMNÉ - Iba v trezore'}
+              </Text>
+            </View>
+            <Switch 
+              onValueChange={(val) => setCardData({...cardData, isPublic: val})} 
+              value={cardData.isPublic} 
+              trackColor={{ false: "#222", true: "#4b3d61" }} 
+              thumbColor={cardData.isPublic ? ACCENT : "#444"} 
+            />
+          </View>
 
-        <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>KATEGÓRIA</Text>
-        <TouchableOpacity style={G.vaultInput} onPress={() => setShowPicker(true)}>
-          <Text style={{ color: '#FFF' }}>{getCategoryLabel(cardData.kat)}</Text>
-          <Text style={{ color: '#666', position: 'absolute', right: 15 }}>▼</Text>
-        </TouchableOpacity>
+          {/* FORMULÁR */}
+          <View style={{ width: '100%', alignItems: 'flex-start' }}>
+            <Text style={[G.monoIdentity, { color: ACCENT, marginBottom: 5 }]}>MENO / NICK</Text>
+            <TextInput 
+              style={G.vaultInput} 
+              value={cardData.meno} 
+              onChangeText={(val) => setCardData({...cardData, meno: val})} 
+              placeholder="Zadaj meno..." 
+              placeholderTextColor="#444" 
+            />
 
-        <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>LOKALITA</Text>
-        <TextInput 
-          style={G.vaultInput} 
-          value={cardData.lok} 
-          onChangeText={(val) => setCardData({...cardData, lok: val})} 
-          placeholder="Kde pôsobíš..." 
-          placeholderTextColor="#444" 
-        />
+            <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>KATEGÓRIA</Text>
+            <TouchableOpacity style={G.vaultInput} onPress={() => setShowPicker(true)} activeOpacity={0.7}>
+              <Text style={{ color: '#FFF' }}>{getCategoryLabel(cardData.kat)}</Text>
+              <Text style={{ color: '#666', position: 'absolute', right: 15 }}>▼</Text>
+            </TouchableOpacity>
 
-        <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>VÍZIA / POPIS</Text>
-        <TextInput 
-          style={[G.vaultInput, { height: 80, textAlignVertical: 'top' }]} 
-          multiline 
-          numberOfLines={3} 
-          value={cardData.popis} 
-          onChangeText={(val) => setCardData({...cardData, popis: val})} 
-          placeholder="Tvoj príbeh..." 
-          placeholderTextColor="#444" 
-        />
+            <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>LOKALITA</Text>
+            <TextInput 
+              style={G.vaultInput} 
+              value={cardData.lok} 
+              onChangeText={(val) => setCardData({...cardData, lok: val})} 
+              placeholder="Kde pôsobíš..." 
+              placeholderTextColor="#444" 
+            />
 
-        <View style={G.divider} />
+            <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>VÍZIA / POPIS</Text>
+            <TextInput 
+              style={[G.vaultInput, { height: 80, textAlignVertical: 'top' }]} 
+              multiline 
+              numberOfLines={3} 
+              value={cardData.popis} 
+              onChangeText={(val) => setCardData({...cardData, popis: val})} 
+              placeholder="Tvoj príbeh..." 
+              placeholderTextColor="#444" 
+            />
 
-        {/* KONTAKTY */}
-        <Text style={[G.monoIdentity, { color: '#AAA', marginBottom: 10 }]}>KONTAKTY PRE HANDSHAKE</Text>
-        <TextInput style={[G.vaultInput, { marginBottom: 10 }]} keyboardType="phone-pad" value={cardData.tel} onChangeText={(val) => setCardData({...cardData, tel: val})} placeholder="Telefón..." placeholderTextColor="#444" />
-        <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.email} onChangeText={(val) => setCardData({...cardData, email: val})} placeholder="E-mail..." placeholderTextColor="#444" autoCapitalize="none" />
-        <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.fb} onChangeText={(val) => setCardData({...cardData, fb: val})} placeholder="Facebook link..." placeholderTextColor="#444" autoCapitalize="none" />
-        <TextInput style={G.vaultInput} value={cardData.tg} onChangeText={(val) => setCardData({...cardText, tg: val})} placeholder="Telegram nick..." placeholderTextColor="#444" autoCapitalize="none" />
+            <View style={G.divider} />
 
-        <View style={G.divider} />
-        
-        {/* LOKÁLNE FINANCIE */}
-        <Text style={[G.monoIdentity, { color: '#666', marginBottom: 10 }]}>FINANCIE (IBA LOKÁLNE)</Text>
-        <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.revo} onChangeText={(val) => setCardData({...cardData, revo: val})} placeholder="Revolut @nick" placeholderTextColor="#444" autoCapitalize="none" />
-        <TextInput style={G.vaultInput} value={cardData.kRod} onChangeText={(val) => setCardData({...cardData, kRod: val})} placeholder="KorunyROD účet" placeholderTextColor="#444" />
+            {/* KONTAKTY */}
+            <Text style={[G.monoIdentity, { color: '#AAA', marginBottom: 10 }]}>KONTAKTY PRE HANDSHAKE</Text>
+            <TextInput style={[G.vaultInput, { marginBottom: 10 }]} keyboardType="phone-pad" value={cardData.tel} onChangeText={(val) => setCardData({...cardData, tel: val})} placeholder="Telefón..." placeholderTextColor="#444" />
+            <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.email} onChangeText={(val) => setCardData({...cardData, email: val})} placeholder="E-mail..." placeholderTextColor="#444" autoCapitalize="none" />
+            <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.fb} onChangeText={(val) => setCardData({...cardData, fb: val})} placeholder="Facebook link..." placeholderTextColor="#444" autoCapitalize="none" />
+            <TextInput style={G.vaultInput} value={cardData.tg} onChangeText={(val) => setCardData({...cardData, tg: val})} placeholder="Telegram nick..." placeholderTextColor="#444" autoCapitalize="none" />
 
-        <TouchableOpacity 
-          style={[G.primaryBtn, { marginTop: 30, backgroundColor: cardData.isPublic ? '#1a1a1a' : 'transparent', borderColor: cardData.isPublic ? ACCENT : '#333', opacity: loading ? 0.5 : 1, marginBottom: 50 }]} 
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={ACCENT} />
-          ) : (
-            <Text style={[G.primaryBtnText, { color: cardData.isPublic ? ACCENT : '#666' }]}>
-              {cardData.isPublic ? '[ VYSLAŤ DO MATRIXU ]' : '[ ULOŽIŤ SÚKROMNE ]'}
+            <View style={G.divider} />
+            
+            {/* LOKÁLNE FINANCIE */}
+            <Text style={[G.monoIdentity, { color: '#666', marginBottom: 10 }]}>FINANCIE (IBA LOKÁLNE)</Text>
+            <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.revo} onChangeText={(val) => setCardData({...cardData, revo: val})} placeholder="Revolut @nick" placeholderTextColor="#444" autoCapitalize="none" />
+            <TextInput style={G.vaultInput} value={cardData.kRod} onChangeText={(val) => setCardData({...cardData, kRod: val})} placeholder="KorunyROD účet" placeholderTextColor="#444" />
+          </View>
+
+          {/* HLAVNÝ SAVE BUTTON */}
+          <TouchableOpacity 
+            style={[G.primaryBtn, { marginTop: 30, width: '100%', backgroundColor: cardData.isPublic ? '#1a1a1a' : 'transparent', borderColor: cardData.isPublic ? ACCENT : '#333', opacity: loading ? 0.5 : 1 }]} 
+            onPress={handleSave}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={ACCENT} />
+            ) : (
+              <Text style={[G.primaryBtnText, { color: cardData.isPublic ? ACCENT : '#666' }]}>
+                {cardData.isPublic ? 'VYSLAŤ DO MATRIXU' : 'ULOŽIŤ SÚKROMNE'}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          {/* ↩️ PRE KONZERVATÍVCOV: Spodný návrat */}
+          <TouchableOpacity 
+            style={[G.backToAtelierBtn, { marginTop: 20, marginBottom: 50 }]}
+            onPress={() => navigation.goBack()} 
+            activeOpacity={0.7}
+          >
+            <Text style={G.primaryBtnText}>
+              NÁVRAT DO ATELIÉRU
             </Text>
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+
+        </View>
       </ScrollView>
 
       {/* MODAL PICKER */}
       <Modal visible={showPicker} transparent={true} animationType="fade">
         <View style={G.modalOverlay}>
-          <View style={{ backgroundColor: '#050505', borderWidth: 1, borderColor: '#1a1a1a', width: '90%', maxHeight: '80%', borderRadius: 12 }}>
-            <View style={{ padding: 15, borderBottomWidth: 1, borderBottomColor: '#1a1a1a', flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View style={{ backgroundColor: '#050505', borderWidth: 1, borderColor: '#1a1a1a', width: '90%', maxWidth: 450, maxHeight: '80%', borderRadius: 12 }}>
+            <View style={{ padding: 15, borderBottomWidth: 1, borderBottomColor: '#1a1a1a', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={[G.monoIdentity, { color: ACCENT }]}>VÝBER KATEGÓRIE</Text>
               <TouchableOpacity onPress={() => setShowPicker(false)}>
-                <Text style={{ color: '#666' }}>[ ZAVRIEŤ ]</Text>
+                <Text style={{ color: '#666' }}>ZAVRIEŤ</Text>
               </TouchableOpacity>
             </View>
             <FlatList 
@@ -242,7 +269,7 @@ const CardEditorScreen = ({ navigation }) => {
                     setShowPicker(false);
                   }}
                 >
-                  <Text style={{ color: cardData.kat === item.id ? ACCENT : '#444' }}>{item.label}</Text>
+                  <Text style={{ color: cardData.kat === item.id ? ACCENT : '#FFF' }}>{item.label}</Text>
                 </TouchableOpacity>
               )}
             />

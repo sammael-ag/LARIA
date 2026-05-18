@@ -1,7 +1,8 @@
 /**
  * LARIA v2.0: DashboardScreen
  * Master: Sammael | Muse: Aria
- * Status: IDENTITY_ACCESS_ENABLED_FULL
+ * Status: IDENTITY_ACCESS_ENABLED_FULL_STABLE
+ * Oprava: Uzavretie rozbitého View kontajnera a čisté centrovanie cez screenContainer.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -79,106 +80,112 @@ const DashboardScreen = ({ navigation }) => {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={G.scrollPadding}>
+      {/* 📐 HLAVNÝ OBSAH (Centrovaný automaticky cez G.screenContainer) */}
+      <ScrollView contentContainerStyle={G.screenContainer}>
         
-        {/* Hlavička Dashboardu */}
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <Text style={G.atelierTitle}>Ateliér</Text>
-          <View style={G.statusIndicatorRow}>
-            <View style={[G.statusDot, { backgroundColor: status.isOnline ? '#0F0' : '#F00' }]} />
-            <Text style={G.statusTextSmall}>
-              {identity.meno} | {status.isAdmin ? "ARCHITECT MODE" : "IDENTITY ACTIVE"}
-            </Text>
+        {/* Obal s maximálnou šírkou 500px, ktorý drží vizitky pevne pod sebou */}
+        <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
+        
+          {/* Hlavička Dashboardu */}
+          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            <Text style={G.atelierTitle}>Ateliér</Text>
+            <View style={G.statusIndicatorRow}>
+              <View style={[G.statusDot, { backgroundColor: status.isOnline ? '#0F0' : '#F00' }]} />
+              <Text style={G.statusTextSmall}>
+                {identity.meno} | {status.isAdmin ? "ARCHITECT MODE" : "IDENTITY ACTIVE"}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        {/* Hlavné menu */}
-        <View style={{ width: '100%' }}>
-          
-          {/* ⚙️ CENTRÁLNY VELÍN */}
-          {status.isAdmin && (
+          {/* Hlavné menu */}
+          <View style={{ width: '100%' }}>
+            
+            {/* ⚙️ CENTRÁLNY VELÍN */}
+            {status.isAdmin && (
+              <MenuCard 
+                title="Centrálny Velín" 
+                icon="⚙️" 
+                target="Diagnostic" 
+                description="Diagnostika vedomia a uzlov" 
+                color="#F1C40F" 
+              />
+            )}
+            
+            {/* 🌸 ARIA ASISTENCIA */}
             <MenuCard 
-              title="Centrálny Velín" 
-              icon="⚙️" 
-              target="Diagnostic" 
-              description="Diagnostika vedomia a uzlov" 
-              color="#F1C40F" 
+              title="Aria Asistencia" 
+              icon="🌸" 
+              target="Aria" 
+              description="Tvoja sprievodkyňa matricou" 
+              color="#FF77FF" 
             />
-          )}
-          
-          {/* 🌸 ARIA ASISTENCIA */}
-          <MenuCard 
-            title="Aria Asistencia" 
-            icon="🌸" 
-            target="Aria" 
-            description="Tvoja sprievodkyňa matricou" 
-            color="#FF77FF" 
-          />
-          
-          {/* 🆔 MOJA PEČAŤ */}
-          <MenuCard 
-            title="Moja Pečať" 
-            icon="🆔" 
-            target="Card" 
-            description="Zobraziť digitálnu identitu" 
-            color="#FFF" 
-          />
-          
-          {/* 🛠️ NASTAVENIA */}
-          <MenuCard 
-            title="Nastavenia" 
-            icon="🛠️" 
-            target="Settings" 
-            description="Konfigurácia jadra a kľúčov" 
-            color="#555" 
-          />
+            
+            {/* 🆔 MOJA PEČAŤ */}
+            <MenuCard 
+              title="Moja Pečať" 
+              icon="🆔" 
+              target="Card" 
+              description="Zobraziť digitálnu identitu" 
+              color="#FFF" 
+            />
+            
+            {/* 🛠️ NASTAVENIA */}
+            <MenuCard 
+              title="Nastavenia" 
+              icon="🛠️" 
+              target="Settings" 
+              description="Konfigurácia jadra a kľúčov" 
+              color="#555" 
+            />
 
-          <View style={G.sectionDivider}>
-            <Text style={G.sectionDividerText}>EXTERNÉ OPERÁCIE</Text>
+            <View style={G.sectionDivider}>
+              <Text style={G.sectionDividerText}>EXTERNÉ OPERÁCIE</Text>
+            </View>
+
+            {/* 🌐 LARIA WEB */}
+            <MenuCard 
+              title="Laria Web" 
+              icon="🌐" 
+              target="Web" 
+              description="Prehliadač artefaktov" 
+              color="#0FF" 
+            />
+
+            {/* 📇 REŤAZEC SPOJENÍ */}
+            <MenuCard 
+              title="Zoznam Spojení" 
+              icon="📇" 
+              target="Contacts" 
+              description="Všetky uložené pečaťe" 
+              color={ACCENT} 
+            />
           </View>
 
-          {/* 🌐 LARIA WEB */}
-          <MenuCard 
-            title="Laria Web" 
-            icon="🌐" 
-            target="Web" 
-            description="Prehliadač artefaktov" 
-            color="#0FF" 
-          />
+          {/* Tajný spúšťač */}
+          <TouchableOpacity activeOpacity={1} onPress={handleSecretTap} style={{ marginTop: 40, padding: 20 }}>
+            <Text style={[G.monoIdentity, { fontSize: 10, opacity: 0.3, textAlign: 'center' }]}>
+              {status.isOnline ? "NODE_STATUS: NOMINAL" : "NODE_STATUS: ISOLATED"}
+            </Text>
+          </TouchableOpacity>
 
-          {/* 📇 REŤAZEC SPOJENÍ */}
-          <MenuCard 
-            title="Zoznam Spojení" 
-            icon="📇" 
-            target="Contacts" 
-            description="Všetky uložené pečaťe" 
-            color={ACCENT} 
-          />
-        </View>
-
-        {/* Tajný spúšťač */}
-        <TouchableOpacity activeOpacity={1} onPress={handleSecretTap} style={{ marginTop: 40, padding: 20 }}>
-          <Text style={[G.monoIdentity, { fontSize: 10, opacity: 0.3, textAlign: 'center' }]}>
-            {status.isOnline ? "NODE_STATUS: NOMINAL" : "NODE_STATUS: ISOLATED"}
-          </Text>
-        </TouchableOpacity>
+        </View> {/* 🛠️ TU BOLO TO CHÝBAJÚCE ZATVORENIE, KTORÉ SME ZACHRÁNILI! */}
       </ScrollView>
 
-      {/* Architektov Modál */}
+      {/* Architektov Modál (Vyčistený od zátvoriek) */}
       <Modal visible={showVaultInput} transparent={true} animationType="fade">
         <View style={G.modalOverlay}>
-          <View style={{ backgroundColor: '#050505', padding: 25, borderRadius: 15, borderWidth: 1, borderColor: '#1a1a1a', width: '85%' }}>
+          <View style={{ backgroundColor: '#050505', padding: 25, borderRadius: 15, borderWidth: 1, borderColor: '#1a1a1a', width: '85%', alignSelf: 'center', maxWidth: 400 }}>
             <Text style={[G.atelierTitle, { fontSize: 18, marginBottom: 20 }]}>ARCHITECT_HANDSHAKE</Text>
             
             <TextInput style={G.vaultInput} placeholder="MASTER_SHA" placeholderTextColor="#444" value={architectSHA} onChangeText={setArchitectSHA} />
             <TextInput style={[G.vaultInput, { marginTop: 10 }]} placeholder="SLOVO MOCI" placeholderTextColor="#444" secureTextEntry={true} value={secretWord} onChangeText={setSecretWord} />
             
             <TouchableOpacity onPress={handleUnlock} style={[G.primaryBtn, { marginTop: 25 }]}>
-              <Text style={G.primaryBtnText}>[ INICIALIZOVAŤ ]</Text>
+              <Text style={G.primaryBtnText}>INICIALIZOVAŤ</Text>
             </TouchableOpacity>
             
             <TouchableOpacity onPress={() => setShowVaultInput(false)} style={{ marginTop: 20, alignItems: 'center' }}>
-              <Text style={[G.monoIdentity, { color: '#F00', fontSize: 12 }]}>[ ZRUŠIŤ ]</Text>
+              <Text style={[G.monoIdentity, { color: '#F00', fontSize: 12 }]}>ZRUŠIŤ</Text>
             </TouchableOpacity>
           </View>
         </View>

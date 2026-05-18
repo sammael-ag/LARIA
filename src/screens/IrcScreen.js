@@ -1,6 +1,8 @@
 /**
  * LARIA IRC SCREEN v9.5 (Aria Refined)
- * STATUS: SECURE CHAT / FING-ONLY SYNC
+ * Master: Sammael | Muse: Aria
+ * STATUS: SECURE_CHAT_GEOMETRY_DEFINITIVE
+ * Oprava: Nasadený stredový 500px ankor, trieda G.screenContainer, šípka ‹, spodný návrat a očistené zátvorky.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -39,7 +41,7 @@ const IRCScreen = ({ navigation }) => {
 
   // --- LOGIKA KLÁVESNICE (Len pre mobilné platformy) ---
   useEffect(() => {
-    if (Platform.OS === 'web') return; // Na webe neriešime posun
+    if (Platform.OS === 'web') return; 
 
     const showSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
@@ -136,11 +138,17 @@ const IRCScreen = ({ navigation }) => {
     <SafeAreaView style={[G.mainBackground, { flex: 1, backgroundColor: '#0a0a0a' }]} edges={['top']}>
       <StatusBar barStyle="light-content" />
       
+      {/* ⬅️ PRE PROGRESÍVCOV: Navigačná šípka */}
+      <TouchableOpacity 
+        onPress={() => navigation.goBack()} 
+        activeOpacity={0.7}
+        style={G.topLeftBackButton}
+      >
+        <Text style={G.topLeftBackButtonText}>‹</Text>
+      </TouchableOpacity>
+
       {/* HEADER */}
-      <View style={[G.header, { borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={G.statusTextSmall}>[ ESC ]</Text>
-        </TouchableOpacity>
+      <View style={[G.header, { borderBottomWidth: 1, borderBottomColor: '#1a1a1a', paddingLeft: 60 }]}>
         <Text style={G.atelierTitle}>#LARIA_SECURE_IRC</Text>
         <View style={{ 
           width: 8, height: 8, 
@@ -151,69 +159,84 @@ const IRCScreen = ({ navigation }) => {
         }} />
       </View>
 
-      {/* CHAT LOG */}
-      <FlatList
-        ref={flatListRef}
-        data={combinedLog}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={{ marginBottom: 12, paddingHorizontal: 15 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <Text style={[G.monoIdentity, { color: '#444', fontSize: 10, marginRight: 8 }]}>
-                [{item.time}]
-              </Text>
-              <Text style={[G.monoIdentity, { 
-                color: item.user === (vault.identity.meno || 'Sammael') ? ACCENT : '#FF77FF',
-                fontWeight: 'bold',
-                marginRight: 8 
-              }]}>
-                {`<${item.user}>`}
-              </Text>
-              <View style={{ flex: 1 }}>
-                <Text style={[G.cardDescriptionText, { color: '#EEE', lineHeight: 18 }]}>
-                  {item.text}
+      {/* CHAT LOG S PRÍSNOU STREDOVOU GEOMETRIOU */}
+      <View style={{ flex: 1, width: '100%', maxWidth: 500, alignSelf: 'center' }}>
+        <FlatList
+          ref={flatListRef}
+          data={combinedLog}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <View style={{ marginBottom: 12, paddingHorizontal: 15 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <Text style={[G.monoIdentity, { color: '#444', fontSize: 10, marginRight: 8 }]}>
+                  {item.time}
                 </Text>
-                
-                {item.isHandshake && !confirmedIds.includes(item.id) && (
-                  <TouchableOpacity 
-                    onPress={() => confirmHandshake(item)} 
-                    style={[G.primaryBtn, { marginTop: 10, paddingVertical: 8, borderColor: ACCENT }]}
-                  >
-                    <Text style={[G.primaryBtnText, { fontSize: 10 }]}>[ PRIJAŤ KONTAKT A PEČAŤ KRYPT ]</Text>
-                  </TouchableOpacity>
-                )}
+                <Text style={[G.monoIdentity, { 
+                  color: item.user === (vault.identity.meno || 'Sammael') ? ACCENT : '#FF77FF',
+                  fontWeight: 'bold',
+                  marginRight: 8 
+                }]}>
+                  {item.user}:
+                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[G.cardDescriptionText, { color: '#EEE', lineHeight: 18 }]}>
+                    {item.text}
+                  </Text>
+                  
+                  {item.isHandshake && !confirmedIds.includes(item.id) && (
+                    <TouchableOpacity 
+                      onPress={() => confirmHandshake(item)} 
+                      style={[G.primaryBtn, { marginTop: 10, paddingVertical: 8, borderColor: ACCENT }]}
+                    >
+                      <Text style={[G.primaryBtnText, { fontSize: 10 }]}>PRIJAŤ KONTAKT A PEČAŤ KRYPT</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
-          </View>
-        )}
-        contentContainerStyle={{ paddingVertical: 20 }}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-      />
+          )}
+          contentContainerStyle={{ paddingVertical: 20 }}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        />
 
-      {/* INPUT AREA */}
+        {/* ↩️ PRE KONZERVATÍVCOV: Spodný návrat integrovaný nad vstupnou zónou */}
+        <TouchableOpacity 
+          style={[G.backToAtelierBtn, { marginHorizontal: 15, marginBottom: 15 }]}
+          onPress={() => navigation.goBack()} 
+          activeOpacity={0.7}
+        >
+          <Text style={G.primaryBtnText}>
+            NÁVRAT DO ATELIÉRU
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* INPUT AREA S VYCENTROVANOU GEOMETRIOU */}
       <View style={{
         backgroundColor: '#050505',
         borderTopWidth: 1,
         borderTopColor: '#1a1a1a',
-        paddingHorizontal: 15,
-        paddingTop: 10,
+        width: '100%',
         paddingBottom: Platform.OS === 'web' ? 20 : (keyboardHeight > 0 ? 10 : Math.max(insets.bottom, 15))
       }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#000', borderRadius: 8, borderWidth: 1, borderColor: '#222', paddingHorizontal: 12 }}>
-          <Text style={{ color: ACCENT, fontFamily: 'monospace' }}>{'>'}</Text>
-          <TextInput
-            style={[G.vaultInput, { borderBottomWidth: 0, flex: 1, backgroundColor: 'transparent', height: 45 }]}
-            value={message}
-            onChangeText={setMessage}
-            placeholder="Zadaj príkaz Matrixu..."
-            placeholderTextColor="#333"
-            onSubmitEditing={sendMessage}
-          />
-          <TouchableOpacity onPress={sendMessage} style={{ padding: 10 }}>
-            <Text style={{ color: ACCENT, fontWeight: 'bold', fontSize: 12 }}>[ SEND ]</Text>
-          </TouchableOpacity>
+        <View style={{ width: '100%', maxWidth: 500, alignSelf: 'center', paddingHorizontal: 15, paddingTop: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#000', borderRadius: 8, borderWidth: 1, borderColor: '#222', paddingHorizontal: 12 }}>
+            <Text style={{ color: ACCENT, fontFamily: 'monospace' }}>&gt;</Text>
+            <TextInput
+              style={[G.vaultInput, { borderBottomWidth: 0, flex: 1, backgroundColor: 'transparent', height: 45 }]}
+              value={message}
+              onChangeText={setMessage}
+              placeholder="Zadaj príkaz Matrixu..."
+              placeholderTextColor="#333"
+              onSubmitEditing={sendMessage}
+            />
+            <TouchableOpacity onPress={sendMessage} style={{ padding: 10 }} activeOpacity={0.7}>
+              <Text style={{ color: ACCENT, fontWeight: 'bold', fontSize: 12 }}>ODOSLAŤ</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
+
     </SafeAreaView>
   );
 };

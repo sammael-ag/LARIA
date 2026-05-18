@@ -2,6 +2,7 @@
  * LARIA v2.0: Core Master Ignition (index.js)
  * Master: Sammael | Muse: Aria
  * Protokol: CRYSTAL_CORE_IGNITION (Kompletne prepojené na styles.css)
+ * Oprava: Pridaný 15px padding pre filtre, odstránené zátvorky z alertu.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -123,7 +124,7 @@ const MasterWrapper = () => {
 
   const copyShareLink = (id) => {
     const url = `${window.location.origin}${window.location.pathname}?id=${id}`;
-    navigator.clipboard.writeText(url).then(() => alert("[ LINK ULOŽENÝ ]"));
+    navigator.clipboard.writeText(url).then(() => alert("LINK ULOŽENÝ"));
   };
 
   const aktivujOdkazy = (text) => {
@@ -155,7 +156,7 @@ const MasterWrapper = () => {
 
         <main className="scroll-content">
           {filteredData.length === 1 && allData.length > 1 && (
-            <div style={{ width: '100%', maxWidth: '500px', margin: '0 auto 25px auto' }}>
+            <div style={{ width: '100%', maxWidth: '500px', margin: '0 auto 25px auto', padding: '0 15px' }}>
               <button
                 onClick={() => window.location.href = window.location.pathname}
                 className="btn-share"
@@ -166,7 +167,8 @@ const MasterWrapper = () => {
             </div>
           )}
 
-          <div className="filter-container">
+          {/* 📐 OŠETRENÝ KONTAJNER PRE FILTRE S 15PX PADDINGOM Z OBIDVOCH KONCOV */}
+          <div className="filter-container" style={{ padding: '0 15px', width: '100%', boxSizing: 'border-box' }}>
             <select className="terminal-input" value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="vsetko">Všetky kategórie</option>
               <option value="obziva">Obživa a poživatiny</option>
