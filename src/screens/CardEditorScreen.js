@@ -2,7 +2,7 @@
  * LARIA v2.0: CardEditorScreen (Tesanie identity)
  * Master: Sammael | Muse: Aria
  * Status: IDENTITY_FORGING_READY_DEFINITIVE
- * Oprava: Nasadená trieda G.screenContainer, 500px stredový obal, top-left šípka ‹ a odstránené hranaté zátvorky.
+ * Oprava: Vrátené vizuálne polia pre Google Galériu (gal) a Krypto peňaženku (krypt).
  */
 
 import React, { useState } from 'react';
@@ -80,11 +80,14 @@ const CardEditorScreen = ({ navigation }) => {
       const cleanPopis = cardData.popis ? cardData.popis.replace(/[\r\n\t]+/g, " ").trim() : "";
       const cleanTel = cardData.tel ? cardData.tel.toString().replace(/\s/g, '') : '';
 
+      // Poistenie krypto kľúča: Ak máme staré SHA heslo a nanovo vygenerovaný kľúč zlyhá, udržíme existujúci
+      const finalKrypt = currentKrypt || cardData.krypt;
+
       const localData = {
         ...cardData,
         popis: cleanPopis,
         tel: cleanTel,
-        krypt: currentKrypt || cardData.krypt,
+        krypt: finalKrypt,
         status: { ...vault.status, isOnline: cardData.isPublic }
       };
 
@@ -137,10 +140,7 @@ const CardEditorScreen = ({ navigation }) => {
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
       
-      {/* 📐 TVOJA FINÁLNA TRIEDA S SPRÁVNYM PADDINGOM PRE SCROLLVIEW */}
       <ScrollView contentContainerStyle={G.screenContainer} showsVerticalScrollIndicator={false}>
-        
-        {/* 📐 TVOJ PRÍSNY STREDOVÝ OBAL PRE MAX ŠÍRKU 500PX */}
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center', alignSelf: 'center' }}>
 
           {/* HEADER */}
@@ -209,14 +209,36 @@ const CardEditorScreen = ({ navigation }) => {
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} keyboardType="phone-pad" value={cardData.tel} onChangeText={(val) => setCardData({...cardData, tel: val})} placeholder="Telefón..." placeholderTextColor="#444" />
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.email} onChangeText={(val) => setCardData({...cardData, email: val})} placeholder="E-mail..." placeholderTextColor="#444" autoCapitalize="none" />
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.fb} onChangeText={(val) => setCardData({...cardData, fb: val})} placeholder="Facebook link..." placeholderTextColor="#444" autoCapitalize="none" />
-            <TextInput style={G.vaultInput} value={cardData.tg} onChangeText={(val) => setCardData({...cardData, tg: val})} placeholder="Telegram nick..." placeholderTextColor="#444" autoCapitalize="none" />
+            <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.tg} onChangeText={(val) => setCardData({...cardData, tg: val})} placeholder="Telegram nick..." placeholderTextColor="#444" autoCapitalize="none" />
+            
+            {/* 🛠️ OPRAVENÝ ZÁREZ 1: Google Fotoalbum / Portfólio */}
+            <Text style={[G.monoIdentity, { color: ACCENT, marginBottom: 5 }]}></Text>
+            <TextInput 
+              style={G.vaultInput} 
+              value={cardData.gal} 
+              onChangeText={(val) => setCardData({...cardData, gal: val})} 
+              placeholder="Google Fotoalbum link..." 
+              placeholderTextColor="#444" 
+              autoCapitalize="none" 
+            />
 
             <View style={G.divider} />
             
             {/* LOKÁLNE FINANCIE */}
             <Text style={[G.monoIdentity, { color: '#666', marginBottom: 10 }]}>FINANCIE (IBA LOKÁLNE)</Text>
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.revo} onChangeText={(val) => setCardData({...cardData, revo: val})} placeholder="Revolut @nick" placeholderTextColor="#444" autoCapitalize="none" />
-            <TextInput style={G.vaultInput} value={cardData.kRod} onChangeText={(val) => setCardData({...cardData, kRod: val})} placeholder="KorunyROD účet" placeholderTextColor="#444" />
+            <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.kRod} onChangeText={(val) => setCardData({...cardData, kRod: val})} placeholder="KorunyROD účet" placeholderTextColor="#444" />
+            
+            {/* 🛠️ OPRAVENÝ ZÁREZ 2: Krypto peňaženka pre reinkarnáciu identity */}
+            <Text style={[G.monoIdentity, { color: '#666', marginTop: 5, marginBottom: 5 }]}>KRYPTO PEŇAŽENKA (HESLO SECURE)</Text>
+            <TextInput 
+              style={G.vaultInput} 
+              value={cardData.krypt} 
+              onChangeText={(val) => setCardData({...cardData, krypt: val})} 
+              placeholder="Adresa krypto peňaženky..." 
+              placeholderTextColor="#444" 
+              autoCapitalize="none" 
+            />
           </View>
 
           {/* HLAVNÝ SAVE BUTTON */}
