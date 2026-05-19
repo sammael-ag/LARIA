@@ -9,7 +9,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { G } from '../styles/styles';
-import { useLaria } from '../../context/LariaContext';
+import { useLaria } from '../context/LariaContext';
 
 const AriaScreen = ({ navigation }) => {
   const { vault } = useLaria();

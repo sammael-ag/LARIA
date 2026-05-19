@@ -21,8 +21,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
 
 import { G, ACCENT } from '../styles/styles';
-import { useSignal } from '../../context/SignalContext';
-import { useLaria } from '../../context/LariaContext'; 
+import { useSignal } from '../context/SignalContext';
+import { useLaria } from '../context/LariaContext'; 
 import { SignalService } from '../services/SignalService'; 
 
 const IRCScreen = ({ navigation }) => {

@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { G, ACCENT } from '../styles/styles'; 
 import { saveToGMatrix } from '../services/GMatrixService'; 
-import { useLaria } from '../../context/LariaContext';
+import { useLaria } from '../context/LariaContext';
 
 const CATEGORIES = [
   { id: 'obziva', label: 'Obživa a poživatiny' },

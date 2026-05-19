@@ -12,8 +12,8 @@ import QRCode from 'react-native-qrcode-svg';
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 
 import { G, ACCENT } from '../styles/styles'; 
-import { useLaria } from '../../context/LariaContext';    
-import { useContacts } from '../../context/ContactContext'; 
+import { useLaria } from '../context/LariaContext';    
+import { useContacts } from '../context/ContactContext'; 
 
 const CardScreen = ({ route, navigation }) => {
   const { vault } = useLaria();

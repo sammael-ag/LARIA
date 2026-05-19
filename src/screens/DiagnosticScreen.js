@@ -18,8 +18,8 @@ import {
   Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLaria } from '../../context/LariaContext';
-import { useKrypto } from '../../context/KryptoContext';
+import { useLaria } from '../context/LariaContext';
+import { useKrypto } from '../context/KryptoContext';
 import { G, ACCENT } from '../styles/styles';
 
 const DiagnosticScreen = ({ navigation }) => {

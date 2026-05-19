@@ -23,10 +23,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from './src/services/WalletProvider'; 
 
 // --- 💎 LARIA PROVIDERY ---
-import { KryptoProvider } from './context/KryptoContext'; 
-import { LariaProvider } from './context/LariaContext'; 
-import { SignalProvider } from './context/SignalContext'; 
-import { ContactProvider } from './context/ContactContext'; 
+import { KryptoProvider } from './src/context/KryptoContext'; 
+import { LariaProvider } from './src/context/LariaContext'; 
+import { SignalProvider } from './src/context/SignalContext'; 
+import { ContactProvider } from './src/context/ContactContext'; 
 
 import MainScreen from './src/screens/MainScreen';
 

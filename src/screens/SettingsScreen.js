@@ -9,8 +9,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, Clipboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useKrypto } from '../../context/KryptoContext';
-import { useLaria } from '../../context/LariaContext'; 
+import { useKrypto } from '../context/KryptoContext';
+import { useLaria } from '../context/LariaContext'; 
 import { G, ACCENT } from '../styles/styles'; 
 
 const SettingsScreen = ({ navigation }) => {

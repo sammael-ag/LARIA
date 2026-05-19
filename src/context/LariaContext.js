@@ -3,8 +3,8 @@ import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device'; 
 import { ethers } from 'ethers';
-import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../src/services/LariaLogic';
-import { useKrypto } from './KryptoContext';
+import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../services/LariaLogic.js';
+import { useKrypto } from './KryptoContext.js';
 
 const LariaContext = createContext();
 

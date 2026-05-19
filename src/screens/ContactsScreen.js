@@ -10,7 +10,7 @@ import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, ActivityIndic
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { G, ACCENT } from '../styles/styles'; 
-import { useContacts } from '../../context/ContactContext'; 
+import { useContacts } from '../context/ContactContext'; 
 
 const ContactsScreen = ({ navigation }) => {
   const [search, setSearch] = useState('');

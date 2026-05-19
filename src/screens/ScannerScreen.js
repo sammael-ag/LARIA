@@ -12,7 +12,7 @@ import QRCode from 'react-native-qrcode-svg';
 import NfcManager from 'react-native-nfc-manager';
 
 import { G, ACCENT } from '../styles/styles';
-import { useContacts } from '../../context/ContactContext';
+import { useContacts } from '../context/ContactContext';
 
 export default function ScannerScreen({ navigation }) {
   const { addContact } = useContacts();

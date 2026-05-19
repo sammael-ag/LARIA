@@ -9,7 +9,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { G, ACCENT } from '../styles/styles'; 
-import { useKrypto } from '../../context/KryptoContext';
+import { useKrypto } from '../context/KryptoContext';
 
 const AdminScreen = ({ navigation }) => {
   // Sammael, tu berieme dáta priamo zo sýpky na Base

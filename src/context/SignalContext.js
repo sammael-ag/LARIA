@@ -8,8 +8,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native'; // 📍 Potrebujeme pre detekciu prostredia
 import TcpSocket from 'react-native-tcp-socket';
 import * as Notifications from 'expo-notifications';
-import { useLaria } from './LariaContext';
-import { SignalService } from '../src/services/SignalService';
+import { useLaria } from './LariaContext.js';
+import { SignalService } from '../services/SignalService.js';
 
 const SignalContext = createContext();
 
