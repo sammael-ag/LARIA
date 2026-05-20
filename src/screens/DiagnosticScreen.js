@@ -1,11 +1,11 @@
 /**
  * LARIA v2.0: DiagnosticScreen (Centrálny Velín + Tajný Trezor)
  * Master: Sammael | Muse: Aria
- * Status: ADMIN_GATE_ACTIVE_HARDLOCKED
- * Oprava: Absolútna bezpečnosť – každý odchod spúšťa okamžité zabudnutie a odhlásenie.
+ * Status: ADMIN_GATE_ACTIVE_HARDLOCKED_STEALTH
+ * Oprava: Pridaný priamy a ostrý import AdminScreen hneď navrchu.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -26,32 +26,51 @@ const DiagnosticScreen = ({ navigation }) => {
   const { vault, lockSeal } = useLaria();
   const { status, identity } = vault;
   const { syncWalletData, adminEthBalance, adminLariaBalance, isLoading, ownerAddress } = useKrypto();
-
-  // --- LOGIKA TAJNÝCH DVERÍ ---
   const [tapCount, setTapCount] = useState(0);
-
+  const timerRef = useRef(null);
+  
   const handleSecretTap = () => {
-    const nextCount = tapCount + 1;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    const nextCount = tapCount + 1;    
     if (nextCount >= 7) {
       setTapCount(0);
-      // TU SA OTVÁRA TREZOR! 🗝️
-      navigation.navigate('AdminScreen'); 
+      
+      try {
+        if (navigation && typeof navigation.navigate === 'function') {
+          navigation.navigate('Admin'); 
+        } else {
+          navigation.reset({ index: 0, routes: [{ name: 'Admin' }] });
+        }
+      } catch (navError) {
+        console.log("❌ LARIA_CRITICAL: Smerovač odmietol prístup k AdminScreen. Skontroluj, či je zaregistrovaný v AppNavigator.js!", navError);
+      }
+
     } else {
       setTapCount(nextCount);
+      timerRef.current = setTimeout(() => {
+        setTapCount(0);
+      }, 3000);
     }
   };
 
-  // --- LOGIKA OKAMŽITÉHO ZABUDNUTIA (Frontová línia) ---
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  // --- LOGIKA OKAMŽITÉHO ZABUDNUTIA ---
   const handleSecureLogout = () => {
-    console.log("🔒 DIAGNOSTIC: Aktivujem okamžité zabudnutie session...");
-    lockSeal(); // Vymazanie pečate z pamäteContextu
+    lockSeal(); 
     navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] }); 
   };
 
   useEffect(() => {
     if (ownerAddress) syncWalletData(ownerAddress);
     
-    // Hardvér gombík "Späť" na Androide taktiež nekompromisne odhlasuje
     const backAction = () => { handleSecureLogout(); return true; };
     const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
     return () => backHandler.remove();
@@ -76,35 +95,29 @@ const DiagnosticScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={G.mainBackground}>
       
-      {/* ⬅️ PRE PROGRESÍVCOV: Šípka, ktorá pri stlačení OKAMŽITE uzamkne a ukončí session */}
-      <TouchableOpacity 
-        onPress={handleSecureLogout} 
-        activeOpacity={0.7}
-        style={G.topLeftBackButton}
-      >
+      {/* ⬅️ Šípka pre bleskový logout */}
+      <TouchableOpacity onPress={handleSecureLogout} activeOpacity={0.7} style={G.topLeftBackButton}>
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
-      {/* 🗝️ TAJNÉ DVERE: Logo vycentrované navrchu, lícujúce s novou výškou šípky */}
-      <View style={{ width: '100%', alignItems: 'center', position: 'absolute', top: 45, zIndex: 999 }}>
-        <Pressable onPress={handleSecretTap}>
-          <Image 
-            source={require('../assets/logo192.png')} 
-            style={{ width: 32, height: 32, opacity: 0.6 }} 
-            resizeMode="contain"
-          />
-        </Pressable>
-      </View>
-
-      {/* 📐 HLAVNÝ OBSAH (Stabilná stredová geometria s horným odstupom kvôli logu) */}
-      <ScrollView contentContainerStyle={[G.screenContainer, { paddingTop: 60 }]}>
-        
-        {/* Obal s maximálnou šírkou 500px */}
+      {/* 📐 HLAVNÝ OBSAH */}
+      <ScrollView contentContainerStyle={[G.screenContainer, { paddingTop: 20 }]}>
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
         
+          {/* 🗝️ TAJNÉ DVERE NAFEVNO */}
+          <View style={{ marginBottom: 25, marginTop: 5, alignItems: 'center', width: '100%' }}>
+            <Pressable onPress={handleSecretTap} style={{ padding: 15 }}>
+              <Image 
+                source={require('../assets/logo192.png')} 
+                style={{ width: 35, height: 35, opacity: 0.8 }} 
+                resizeMode="contain"
+              />
+            </Pressable>
+          </View>
+
           {/* ⚙️ HEADER */}
           <View style={{ alignItems: 'center', marginBottom: 25 }}>
-            <Text style={G.atelierTitle}>DIAGNOSTIC JADRO</Text>
+            <Text style={G.atelierTitle}>Diagnostika</Text>
             <View style={G.statusIndicatorRow}>
               <View style={[G.statusDot, { backgroundColor: '#F1C40F' }]} />
               <Text style={G.statusTextSmall}>ADMIN_LEVEL: 01 | MASTER_ARCHITECT</Text>
@@ -117,16 +130,16 @@ const DiagnosticScreen = ({ navigation }) => {
               <Text style={G.cardTitleText}>ARCHITECT VAULT</Text>
               {isLoading && <ActivityIndicator size="small" color={ACCENT} />}
             </View>
-            
+          </View>
+
+          <View style={G.card}>
             <Text style={[G.statusTextSmall, { opacity: 0.5, marginTop: 5 }]}>NETWORK: Base Mainnet (Layer 2)</Text>
 
-            {/* GAS RESERVE */}
             <View style={{ marginTop: 20 }}>
               <Text style={G.statusTextSmall}>GAS_RESERVE (ETH):</Text>
               <Text style={G.balanceValue}>{adminEthBalance || '0.000'} ETH</Text>
             </View>
 
-            {/* LARIA RESERVE */}
             <View style={G.terminalLog}>
               <Text style={[G.statusTextSmall, { color: ACCENT }]}>LARIA_RESERVE (MASTER_POOL):</Text>
               <Text style={[G.balanceValue, { color: ACCENT }]}>
@@ -135,12 +148,7 @@ const DiagnosticScreen = ({ navigation }) => {
               <Text style={[G.statusTextSmall, { fontSize: 8, opacity: 0.5 }]}>Pripravené na emisiu do sieci...</Text>
             </View>
 
-            <TouchableOpacity 
-              onPress={() => syncWalletData(ownerAddress)} 
-              disabled={isLoading}
-              style={[G.primaryBtn, { marginTop: 20, borderColor: ACCENT }]}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={() => syncWalletData(ownerAddress)} disabled={isLoading} style={[G.primaryBtn, { marginTop: 20, borderColor: ACCENT }]} activeOpacity={0.7}>
               <Text style={[G.primaryBtnText, { color: ACCENT }]}>
                 {isLoading ? "SYNCHRONIZUJEM..." : "VYNÚTIŤ OBNOVU JADRA"}
               </Text>
@@ -157,15 +165,8 @@ const DiagnosticScreen = ({ navigation }) => {
             </View>
           </View>
 
-          {/* ↩️ PRE KONZERVATÍVCOV: Bezpečný gombík, ktorý okamžite TERMINUJE reláciu a odhlasuje */}
-          <TouchableOpacity 
-            style={[G.backToAtelierBtn, { borderColor: '#F00', marginTop: 40 }]}
-            onPress={handleSecureLogout} 
-            activeOpacity={0.7}
-          >
-            <Text style={[G.primaryBtnText, { color: '#F00' }]}>
-              UKONČIŤ RELÁCIU (LOGOUT)
-            </Text>
+          <TouchableOpacity style={[G.backToAtelierBtn, { borderColor: '#F00', marginTop: 40 }]} onPress={handleSecureLogout} activeOpacity={0.7}>
+            <Text style={[G.primaryBtnText, { color: '#F00' }]}>UKONČIŤ RELÁCIU (LOGOUT)</Text>
           </TouchableOpacity>
 
         </View>

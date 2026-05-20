@@ -39,8 +39,8 @@ export const G = StyleSheet.create({
   // --- TYPOGRAFIA (Art Deco Vibe) ---
   monoIdentity: {
     fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', web: 'monospace' }),
-    fontSize: 12,
-    letterSpacing: 2,
+    fontSize: 9,
+    letterSpacing: 1,
     color: ACCENT,
     opacity: 0.8,
   },

@@ -75,7 +75,7 @@ const SettingsScreen = ({ navigation }) => {
           
           {/* HEADER */}
           <View style={{ marginTop: 10, marginBottom: 35, width: '100%', alignItems: 'center' }}>
-            <Text style={[G.atelierTitle, { fontSize: 26, letterSpacing: 5, textAlign: 'center' }]}>CORE CONFIG</Text>
+            <Text style={[G.atelierTitle, { fontSize: 26, letterSpacing: 5, textAlign: 'center' }]}>Nastavenia</Text>
             <Text style={[G.statusTextSmall, { color: ACCENT, fontSize: 10, marginTop: 5, textAlign: 'center' }]}>
                Sammael Engine v8.0.4 | Rákoš Base Matrix
             </Text>
@@ -154,7 +154,7 @@ const SettingsScreen = ({ navigation }) => {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
               <Text style={G.cardDescriptionText}>LARIA Assets:</Text>
               <Text style={[G.cardTitleText, { fontSize: 14 }]}>
-                {isLoading ? "..." : `${Number(lariaBalance).toLocaleString(undefined, {minimumFractionDigits: 2})} LRIA`}
+                {isLoading ? "..." : `${Number(lariaBalance).toLocaleString(undefined, {minimumFractionDigits: 2})} LARIA`}
               </Text>
             </View>
 
@@ -174,7 +174,7 @@ const SettingsScreen = ({ navigation }) => {
               disabled={!walletAddress || isLoading}
             >
               <Text style={[G.primaryBtnText, { color: walletAddress && !isLoading ? ACCENT : '#444' }]}>
-                {isLoading ? "POPRÁŠENÉ DÁTA..." : "OBNOVIŤ DÁTA Z MATRIXU"}
+                {isLoading ? "POPRÁŠENÉ DÁTA..." : "Aktualizovať"}
               </Text>
             </TouchableOpacity>
           </View>

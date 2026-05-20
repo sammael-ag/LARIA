@@ -46,7 +46,7 @@ const AdminScreen = ({ navigation }) => {
         
           {/* 🏛️ HEADER (Už s naším dievčenským poníkom) */}
           <View style={{ alignItems: 'center', marginBottom: 25, width: '100%' }}>
-            <Text style={G.atelierTitle}>ARCHITECT VELÍN</Text>
+            <Text style={G.atelierTitle}>Admin</Text>
             <Text style={[G.statusTextSmall, { color: ACCENT, marginTop: -10, marginBottom: 15, textAlign: 'center' }]}>
               Vedomie: SAMMAEL | Matrix Level: OMEGA
             </Text>
@@ -72,7 +72,7 @@ const AdminScreen = ({ navigation }) => {
                 <View style={[G.terminalLog, { marginTop: 10 }]}>
                   <Text style={G.statusTextSmall}>ZÁSOBY (LARIA):</Text>
                   <Text style={[G.balanceValue, { color: ACCENT, fontSize: 22 }]}>
-                    {Number(adminLariaBalance).toLocaleString()} LRIA
+                    {Number(adminLariaBalance).toLocaleString()} LARIA
                   </Text>
                 </View>
 
