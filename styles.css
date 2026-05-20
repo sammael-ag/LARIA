@@ -1,6 +1,6 @@
 /* 💎 LARIA v2 - MASTER STYLESHEET 
    Miesto: Rákoš | Design: Sammael & Aria
-   Protokol: STABLE_BRONZE_GLOW (Škriatok dostal padáka)
+   Protokol: STABLE_BRONZE_GLOW (Kód oslobodený od dôležitých drakov)
 */
 
 /* 1. OVLÁDACÍ PULT (Design Tokens) */
@@ -95,23 +95,18 @@ html, body {
 /* 5. OBJEKTY: KARTY A MODULY (Tvoje vizitky - Pevné a stabilné) */
 .card-stable {
     background-color: var(--card-bg);
-    width: 80%;                  /* Zosúladené s 80% šírkou stĺpca */
+    width: 80%;                  
     max-width: 650px; 
     padding: 20px;
-    border-radius: 0px;          /* Striktne ostré hrany - purizmus */
-    border: 1px solid rgba(197, 160, 89, 0.2); /* Jemný mosadzný lem */
+    border-radius: 0px;          
+    border: 1px solid rgba(197, 160, 89, 0.2); 
     border-left: 4px solid var(--accent-color); 
     margin-bottom: 25px;
-    
-    /* 📐 ZÁKLADNÁ BRONZOVÁ ŽIARA: Stabilný a slabý podsvietený základ */
     box-shadow: 0px 4px 20px rgba(197, 160, 89, 0.08);
-    
-    /* Plynulý prechod iba pre svetlo a lem - žiadne mechanické pohyby! */
     transition: box-shadow var(--transition-speed) ease, 
                 border-color var(--transition-speed) ease;
 }
 
-/* 📐 HOVER: Karta sa ani nepohne, iba citlivo a elegantne zosilnie bronzové svetlo */
 .card-stable:hover {
     border-color: rgba(197, 160, 89, 0.6);
     box-shadow: 0px 0px 25px rgba(197, 160, 89, 0.35);
@@ -193,16 +188,16 @@ button {
     box-shadow: 0 0 25px rgba(204, 0, 0, 0.4);
 }
 
-/* Vstupy */
+/* Vstupy: Použité len najnutnejšie !important, aby mobilné prehliadače nevnucovali vlastné štýly pozadia */
 input, select, textarea, .vault-input {
     width: 100%;
     padding: 10px; 
-    background-color: #2a2a2a;
+    background-color: #2a2a2a !important;
     border: 1px solid #3d3d3d;
-    color: #fff;
+    color: #fff !important;
     font-family: var(--font-mono);
     font-size: 16px;
-    border-radius: 0px;
+    border-radius: 0px !important;
     margin-bottom: 12px;
     outline: none;
     transition: border-color var(--transition-speed);
@@ -326,7 +321,7 @@ input:focus, select:focus, textarea:focus {
 .divider {
     height: 1px;
     background-color: #333;
-    width: '100%';
+    width: 100%;
     margin: 20px 0;
 }
 
@@ -356,16 +351,15 @@ input:focus, select:focus, textarea:focus {
    LARIA v2.0: CRYSTAL CORE EXTENSION (WEB & PWA STYLES)
    ========================================================================== */
 
-/* --- EXTRA KLASA PRE NÁDPIS H1 V INDEXE --- */
 .header-title {
   color: var(--accent-color);
-  font-size: 32px;             /* Trošičku som pridala na sile, nech dominuje */
-  letter-spacing: 6px;         /* Ešte jemne vzdušnejšie Art Deco */
+  font-size: 32px;             
+  letter-spacing: 6px;         
   text-align: center;
   font-weight: 300;
   text-transform: uppercase;
-  margin-top: 20px;            /* Odsadenie zhora, nech to nedýcha na strop */
-  margin-bottom: 20px;         /* Primerané odsadenie zdola ku kartám */
+  margin-top: 20px;            
+  margin-bottom: 20px;         
 }
 
 .master-container {
@@ -457,11 +451,11 @@ input:focus, select:focus, textarea:focus {
 
 .card-right-actions {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 15%;
-  margin-right: 20px;
-  flex-shrink: 0;
+  flex-direction: row;       /* 🛠️ Tlačí gombíky vedľa seba do riadku */
+  justify-content: flex-end; /* 🔥 Pritlačí celý blok k úplnému pravému okraju */
+  align-items: center;       /* Vycentruje gombíky výškovo, aby nelietali hore-dole */
+  gap: 10px;                 /* 📐 Presná, elegantná medzera medzi tlačidlami */
+  flex-shrink: 0;            /* Nedovolí systému gombíky deformovať alebo stláčať */
 }
 
 .card-description-block {
@@ -513,45 +507,34 @@ input:focus, select:focus, textarea:focus {
    LARIA v2.0: MEDENÝ OVLÁDACÍ PANEL (ĽAVÁ STRANA - BLOKOVÉ VIZITKY)
    ========================================================================== */
 
-/* ĽAVÉ MENU - Pretransformovanie na pevné tlačidlá podľa vzoru pravého panelu */
 .btn-menu {
-    background-color: #242424 !important; /* Mierne svetlejší antracit pre hĺbku */
+    background-color: #242424; 
     width: 100%;
-    max-width: 500px;                     /* Držíme identickú líniu ako dashboard */
-    padding: 15px 25px;                   /* Štíhly, elegantný padding z mobilu */
-    margin-bottom: 12px;                  /* Rozostup medzi tlačidlami */
-    
-    border: 2px solid #333333 !important;
-    border-left: 4px solid #b87333 !important; /* MEDENÝ AKCENT: Silná, stabilná hrana */
-    border-radius: 0px !important;        /* Striktne ostré hrany - purizmus */
-    
-    color: #e0e0e0 !important;            /* Teplá krémová pre unavené oči */
+    max-width: 500px;                     
+    padding: 15px 25px;                   
+    margin-bottom: 12px;                  
+    border: 2px solid #333333;
+    border-left: 4px solid #b87333; /* MEDENÝ AKCENT */
+    border-radius: 0px;        
+    color: #e0e0e0;            
     font-family: 'monospace', 'Courier', sans-serif;
-    font-size: 16px !important;
+    font-size: 16px;
     letter-spacing: 2px;
     text-align: left;
     cursor: pointer;
     display: block;
     box-sizing: border-box;
-
-    /* 📐 MEDENÝ ZÁKLAD: Stabilný, hlboký tieň na webe */
     box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.5), 0px 4px 15px rgba(184, 115, 51, 0.05);
-    
-    /* Plynulý prechod pre svetlo a lem - žiadne trhané pohyby */
     transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
 }
 
-/* 📐 HOVER: Tlačidlo stojí pevne ako skala, ale rozžeraví sa v ňom meď! */
 .btn-menu:hover {
-    background-color: #2a2a2a !important; /* Jemné prebudenie textúry */
-    border-color: rgba(184, 115, 51, 0.6) !important;
-    color: #ffffff !important;            /* Čisté biele svetlo pre text */
-    
-    /* Intenzívna, pulzujúca medená cyber-žiara */
+    background-color: #2a2a2a; 
+    border-color: rgba(184, 115, 51, 0.6);
+    color: #ffffff;            
     box-shadow: 0px 0px 25px rgba(184, 115, 51, 0.35);
 }
 
-/* Ak by si chcel dovnútra tlačidla pridať nejaký tichý podtext/popis (voliteľné) */
 .btn-menu-subtitle {
     display: block;
     color: #8c8c82;
@@ -562,17 +545,14 @@ input:focus, select:focus, textarea:focus {
     text-transform: none;
 }
 
-
-/* 2. KONTROLOVANÝ ROH (Spájacia vrstva pre šípky v stredovom paneli) */
 .stred-controls-corner {
-    /* Absolútne pozicionovanie vyhodíme z HTML inline štýlov sem, nech je v tom poriadok */
-    position: absolute !important; 
-    top: 15px !important; 
-    left: 15px !important; 
+    position: absolute; 
+    top: 15px; 
+    left: 15px; 
     z-index: 100; 
     display: flex; 
     align-items: center;
-    gap: 15px !important;
+    gap: 15px;
 }
 
 
@@ -580,42 +560,35 @@ input:focus, select:focus, textarea:focus {
    LARIA v2.0: ARIA PANEL TOGGLE (ČISTÝ PEVNÝ TEXT BEZ RÁMU)
    ========================================================================== */
 
+/* Tu ostal !important zámerne, aby fixná poloha v rohu nebola ohrozená iným flexboxom */
 .btn-panel-toggle {
-    /* Absolútna fixácia: visí na obrazovke stále na rovnakom mieste, aj pri scrollovaní */
     position: fixed !important;
     top: 15px !important;
-    left: 15px !important;     /* Pevne ukotvená v ľavom hornom rohu */
-    z-index: 9999 !important;  /* Nad všetkými vrstvami systému */
-    
-    /* Úplne neviditeľná vrstva na pozadí */
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    border-radius: 0px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    
-    /* 📐 TVOJE PRESNÉ PARAMETRE */
-    color: var(--accent-color) !important; /* Tvoja jasná mosadzná zlatá */
-    font-family: 'monospace', 'Courier', sans-serif !important;
-    font-size: 35px !important;            /* Tvoja parádna, veľká, čitateľná šípka */
-    font-weight: 300 !important;
-    line-height: 35px !important;          /* Istota, aby znak nikam neutekal */
-    
+    left: 15px !important;     
+    z-index: 9999 !important;  
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0px;
+    padding: 0;
+    margin: 0;
+    color: var(--accent-color); 
+    font-family: 'monospace', 'Courier', sans-serif;
+    font-size: 35px;            
+    font-weight: 300;
+    line-height: 35px;          
     cursor: pointer;
-    display: inline-block !important;
-    transition: none !important;           /* Žiadne prechody, žiadne efekty */
+    display: inline-block;
+    transition: none;           
 }
 
-/* 📐 HOVER: Ani sa nepohne, ani nezmení farbu, zostáva stále rovnaká */
 .btn-panel-toggle:hover {
-    background: transparent !important;
-    color: var(--accent-color) !important;
-    border: none !important;
-    box-shadow: none !important;
+    background: transparent;
+    color: var(--accent-color);
+    border: none;
+    box-shadow: none;
 }
 
-/* 📐 ODSTUP MENU OD STROPU: Tlačidlá sa posunú o 100px nižšie */
 .left-menu-wrapper {
     padding-top: 84px;
 }
@@ -625,29 +598,26 @@ input:focus, select:focus, textarea:focus {
    ========================================================================== */
 
 .btn-panel-refresh {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    border-radius: 0px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    
-    /* 📐 ZLADENIE S ARIA ŠÍPEČKOU */
-    color: var(--accent-color) !important; /* Tvoja jasná mosadzná zlatá */
-    font-family: 'monospace', 'Courier', sans-serif !important;
-    font-size: 35px !important;            /* Rovnaká parádna čitateľná veľkosť */
-    font-weight: 300 !important;
-    line-height: 35px !important;
-    
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0px;
+    padding: 0;
+    margin: 0;
+    color: var(--accent-color); 
+    font-family: 'monospace', 'Courier', sans-serif;
+    font-size: 30px;            
+    font-weight: 300;
+    line-height: 35px;
     cursor: pointer;
-    display: inline-block !important;
-    transition: none !important;           /* Žiadne blikanie ani efekty */
+    display: inline-block;
+    transition: none;           
 }
 
-/* 📐 HOVER: Absolútny pokoj, nemení vzhľad, drží líniu */
 .btn-panel-refresh:hover {
-    background: transparent !important;
-    color: var(--accent-color) !important;
-    border: none !important;
-    box-shadow: none !important;
+    background: transparent;
+    color: var(--accent-color);
+    border: none;
+    box-shadow: none;
 }
+

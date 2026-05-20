@@ -3,12 +3,15 @@
  * Master: Sammael | Muse: Aria
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE
  * Rez: Nadpis LARIA vycentrovaný, zbytočný padding vyčistený.
+ * Úprava: Pridané scrollovanie pre menu a opravené lícovanie tlačidiel na kartách.
  */
 
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './app';
 import './styles.css';
+import FreeVsFull from './src/components/FreeVsFull';
+import Donate from './src/components/Donate';
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
 
@@ -25,6 +28,8 @@ const MasterWrapper = () => {
 
   const [webRefreshKey, setWebRefreshKey] = useState(0);
   const [soloActiveId, setSoloActiveId] = useState(null);
+  // Základný stav bude 'domov' (zobrazí vizitky pod vyhľadávaním)
+  const [currentView, setCurrentView] = useState('domov');
 
   // --- 1. DETEKCIA DISPLEJA ---
   useEffect(() => {
@@ -138,34 +143,51 @@ const MasterWrapper = () => {
   return (
     <div className="master-container bg-dashboard" style={{ overflow: 'hidden' }}>
       
-      {/* 📐 MAIN ARIA PANEL TOGGLE: Drží fixnú pozíciu v ľavom hornom rohu obrazovky */}
-      {!isMobile && (
-        <button 
-          className="btn-panel-toggle" 
-          onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
-        >
-          {isLeftPanelOpen ? '‹' : '›'}
-        </button>
-      )}
+      {/* 📐 MAIN ARIA PANEL TOGGLE: Oslobodená! Svieti na pevnom mieste na desktope aj na mobile */}
+      <button 
+        className="btn-panel-toggle" 
+        onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
+      >
+        {isLeftPanelOpen ? '‹' : '›'}
+      </button>
 
-      {/* 1. ĽAVÉ MENU (20% šírky na desktope) */}
-      {!isMobile && (
+      {/* 1. ĽAVÉ MENU - Pridaná stabilná geometria a scrollovanie v prípade potreby */}
+      {(!isMobile || isLeftPanelOpen) && (
         <div 
           className={`left-side ${isLeftPanelOpen ? 'open' : 'closed'}`} 
           style={{ 
-            flex: isLeftPanelOpen ? '0 0 20%' : '0 0 0%', 
-            width: isLeftPanelOpen ? '20%' : '0%',
+            flex: isMobile ? '1 0 100%' : (isLeftPanelOpen ? '0 0 20%' : '0 0 0%'), 
+            width: isMobile ? '100%' : (isLeftPanelOpen ? '20%' : '0%'),
+            position: isMobile ? 'fixed' : 'relative',
+            top: 0,
+            left: 0,
+            height: '100vh',
+            zIndex: isMobile ? 9998 : 1, /* Drží sa tesne pod šípkou, ktorá má z-index 9999 */
             transition: 'all 0.3s ease',
-            overflow: 'hidden',
-            position: 'relative'
+            overflowX: 'hidden',
+            overflowY: 'auto' /* 🛠️ SÚDRŽNÝ SCROLL PRE TLAČIDLÁ MENU */
           }}
         >
           <div className="left-menu-wrapper">
-            <button className="btn-menu" onClick={() => console.log('donate')}>Domov</button>
-            <button className="btn-menu" onClick={() => console.log('co-je-laria')}>ČO JE LARIA</button>
-            <button className="btn-menu" onClick={() => console.log('fakturant')}>Fakturant</button>
-            <button className="btn-menu" onClick={() => console.log('free-vs-full')}>FREE alebo FULL</button>
-            <button className="btn-menu" onClick={() => console.log('donate')}>Dotovať</button>
+            <button className="btn-menu" onClick={() => { setCurrentView('domov'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              Domov
+            </button>
+  
+            <button className="btn-menu" onClick={() => { setCurrentView('co-je-laria'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              ČO JE LARIA
+            </button>
+  
+            <button className="btn-menu" onClick={() => { setCurrentView('fakturant'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              Fakturant
+            </button>
+  
+            <button className="btn-menu" onClick={() => { setCurrentView('free-vs-full'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              FREE alebo FULL
+            </button>
+  
+            <button className="btn-menu" onClick={() => { setCurrentView('donate'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              Dotovať
+            </button>
           </div>
         </div>
       )}
@@ -189,91 +211,198 @@ const MasterWrapper = () => {
         </header>
 
         <main className="scroll-content">
-          {/* KONTAJNER PRE FILTRE A OVÁDACIE PRVKY */}
-          <div className="filter-container" style={{ padding: '0 15px', width: '100%', boxSizing: 'border-box' }}>
-            <select className="terminal-input" value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="vsetko">Všetky kategórie</option>
-              <option value="obziva">Obživa a poživatiny</option>
-              <option value="remesla">Remeslá a materiál</option>
-              <option value="sluzby">Odborné služby</option>
-              <option value="vzdelavanie">Vzdelávanie</option>
-              <option value="knihy">Knihy</option>
-              <option value="zdravie">Zdravie</option>
-              <option value="oblecenie">Oblečenie</option>
-              <option value="auto">Auto-moto</option>
-              <option value="volno">Voľný čas</option>
-              <option value="elektro">Elektro</option>
-              <option value="rodina">Deti a rodina</option>
-              <option value="ubytovanie">Ubytovanie</option>
-              <option value="zahrada">Záhrada</option>
-              <option value="nabytok">Nábytok</option>
-              <option value="kultura">Kultúra</option>
-              <option value="osobne">Osobné služby</option>
-              <option value="tvorba">Tvorba</option>
-              <option value="ine">Iné</option>
-            </select>
-            <input
-              type="text"
-              className="terminal-input"
-              placeholder="🔍 Hľadať v systéme..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
 
-            {/* POD-VYHĽADÁVACIE MENU */}
-            <div style={{ display: 'flex', gap: '20px', marginTop: '10px', paddingLeft: '5px' }}>
-              {soloActiveId ? (
-                <button className="btn-panel-refresh" onClick={() => triggerWebRefresh('RESET')}>
-                  ‹
-                </button>
-              ) : (
-                <button className="btn-panel-refresh" onClick={() => triggerWebRefresh()}>
-                  ↻
-                </button>
-              )}
-            </div>
-          </div>
+          {/* ==========================================================================
+              1. POHĽAD: DOMOV (Filtre, Vyhľadávanie a Vizitky)
+             ========================================================================== */}
+          {currentView === 'domov' && (
+            <>
+              {/* KONTAJNER PRE FILTRE A OVÁDACIE PRVKY */}
+              <div className="filter-container" style={{ padding: '0 15px', width: '100%', boxSizing: 'border-box' }}>
+                <select className="terminal-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <option value="vsetko">Všetky kategórie</option>
+                  <option value="obziva">Obživa a poživatiny</option>
+                  <option value="remesla">Remeslá a materiál</option>
+                  <option value="sluzby">Odborné cookies</option>
+                  <option value="vzdelavanie">Vzdelávanie</option>
+                  <option value="knihy">Knihy</option>
+                  <option value="zdravie">Zdravie</option>
+                  <option value="oblecenie">Oblečenie</option>
+                  <option value="auto">Auto-moto</option>
+                  <option value="volno">Voľný čas</option>
+                  <option value="elektro">Elektro</option>
+                  <option value="rodina">Deti a rodina</option>
+                  <option value="ubytovanie">Ubytovanie</option>
+                  <option value="zahrada">Záhrada</option>
+                  <option value="nabytok">Nábytok</option>
+                  <option value="kultura">Kultúra</option>
+                  <option value="osobne">Osobné služby</option>
+                  <option value="tvorba">Tvorba</option>
+                  <option value="ine">Iné</option>
+                </select>
+                <input
+                  type="text"
+                  className="terminal-input"
+                  placeholder="🔍 Hľadať v systéme..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
 
-          <div id="cards-container" className="laria-grid" style={{ marginTop: '15px' }}>
-            {loading ? (
-              <p className="text-cyber" style={{ color: '#b19cd9', textAlign: 'center', width: '100%' }}> SYNCHRONIZUJEM MATRIX... </p>
-            ) : filteredData.length > 0 ? (
-              filteredData.map(item => (
-                <div 
-                  key={item.fing} 
-                  className="card symmetric-card" 
-                  onClick={(e) => {
-                    if (filteredData.length > 1 && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
-                      triggerWebRefresh(item.fing);
-                    }
-                  }} 
-                  style={{ cursor: filteredData.length > 1 ? 'pointer' : 'default' }}
-                >
-                  <div className="card-main-layout">
-                    <div className="card-left-info">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <span className="tag">{item.kat}</span>
-                        <h2 className="card-title" style={{ margin: 0, fontSize: '1.4em' }}>{item.meno}</h2>
-                      </div>
-                      <p className="card-loc" style={{ marginTop: '8px', marginBottom: 0 }}>📍 {item.lok}</p>
-                    </div>
-                    <div className="card-right-actions">
-                      <button onClick={(e) => { e.stopPropagation(); smartAdd(item); }} className="btn-core-app">DO APPKY</button>
-                      <button onClick={(e) => { e.stopPropagation(); copyShareLink(item.fing); }} className="btn-core-share">LINK</button>
-                      {item.gal && (
-                        <button onClick={(e) => { e.stopPropagation(); window.open(item.gal, '_blank', 'noopener,noreferrer'); }} className="btn-core-gallery">GALÉRIA</button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="card-description-block">
-                    <p className="card-desc" style={{ margin: 0 }}>{aktivujOdkazy(item.popis)}</p>
-                  </div>
+                {/* POD-VYHĽADÁVACIE MENU */}
+                <div style={{ display: 'flex', gap: '20px', marginTop: '10px', paddingLeft: '5px' }}>
+                  {soloActiveId ? (
+                    <button className="btn-panel-refresh" onClick={() => triggerWebRefresh('RESET')}>
+                      ‹
+                    </button>
+                  ) : (
+                    <button className="btn-panel-refresh" onClick={() => triggerWebRefresh()}>
+                      ↻
+                    </button>
+                  )}
                 </div>
-              ))
-            ) : (
-              <p style={{ color: '#666', textAlign: 'center', width: '100%' }}>Nenašli sa žiadni majstri.</p>
-            )}
-          </div>
+              </div>
+
+              {/* GRID S VIZITKAMI */}
+              <div id="cards-container" className="laria-grid" style={{ marginTop: '15px' }}>
+                {loading ? (
+                  <p className="text-cyber" style={{ color: '#b19cd9', textAlign: 'center', width: '100%' }}> SYNCHRONIZUJEM MATRIX... </p>
+                ) : filteredData.length > 0 ? (
+                  filteredData.map(item => (
+                    <div 
+                      key={item.fing} 
+                      className="card symmetric-card" 
+                      onClick={(e) => {
+                        if (filteredData.length > 1 && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+                          triggerWebRefresh(item.fing);
+                        }
+                      }} 
+                      style={{ cursor: filteredData.length > 1 ? 'pointer' : 'default' }}
+                    >
+                      <div className="card-main-layout" style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '100%' }}>
+  
+  {/* 🏛️ 1. POSCHODIE: KATEGÓRIA A CENTROVANÉ MENO */}
+  <div style={{ display: 'flex', alignItems: 'center', width: '100%', position: 'relative', minHeight: '30px' }}>
+    {/* Kategória ukotvená na ľavom okraji */}
+    <span className="tag" style={{ position: 'absolute', left: 0, zIndex: 2 }}>
+      {item.kat}
+    </span>
+    
+    {/* Meno vycentrované na stred celej karty */}
+    <h2 className="card-title" style={{ 
+      margin: '0 auto', 
+      fontSize: '1.4em', 
+      textAlign: 'center', 
+      width: '100%',
+      padding: '0 80px' /* Ochrana, aby dlhé meno nenarazilo do tagu */
+    }}>
+      {item.meno}
+    </h2>
+  </div>
+
+  {/* 🏛️ 2. POSCHODIE: LOKALITA VĽAVO A ROZTIAHNUTÉ TLAČIDLÁ VPRAVO (50% / 50%) */}
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '5px' }}>
+    
+    {/* Lokalita dostane 50% šírky, aby neprekážala gombíkom */}
+    <div style={{ width: '50%', display: 'flex', justifyContent: 'flex-start' }}>
+      <p className="card-loc" style={{ margin: 0 }}>
+        📍 {item.lok}
+      </p>
+    </div>
+
+    {/* 📐 Tlačidlá dostanú kráľovských 50% šírky s voľným rozložením */}
+    <div 
+      className="card-right-actions" 
+      style={{ 
+        margin: 0, 
+        width: '50%', 
+        display: 'flex', 
+        justifyContent: 'flex-end', 
+        gap: '12px' /* Trošku sme zväčšili medzeru medzi nimi pre lepší detail */
+      }}
+    >
+      <button 
+        onClick={(e) => { e.stopPropagation(); smartAdd(item); }} 
+        className="btn-core-app"
+        style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }} /* 🔥 Prikáže gombíku rásť, ale nedeformovať text */
+      >
+        DO APPKY
+      </button>
+      
+      {item.gal && (
+        <button 
+          onClick={(e) => { e.stopPropagation(); window.open(item.gal, '_blank', 'noopener,noreferrer'); }} 
+          className="btn-core-gallery"
+          style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}
+        >
+          GALÉRIA
+        </button>
+      )}
+      
+      <button 
+        onClick={(e) => { e.stopPropagation(); copyShareLink(item.fing); }} 
+        className="btn-core-share"
+        style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}
+      >
+        LINK
+      </button>
+    </div>
+
+  </div>
+
+</div>
+                      <div className="card-description-block">
+                        <p className="card-desc" style={{ margin: 0 }}>{aktivujOdkazy(item.popis)}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ color: '#666', textAlign: 'center', width: '100%' }}>Nenašli sa žiadni majstri.</p>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ==========================================================================
+              2. POHĽAD: ČO JE LARIA (Statický E-book z zložky public/)
+             ========================================================================== */}
+          {currentView === 'co-je-laria' && (
+            <iframe 
+              src="/co-je-laria.html" 
+              style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} 
+              title="Čo je Laria"
+            />
+          )}
+
+          {/* ==========================================================================
+              3. POHĽAD: FAKTURANT (Formulár z zložky public/)
+             ========================================================================== */}
+          {currentView === 'fakturant' && (
+            <iframe 
+              src="/fakturant.html" 
+              style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} 
+              title="Fakturant"
+            />
+          )}
+
+          {/* ==========================================================================
+              4. POHĽAD: FREE VS FULL (Dynamický React komponent zo src/components/)
+             ========================================================================== */}
+          {currentView === 'free-vs-full' && (
+            <div style={{ padding: '0 15px' }}>
+              <FreeVsFull />
+            </div>
+          )}
+
+          {/* ==========================================================================
+              5. POHĽAD: DOTOVAŤ (Krypto a Smart Contracts zo src/components/)
+             ========================================================================== */}
+          {currentView === 'donate' && (
+            <div style={{ padding: '0 15px' }}>
+              <Donate />
+            </div>
+          )}
+
+          {/* MOBILNÝ SPODNÝ TRIGGER (Zostáva zachovaný pre prepínanie terminálu) */}
           {isMobile && <button onClick={() => setIsAppOpen(true)} className="trigger">TERMINAL</button>}
         </main>
       </div>
