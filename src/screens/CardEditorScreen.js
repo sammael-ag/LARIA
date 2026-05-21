@@ -145,7 +145,7 @@ const CardEditorScreen = ({ navigation }) => {
 
           {/* HEADER */}
           <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 25 }}>
-            <Text style={G.atelierTitle}>TESANIE IDENTITY</Text>
+            <Text style={G.atelierTitle}>Úprava pečate</Text>
             <View style={[G.statusDot, { backgroundColor: cardData.isPublic ? ACCENT : '#333', marginTop: 10 }]} />
           </View>
 

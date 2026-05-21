@@ -62,7 +62,7 @@ const SplashScreen = ({ navigation }) => {
       }}>
         
         {/* 1. NADPIS HORE (Presne podľa tvojej vízie) */}
-        <Text style={[G.atelierTitle, { marginBottom: 25 }]}>LARIA</Text>
+        <Text style={[G.atelierTitle, { marginBottom: 25 }]}>Crystal Core</Text>
 
         {/* 2. PEČAŤ V STREDE (Zmenšená na 12% šírky celého okna, aby sedela v 25% paneli) */}
         <Image 

@@ -1,3 +1,11 @@
+/**
+ * LARIA v2.0: ContactContext (Trezor identít)
+ * Master: Sammael | Muse: Aria
+ * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | ASYNC_PROMISE_TEXT_NODE_FIX
+ * Oprava: Odstránené zradné návratové objekty z togglePin a deleteContact,
+ * ktoré spôsobovali zamŕzanie LayoutAnimation a pád na Unexpected text node.
+ */
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -57,15 +65,12 @@ export const ContactProvider = ({ children }) => {
         krypt: data.krypt || data.k || '', // I
         pinned: false,
         addedAt: new Date().toISOString(),
-        syncedAt: null,                // Ešte neprebehla synchronizácia
+        syncedAt: null,                
         v: "9.9.9"
       };
 
-      // Keďže useEffect v Reacte pracuje s čerstvým stavom ťažšie kvôli closure, 
-      // použijeme funkcionálnu formu setContacts, aby sme mali istotu absolútnej synchronizácie databázy
       let updatedContacts;
       setContacts(prev => {
-        // Double-check pre istotu v asynchrónnom prostredí
         if (prev.find(c => c.fing === targetFing)) return prev;
         updatedContacts = [...prev, newContact];
         AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts)).catch(e => 
@@ -74,7 +79,7 @@ export const ContactProvider = ({ children }) => {
         return updatedContacts;
       });
 
-      // 🚀 AUTOMATICKÝ SYNC: Skúsime hneď dotiahnuť info z Matrixu
+      // 🚀 AUTOMATICKÝ SYNC
       syncContactWithMatrix(targetFing);
       
       return { success: true, contact: newContact };
@@ -86,7 +91,6 @@ export const ContactProvider = ({ children }) => {
 
   // --- 📡 TELEPATICKÝ LOKÁLNY NERVOVÝ MOST (PWA Symbióza) ---
   useEffect(() => {
-    // Ak nebežíme v prehliadači (napr. čistý natívny mobil bez window), vypneme načúvanie
     if (typeof window === 'undefined') return;
 
     const handleWebSignal = async (e) => {
@@ -94,15 +98,12 @@ export const ContactProvider = ({ children }) => {
         const incomingData = e.detail;
         console.log(`🤖 APP_CORE: Zachytený lokálny signál pre FING: ${incomingData.fing}`);
 
-        // 1. OKAMŽITÉ POTVRDENIE pre Web panel, že žijeme a preberáme prácu
         window.dispatchEvent(new CustomEvent('LARIA_APP_ACKNOWLEDGE', { 
           detail: { success: true } 
         }));
 
-        // 2. Zapíšeme majstra do trezoru appky cez našu addContact funkciu
         const result = await addContact(incomingData);
 
-        // 3. Odozva pre užívateľa, nech vie, že klik na webe vyvolal mágiu v appke
         if (result.success) {
           alert(`✨ PEČAŤ PRIJATÁ: Majster [ ${result.contact.meno} ] úspešne vtiahnutý do tvojho ateliéru!`);
         } else if (result.isDuplicate) {
@@ -119,7 +120,7 @@ export const ContactProvider = ({ children }) => {
     return () => {
       window.removeEventListener('LARIA_LOCAL_HANDSHAKE', handleWebSignal);
     };
-  }, [contacts]); // Sledujeme contacts, aby malo vnútro eventu vždy čerstvú databázu pre addContact
+  }, [contacts]); 
 
 
   // --- 3. 📡 MATRIX SYNC (Doplnenie informácií z tabuľky) ---
@@ -129,7 +130,6 @@ export const ContactProvider = ({ children }) => {
       const response = await fetch(READ_URL);
       const rawData = await response.json();
       
-      // Hľadáme riadok podľa FING (v tabuľke stĺpec poznamka)
       const master = rawData.find(item => item.poznamka?.trim() === fingId);
 
       if (master) {
@@ -172,30 +172,26 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- 4. PRIPNUTIE CEZ FING ---
-  const togglePin = async (fingId) => {
-    try {
-      let updatedContacts;
-      setContacts(prev => {
-        updatedContacts = prev.map(c => c.fing === fingId ? { ...c, pinned: !c.pinned } : c);
-        AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts));
-        return updatedContacts;
-      });
-      return { success: true };
-    } catch (e) { return { success: false }; }
+  // --- 4. PRIPNUTIE CEZ FING (Vyčistené od asynchrónnych duchov) ---
+  const togglePin = (fingId) => {
+    setContacts(prev => {
+      const updatedContacts = prev.map(c => c.fing === fingId ? { ...c, pinned: !c.pinned } : c);
+      AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts)).catch(e =>
+        console.error("❌ VAULT_PIN_WRITE_ERROR:", e)
+      );
+      return updatedContacts;
+    });
   };
 
-  // --- 5. VYMAZANIE CEZ FING ---
-  const deleteContact = async (fingId) => {
-    try {
-      let updatedContacts;
-      setContacts(prev => {
-        updatedContacts = prev.filter(c => c.fing !== fingId);
-        AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts));
-        return updatedContacts;
-      });
-      return { success: true };
-    } catch (e) { return { success: false }; }
+  // --- 5. VYMAZANIE CEZ FING (Čistý synchrónny re-render) ---
+  const deleteContact = (fingId) => {
+    setContacts(prev => {
+      const updatedContacts = prev.filter(c => c.fing !== fingId);
+      AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts)).catch(e =>
+        console.error("❌ VAULT_DELETE_WRITE_ERROR:", e)
+      );
+      return updatedContacts;
+    });
   };
 
   return (

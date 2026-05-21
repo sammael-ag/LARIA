@@ -134,7 +134,7 @@ export default function ScannerScreen({ navigation }) {
           {/* 🌸 IDENTITA BAR V JEMNOM ŠTÝLE ARIA_SCREEN */}
           <View style={{ alignItems: 'center' }}>
             <Text style={G.atelierTitle}>
-              {scannedData ? 'PEČAŤ DEKÓDOVANÁ' : 'SYNCHRONIZÁCIA'}
+              {scannedData ? 'Hotovo' : 'QR/NFC sken'}
             </Text>
             <Text style={[G.statusTextSmall, { color: '#c5a059', marginTop: -15, marginBottom: 25 }]}>
               {scannedData ? '● SIGNAL_LOCKED' : '○ SCANNER_ACTIVE'}

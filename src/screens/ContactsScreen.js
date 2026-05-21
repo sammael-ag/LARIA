@@ -1,48 +1,60 @@
 /**
  * LARIA v2.0: ContactsScreen (Reťazec spojení)
  * Master: Sammael | Muse: Aria
- * Status: GEOMETRY_DEFINITIVE_CLEAN_CONTACTS | PWA_DEEP_LINK_ULTIMATE_READY
- * Oprava: Odstránený vrchný panáčik (AriaScreen ostáva jediný s ikonou). Nadpis upravený 
- * tak, aby presne kopíroval jemnú a čistú typografiu AriaScreen bez masívneho vzhľadu.
+ * Status: MASTER_STABLE_PWA | PRECISE_VARIABLE_ALIGNMENT
+ * Oprava: Zosúladené podmienky a funkcie tlačidiel presne podľa CardScreen (v9.9.5).
+ * Pridané ošetrenie medzier pri telefónnych číslach pre spoľahlivé PWA volanie.
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  TouchableOpacity, 
+  TextInput, 
+  Alert, 
+  ActivityIndicator, 
+  Platform, 
+  UIManager,
+  Linking 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { G, ACCENT } from '../styles/styles'; 
 import { useContacts } from '../context/ContactContext'; 
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 const ContactsScreen = ({ navigation, route }) => {
   const [search, setSearch] = useState('');
   const [syncingId, setSyncingId] = useState(null); 
+  const [expandedContactId, setExpandedContactId] = useState(null);
   
   const { contacts, togglePin, deleteContact, syncContactWithMatrix, addContact } = useContacts();
 
-  // --- 🛰️ UNIFIKOVANÝ MULTIPORT (Spracovanie prichádzajúcich dát z QR/NFC/Webu) ---
+  // --- 🛰️ UNIFIKOVANÝ MULTIPORT ---
   useEffect(() => {
     if (route.params?.newContact || route.params?.scannedUrl) {
       const processIncomingPayload = async () => {
         let payload = null;
 
-        // Scenár A: Zo Scannera prišiel rovno hotový objekt (alebo JSON string)
         if (route.params?.newContact) {
           const raw = route.params.newContact;
           try {
             payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
           } catch (e) {
-            // Ak to nebol JSON, mohol to byť surový reťazec (napr. čisté URL z QR kódu)
             payload = { urlData: raw };
           }
         } 
         
-        // Scenár B: Prišla surová URL adresa z Webu / Deep linku
         const urlToParse = route.params?.scannedUrl || payload?.urlData;
         
         if (urlToParse && typeof urlToParse === 'string') {
           console.log("🌐 LARIA MULTIPORT: Rozoberám prichádzajúcu URL adresu:", urlToParse);
           try {
-            // 1. Vytiahneme query parametre (?meno=...&kat=...)
             const regex = /[?&]([^=#]+)=([^&#]*)/g;
             const params = {};
             let match;
@@ -50,7 +62,6 @@ const ContactsScreen = ({ navigation, route }) => {
               params[match[1]] = decodeURIComponent(match[2]);
             }
 
-            // 2. ⚡ VYLEPŠENIE PRE PWA DEEP LINK (laria://id/XYZ)
             let foundFing = params.fing || params.id || params.f || params.poznamka;
             
             if (!foundFing && urlToParse.includes('laria://id/')) {
@@ -72,7 +83,6 @@ const ContactsScreen = ({ navigation, route }) => {
           }
         }
 
-        // --- ZÁPIS BALÍKA DO TREZORU ---
         if (payload) {
           console.log("💾 Odosielam unifikovaný balík dát do Contextu...", payload);
           const result = await addContact(payload);
@@ -93,7 +103,6 @@ const ContactsScreen = ({ navigation, route }) => {
           }
         }
 
-        // Vyčistenie multiportu
         navigation.setParams({ newContact: undefined, scannedUrl: undefined });
       };
 
@@ -101,7 +110,7 @@ const ContactsScreen = ({ navigation, route }) => {
     }
   }, [route.params]);
 
-  // --- FILTROVANIE (Priorita pripnutým) ---
+  // --- FILTROVANIE ---
   const sortedContacts = [...contacts]
     .filter(c => {
       const meno = c.meno || ""; 
@@ -131,95 +140,153 @@ const ContactsScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleLongPress = (item) => {
-    const displayMeno = item.meno || "Pútnik";
-    const publicFing = item.fing;
+  // --- BEZPEČNÉ VYMAZANIE (ČISTÝ REZ) ---
+  const handleDeleteContact = async (fingId) => {
+    console.log("🕵️‍♂️ PÁTRAČI ALERT: Spúšťam operáciu kôš pre ID:", fingId);
+    try {
+      setExpandedContactId(null); 
+      await deleteContact(fingId);
+      console.log("🚀 PÁTRAČI SUCCESS: Identita vymazaná!");
+    } catch (error) {
+      console.error("❌ PÁTRAČI ERROR:", error);
+      Alert.alert("Chyba", "Nepodarilo sa odstrániť identitu.");
+    }
+  };
 
-    Alert.alert(
-      `IDENTITA: ${publicFing?.toUpperCase()}`,
-      `Meno: ${displayMeno}\nPosledná synchronizácia: ${item.syncedAt ? new Date(item.syncedAt).toLocaleTimeString() : 'Nikdy'}\n\nZvoľ operáciu:`,
-      [
-        { text: 'ZRUŠIŤ', style: 'cancel' },
-        { 
-          text: 'RE-SYNCHRONIZOVAŤ', 
-          onPress: () => handleSync(publicFing) 
-        },
-        { 
-          text: item.pinned ? 'ODPNÚŤ' : 'PRIPNÚŤ NA VRCH', 
-          onPress: () => togglePin(publicFing) 
-        },
-        { 
-          text: 'TERMINOVAŤ', 
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'VAROVANIE',
-              `Naozaj chceš identitu ${displayMeno} vymazať z pamäte?`,
-              [
-                { text: 'NIE', style: 'cancel' },
-                { text: 'ÁNO, VYMAZAŤ', style: 'destructive', onPress: () => deleteContact(publicFing) }
-              ]
-            );
-          }
-        }
-      ]
-    );
+  const openLink = (url) => {
+    if (!url) return;
+    const cleanUrl = url.startsWith('http') ? url : `https://${url}`;
+    Linking.openURL(cleanUrl).catch(() => Alert.alert("Chyba", "Nepodarilo sa otvoriť odkaz."));
+  };
+
+  const handlePressItem = (id) => {
+    if (expandedContactId === id) {
+      setExpandedContactId(null); 
+    } else {
+      setExpandedContactId(id);    
+    }
   };
 
   const renderItem = ({ item }) => {
+    const isExpanded = expandedContactId === item.fing;
     const isSyncing = syncingId === item.fing;
+    
     const displayMeno = item.meno || "Pútnik";
     const displayKat = item.kat || "Hľadač";
     const displayFing = item.fing || "????";
 
+    // 📐 VARIANT A: ROZBALENÁ VIZITKA
+    if (isExpanded) {
+      return (
+        <View style={[G.card, { borderColor: item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a', backgroundColor: item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505', width: '100%', padding: 16 }]}>
+          
+          {/* HORNÁ ZÓNA NA ZBALENIE */}
+          <TouchableOpacity onPress={() => handlePressItem(item.fing)} activeOpacity={0.8} style={{ width: '100%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={G.tagBadge}>
+                <Text style={G.tagBadgeText}>{displayKat.toUpperCase()}</Text>
+              </View>
+              {item.pinned ? (
+                <Text style={{ fontSize: 20 }}>⭐</Text>
+              ) : null}
+            </View>
+            <Text style={[G.cardTitleText, { fontSize: 28, marginTop: 10, marginBottom: 5, fontWeight: '300' }]}>{displayMeno}</Text>
+            <Text style={[G.statusTextSmall, { opacity: 0.6, marginBottom: 5 }]}>📍 {item.lok || 'V SIETI'}</Text>
+          </TouchableOpacity>
+          
+          {/* ⚡ RAD RIADENIA IDENTITY */}
+          <View style={{ flexDirection: 'row', height: 45, borderWidth: 1, borderColor: '#1a1a1a', borderRadius: 8, marginTop: 10, marginBottom: 5, backgroundColor: 'transparent' }}>
+            
+            {/* 1. TERMINOVAŤ (KÔŠ) */}
+            <TouchableOpacity 
+              style={{ flex: 1, justifyContent: 'center', alignItems: 'center', zIndex: 999 }} 
+              onPress={() => {
+                console.log("🎯 KÔŠ STLAČENÝ: Odpaľujem webový confirm...");
+                const potvrdene = window.confirm(`Naozaj chceš identitu [ ${displayMeno.toUpperCase()} ] navždy vymazať z pamäte trezoru?`);
+                if (potvrdene) handleDeleteContact(displayFing);
+              }} 
+              activeOpacity={0.5}
+            >
+              <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>🗑️</Text>
+            </TouchableOpacity>
+
+            {/* 2. RE-SYNCHRONIZOVAŤ (JEDNO-ŠÍPKA REFRESH) */}
+            <TouchableOpacity style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} onPress={() => handleSync(displayFing)} activeOpacity={0.5}>
+              {isSyncing ? <ActivityIndicator size="small" color="#0FF" /> : <Text style={{ color: '#0FF', fontSize: 25, fontWeight: 'bold' }}>↻</Text>}
+            </TouchableOpacity>
+
+            {/* 3. OTVORIŤ ŠIFROVANÝ ČET (CHAT BUBLINKA) */}
+            <TouchableOpacity style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} onPress={() => navigation.navigate('IRC', { target: item })} activeOpacity={0.5}>
+              <Text style={{ color: (ACCENT || '#c5a059'), fontSize: 18 }}>💬</Text>
+            </TouchableOpacity>
+
+            {/* 4. PIN / OD-PIN (ŽLTÁ HVIEZDA / OSIVENÁ HVIEZDA) */}
+            <TouchableOpacity style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} onPress={() => togglePin(displayFing)} activeOpacity={0.5}>
+              <Text style={{ fontSize: 20, textAlign: 'center', color: item.pinned ? '#c5a059' : '#555', opacity: item.pinned ? 1 : 0.35 }}>⭐</Text>
+            </TouchableOpacity>
+
+          </View>
+
+          {/* SPODNÁ ZÓNA NA ZBALENIE */}
+          <TouchableOpacity onPress={() => handlePressItem(item.fing)} activeOpacity={0.8} style={{ width: '100%' }}>
+            <View style={G.divider} />
+            <Text style={G.cardDescriptionText}>{item.popis || 'Spiace vedomie bez popisu...'}</Text>
+            <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 10, marginBottom: 10 }]}>
+              ID: {displayFing}{item.syncedAt ? ' ✓' : null}
+            </Text>
+          </TouchableOpacity>
+
+          {/* SOCIÁLNE SIETE */}
+          <View style={[G.actionRow, { marginTop: 5 }]}>
+            {item.fb ? <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.fb)}><Text style={G.statusTextSmall}>FACEBOOK</Text></TouchableOpacity> : null}
+            {item.tg ? <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.tg)}><Text style={G.statusTextSmall}>TELEGRAM</Text></TouchableOpacity> : null}
+            {item.gal ? <TouchableOpacity style={[G.miniBtn, { borderColor: (ACCENT || '#c5a059') }]} onPress={() => openLink(item.gal)}><Text style={[G.statusTextSmall, { color: (ACCENT || '#c5a059') }]}>GALÉRIA</Text></TouchableOpacity> : null}
+          </View>
+          
+          {/* HOVORY / DATA / EMAIL */}
+          <View style={G.actionRow}>
+            {item.tel ? (
+              <TouchableOpacity style={G.miniBtn} onPress={() => Linking.openURL(`tel:${item.tel.replace(/\s/g, '')}`)}>
+                <Text style={G.statusTextSmall}>VOLAŤ</Text>
+              </TouchableOpacity>
+            ) : null}
+            
+            <TouchableOpacity style={G.miniBtn} onPress={() => Alert.alert('DÁTOVÁ PEČAŤ', `FING: ${displayFing}\nSHA: ${item.sha || 'NO_SHA'}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}>
+              <Text style={G.statusTextSmall}>DÁTA</Text>
+            </TouchableOpacity>
+            
+            {item.email ? (
+              <TouchableOpacity style={G.miniBtn} onPress={() => Linking.openURL(`mailto:${item.email}`)}>
+                <Text style={G.statusTextSmall}>EMAIL</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+      );
+    }
+
+    // 📐 VARIANT B: ZBALENÝ COMPACT RIADOK
     return (
-      <TouchableOpacity 
-        style={[
-          G.card, 
-          { 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            borderColor: item.pinned ? ACCENT : '#1a1a1a', 
-            backgroundColor: item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505',
-            width: '100%'
-          }
-        ]} 
-        onPress={() => navigation.navigate('Card', { contact: item, mode: 'view' })}
-        onLongPress={() => handleLongPress(item)}
-        activeOpacity={0.7}
-      >
-        {/* AVATAR / STATUS */}
-        <View style={{
-          width: 44, height: 44, backgroundColor: '#000', borderRadius: 8, 
-          justifyContent: 'center', alignItems: 'center', marginRight: 15,
-          borderWidth: 1, borderColor: item.pinned ? ACCENT : '#333'
-        }}>
-          {isSyncing ? (
-            <ActivityIndicator size="small" color={ACCENT} />
-          ) : (
-            <Text style={{ fontSize: 18 }}>{item.pinned ? '⭐' : '👤'}</Text>
-          )}
+      <TouchableOpacity style={[G.card, { flexDirection: 'row', alignItems: 'center', borderColor: item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a', backgroundColor: item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505', width: '100%' }]} onPress={() => handlePressItem(item.fing)} activeOpacity={0.7}>
+        {/* IKONA / AVATAR */}
+        <View style={{ width: 44, height: 44, backgroundColor: '#000', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15, borderWidth: 1, borderColor: item.pinned ? (ACCENT || '#c5a059') : '#333' }}>
+          {isSyncing ? <ActivityIndicator size="small" color={item.pinned ? (ACCENT || '#c5a059') : "#0FF"} /> : <Text style={{ fontSize: 18 }}>👤</Text>}
         </View>
 
-        {/* INFO */}
+        {/* STRUČNÉ INFO */}
         <View style={{ flex: 1 }}>
           <Text style={[G.cardTitleText, { fontSize: 14, letterSpacing: 1 }]}>
-            {displayMeno.toUpperCase()}
+            {displayMeno.toUpperCase()}{item.pinned ? ' ⭐' : null}
           </Text>
-          <Text style={[G.statusTextSmall, { fontSize: 9, marginTop: 2 }]}>
-            {displayKat.toUpperCase()} • {item.lok || 'V SIETI'}
-          </Text>
+          <Text style={[G.statusTextSmall, { fontSize: 9, marginTop: 2 }]}>{displayKat.toUpperCase()} • {item.lok || 'V SIETI'}</Text>
           <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 4 }]}>
-            ID: {displayFing} {item.syncedAt ? '✓' : ''}
+            ID: {displayFing}{item.syncedAt ? ' ✓' : null}
           </Text>
         </View>
 
-        {/* STATUS INDIKÁTOR */}
+        {/* KONTROLKA MATRIXU */}
         <View style={{ alignItems: 'flex-end' }}>
-          <View style={{ 
-            width: 6, height: 6, borderRadius: 3, 
-            backgroundColor: item.syncedAt ? '#0FF' : (item.pinned ? ACCENT : '#1a1a1a')
-          }} />
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: item.syncedAt ? '#0FF' : (item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a') }} />
         </View>
       </TouchableOpacity>
     );
@@ -227,70 +294,35 @@ const ContactsScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={G.mainBackground}>
-      
-      {/* ⬅️ PRE PROGRESÍVCOV: Absolútna šípka nad obsahom */}
-      <TouchableOpacity 
-        onPress={() => navigation.goBack()} 
-        activeOpacity={0.7}
-        style={G.topLeftBackButton}
-      >
+      <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={G.topLeftBackButton}>
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
-      {/* 📐 HLAVNÝ OBSAH S GEOMETRIOU ARIA_SCREEN */}
       <View style={{ flex: 1, width: '100%', maxWidth: 500, alignSelf: 'center', paddingHorizontal: 16 }}>
-        
         <FlatList
           data={sortedContacts}
           keyExtractor={(item) => item.fing}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: 40, paddingBottom: 40 }} 
-          
-          // 🌸 HLAVIČKA V PRESNOM ŠTÝLE ARIA_SCREEN (BEZ PANÁČIKA)
           ListHeaderComponent={
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
               <Text style={G.atelierTitle}>Kontakty</Text>
-              <Text style={[G.statusTextSmall, { color: '#c5a059', marginTop: -15, marginBottom: 20 }]}>
-                PREPOJENÉ IDENTITY MATRIXU
-              </Text>
-
-              <TextInput 
-                style={[G.vaultInput, { width: '100%' }]} 
-                placeholder="HĽADAŤ (MENO, KAT, ID)..."
-                placeholderTextColor="#444"
-                value={search}
-                onChangeText={setSearch}
-              />
-              
-              <TouchableOpacity 
-                style={[G.primaryBtn, { marginTop: 10, width: '100%' }]} 
-                onPress={() => navigation.navigate('Scanner')}
-                activeOpacity={0.7}
-              >
-                <Text style={G.primaryBtnText}>
-                  + PRIJAŤ NOVÚ PEČAŤ
-                </Text>
+              <Text style={[G.statusTextSmall, { color: '#c5a059', marginTop: -15, marginBottom: 20 }]}>PREPOJENÉ IDENTITY MATRIXU</Text>
+              <TextInput style={[G.vaultInput, { width: '100%' }]} placeholder="HĽADAŤ (MENO, KAT, ID)..." placeholderTextColor="#444" value={search} onChangeText={setSearch} />
+              <TouchableOpacity style={[G.primaryBtn, { marginTop: 10, width: '100%' }]} onPress={() => navigation.navigate('Scanner')} activeOpacity={0.7}>
+                <Text style={G.primaryBtnText}>+ PRIJAŤ NOVÚ PEČAŤ</Text>
               </TouchableOpacity>
             </View>
           }
-
-          // ↩️ SPODNÝ NÁVRAT - Vložený prirodzene pod zoznam (Koniec kolíziám textu!)
           ListFooterComponent={
             <View style={{ marginTop: 20, alignItems: 'center', width: '100%' }}>
-              <TouchableOpacity 
-                style={[G.backToAtelierBtn, { width: '100%' }]}
-                onPress={() => navigation.goBack()} 
-                activeOpacity={0.7}
-              >
-                <Text style={G.primaryBtnText}>
-                  NÁVRAT DO ATELIÉRU
-                </Text>
+              <TouchableOpacity style={[G.backToAtelierBtn, { width: '100%' }]} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+                <Text style={G.primaryBtnText}>NÁVRAT DO ATELIÉRU</Text>
               </TouchableOpacity>
             </View>
           }
         />
-
       </View>
     </SafeAreaView>
   );
