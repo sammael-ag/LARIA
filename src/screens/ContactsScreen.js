@@ -2,8 +2,8 @@
  * LARIA v2.0: ContactsScreen (Reťazec spojení)
  * Master: Sammael | Muse: Aria
  * Status: GEOMETRY_DEFINITIVE_CLEAN_CONTACTS | PWA_DEEP_LINK_ULTIMATE_READY
- * Oprava: Plná optimalizácia pre čistý PWA multiport. Parser dokonale rozoberá ako query parametre,
- * tak aj priamu cestu laria://id/XYZ z deep linkov. Opravená chybná zátvorka pri destruktívnom mazači kontakru.
+ * Oprava: Odstránený vrchný panáčik (AriaScreen ostáva jediný s ikonou). Nadpis upravený 
+ * tak, aby presne kopíroval jemnú a čistú typografiu AriaScreen bez masívneho vzhľadu.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -51,11 +51,9 @@ const ContactsScreen = ({ navigation, route }) => {
             }
 
             // 2. ⚡ VYLEPŠENIE PRE PWA DEEP LINK (laria://id/XYZ)
-            // Ak v URL nie je query param 'id' alebo 'fing', vytiahneme ID priamo z konca cesty
             let foundFing = params.fing || params.id || params.f || params.poznamka;
             
             if (!foundFing && urlToParse.includes('laria://id/')) {
-              // Vytiahne všetko, čo je za laria://id/ a odreže prípadné ďalšie query parametre
               foundFing = urlToParse.split('laria://id/')[1]?.split('?')[0]?.trim();
             }
 
@@ -95,7 +93,7 @@ const ContactsScreen = ({ navigation, route }) => {
           }
         }
 
-        // Vyčistenie multiportu, aby sa akcia neopakovala pri re-renderi
+        // Vyčistenie multiportu
         navigation.setParams({ newContact: undefined, scannedUrl: undefined });
       };
 
@@ -183,6 +181,7 @@ const ContactsScreen = ({ navigation, route }) => {
             alignItems: 'center', 
             borderColor: item.pinned ? ACCENT : '#1a1a1a', 
             backgroundColor: item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505',
+            width: '100%'
           }
         ]} 
         onPress={() => navigation.navigate('Card', { contact: item, mode: 'view' })}
@@ -227,9 +226,9 @@ const ContactsScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={[G.mainBackground, { position: 'relative' }]}>
+    <SafeAreaView style={G.mainBackground}>
       
-      {/* Navigačná šípka */}
+      {/* ⬅️ PRE PROGRESÍVCOV: Absolútna šípka nad obsahom */}
       <TouchableOpacity 
         onPress={() => navigation.goBack()} 
         activeOpacity={0.7}
@@ -238,22 +237,26 @@ const ContactsScreen = ({ navigation, route }) => {
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
+      {/* 📐 HLAVNÝ OBSAH S GEOMETRIOU ARIA_SCREEN */}
       <View style={{ flex: 1, width: '100%', maxWidth: 500, alignSelf: 'center', paddingHorizontal: 16 }}>
         
-        <View style={{ alignItems: 'center', marginTop: 20, marginBottom: 15 }}>
-          <Text style={G.atelierTitle}>REŤAZEC SPOJENÍ</Text>
-        </View>
-
         <FlatList
           data={sortedContacts}
           keyExtractor={(item) => item.fing}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 120 }} 
+          contentContainerStyle={{ paddingTop: 40, paddingBottom: 40 }} 
+          
+          // 🌸 HLAVIČKA V PRESNOM ŠTÝLE ARIA_SCREEN (BEZ PANÁČIKA)
           ListHeaderComponent={
-            <View style={{ marginBottom: 20 }}>
+            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+              <Text style={G.atelierTitle}>Kontakty</Text>
+              <Text style={[G.statusTextSmall, { color: '#c5a059', marginTop: -15, marginBottom: 20 }]}>
+                PREPOJENÉ IDENTITY MATRIXU
+              </Text>
+
               <TextInput 
-                style={G.vaultInput} 
+                style={[G.vaultInput, { width: '100%' }]} 
                 placeholder="HĽADAŤ (MENO, KAT, ID)..."
                 placeholderTextColor="#444"
                 value={search}
@@ -261,7 +264,7 @@ const ContactsScreen = ({ navigation, route }) => {
               />
               
               <TouchableOpacity 
-                style={[G.primaryBtn, { marginTop: 10 }]} 
+                style={[G.primaryBtn, { marginTop: 10, width: '100%' }]} 
                 onPress={() => navigation.navigate('Scanner')}
                 activeOpacity={0.7}
               >
@@ -271,20 +274,22 @@ const ContactsScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
           }
-        />
 
-        {/* Spodný návrat */}
-        <View style={{ position: 'absolute', bottom: 20, left: 16, right: 16, alignItems: 'center' }}>
-          <TouchableOpacity 
-            style={G.backToAtelierBtn}
-            onPress={() => navigation.goBack()} 
-            activeOpacity={0.7}
-          >
-            <Text style={G.primaryBtnText}>
-              NÁVRAT DO ATELIÉRU
-            </Text>
-          </TouchableOpacity>
-        </View>
+          // ↩️ SPODNÝ NÁVRAT - Vložený prirodzene pod zoznam (Koniec kolíziám textu!)
+          ListFooterComponent={
+            <View style={{ marginTop: 20, alignItems: 'center', width: '100%' }}>
+              <TouchableOpacity 
+                style={[G.backToAtelierBtn, { width: '100%' }]}
+                onPress={() => navigation.goBack()} 
+                activeOpacity={0.7}
+              >
+                <Text style={G.primaryBtnText}>
+                  NÁVRAT DO ATELIÉRU
+                </Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
 
       </View>
     </SafeAreaView>

@@ -39,7 +39,7 @@ const AriaScreen = ({ navigation }) => {
           {/* 🌸 IDENTITA */}
           <View style={{ alignItems: 'center' }}>
             <Text style={G.iconHeader}>🌸</Text>
-            <Text style={G.atelierTitle}>ARIA</Text>
+            <Text style={G.atelierTitle}>Aria</Text>
             <Text style={[G.statusTextSmall, { color: '#c5a059', marginTop: -15, marginBottom: 20 }]}>
               TVOJA DIGITÁLNA MÚZA
             </Text>
