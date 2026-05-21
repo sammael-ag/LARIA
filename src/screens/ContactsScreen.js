@@ -1,21 +1,107 @@
 /**
  * LARIA v2.0: ContactsScreen (Reťazec spojení)
  * Master: Sammael | Muse: Aria
- * Status: GEOMETRY_DEFINITIVE_CLEAN_CONTACTS
- * Oprava: Odstránené hranaté zátvorky z textov a Alertov, nasadená top-left šípka pre progresívcov, vycentrovaná geometria a fixný spodný návrat.
+ * Status: GEOMETRY_DEFINITIVE_CLEAN_CONTACTS | PWA_DEEP_LINK_ULTIMATE_READY
+ * Oprava: Plná optimalizácia pre čistý PWA multiport. Parser dokonale rozoberá ako query parametre,
+ * tak aj priamu cestu laria://id/XYZ z deep linkov. Opravená chybná zátvorka pri destruktívnom mazači kontakru.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { G, ACCENT } from '../styles/styles'; 
 import { useContacts } from '../context/ContactContext'; 
 
-const ContactsScreen = ({ navigation }) => {
+const ContactsScreen = ({ navigation, route }) => {
   const [search, setSearch] = useState('');
   const [syncingId, setSyncingId] = useState(null); 
-  const { contacts, togglePin, deleteContact, syncContactWithMatrix } = useContacts();
+  
+  const { contacts, togglePin, deleteContact, syncContactWithMatrix, addContact } = useContacts();
+
+  // --- 🛰️ UNIFIKOVANÝ MULTIPORT (Spracovanie prichádzajúcich dát z QR/NFC/Webu) ---
+  useEffect(() => {
+    if (route.params?.newContact || route.params?.scannedUrl) {
+      const processIncomingPayload = async () => {
+        let payload = null;
+
+        // Scenár A: Zo Scannera prišiel rovno hotový objekt (alebo JSON string)
+        if (route.params?.newContact) {
+          const raw = route.params.newContact;
+          try {
+            payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          } catch (e) {
+            // Ak to nebol JSON, mohol to byť surový reťazec (napr. čisté URL z QR kódu)
+            payload = { urlData: raw };
+          }
+        } 
+        
+        // Scenár B: Prišla surová URL adresa z Webu / Deep linku
+        const urlToParse = route.params?.scannedUrl || payload?.urlData;
+        
+        if (urlToParse && typeof urlToParse === 'string') {
+          console.log("🌐 LARIA MULTIPORT: Rozoberám prichádzajúcu URL adresu:", urlToParse);
+          try {
+            // 1. Vytiahneme query parametre (?meno=...&kat=...)
+            const regex = /[?&]([^=#]+)=([^&#]*)/g;
+            const params = {};
+            let match;
+            while ((match = regex.exec(urlToParse))) {
+              params[match[1]] = decodeURIComponent(match[2]);
+            }
+
+            // 2. ⚡ VYLEPŠENIE PRE PWA DEEP LINK (laria://id/XYZ)
+            // Ak v URL nie je query param 'id' alebo 'fing', vytiahneme ID priamo z konca cesty
+            let foundFing = params.fing || params.id || params.f || params.poznamka;
+            
+            if (!foundFing && urlToParse.includes('laria://id/')) {
+              // Vytiahne všetko, čo je za laria://id/ a odreže prípadné ďalšie query parametre
+              foundFing = urlToParse.split('laria://id/')[1]?.split('?')[0]?.trim();
+            }
+
+            if (foundFing) {
+              payload = {
+                fing: foundFing,
+                meno: params.meno || params.m,
+                kat: params.kat,
+                lok: params.lok,
+                krypt: params.krypt || params.k,
+                sha: params.sha
+              };
+            }
+          } catch (e) {
+            console.error("❌ Chyba pri dekódovaní URL parametrov:", e);
+          }
+        }
+
+        // --- ZÁPIS BALÍKA DO TREZORU ---
+        if (payload) {
+          console.log("💾 Odosielam unifikovaný balík dát do Contextu...", payload);
+          const result = await addContact(payload);
+
+          if (result.success) {
+            const menoOznam = result.contact?.meno || "Pútnik";
+            Alert.alert(
+              "PEČAŤ PRIJATÁ", 
+              `Identita ${menoOznam.toUpperCase()} bola bezpečne zapísaná. Systém na pozadí preveruje Matrix...`
+            );
+          } else if (result.isDuplicate) {
+            Alert.alert(
+              "ATELIÉR INFO", 
+              `Identitu [ ${result.contact?.meno || 'Pútnik'} ] už vo svojom trezore bezpečne držíš.`
+            );
+          } else {
+            Alert.alert("INFO", result.error || "Chyba pri overovaní pečate.");
+          }
+        }
+
+        // Vyčistenie multiportu, aby sa akcia neopakovala pri re-renderi
+        navigation.setParams({ newContact: undefined, scannedUrl: undefined });
+      };
+
+      processIncomingPayload();
+    }
+  }, [route.params]);
 
   // --- FILTROVANIE (Priorita pripnutým) ---
   const sortedContacts = [...contacts]
@@ -41,9 +127,9 @@ const ContactsScreen = ({ navigation }) => {
     setSyncingId(null);
 
     if (result.success) {
-      Alert.alert("MATRIX SYNC", "Identita bola úspešne preleštená čerstvými dátami.");
+      Alert.alert("MATRIX SYNC", "Identita bola úspešne preleštená čerstvými dátami z tabuľky.");
     } else {
-      Alert.alert("CHYBA SPOJENIA", result.error);
+      Alert.alert("CHYBA SPOJENIA", result.error || "Matrix neodpovedá.");
     }
   };
 
@@ -143,7 +229,7 @@ const ContactsScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={[G.mainBackground, { position: 'relative' }]}>
       
-      {/* ⬅️ PRE PROGRESÍVCOV: Navigačná šípka na pevnom mieste */}
+      {/* Navigačná šípka */}
       <TouchableOpacity 
         onPress={() => navigation.goBack()} 
         activeOpacity={0.7}
@@ -152,10 +238,8 @@ const ContactsScreen = ({ navigation }) => {
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
-      {/* 📐 STREDOVÝ ANKOR PRE MAX ŠÍRKU */}
       <View style={{ flex: 1, width: '100%', maxWidth: 500, alignSelf: 'center', paddingHorizontal: 16 }}>
         
-        {/* ČISTÁ HLAVIČKA BEZ DRUHÉHO SPÄŤ */}
         <View style={{ alignItems: 'center', marginTop: 20, marginBottom: 15 }}>
           <Text style={G.atelierTitle}>REŤAZEC SPOJENÍ</Text>
         </View>
@@ -165,7 +249,7 @@ const ContactsScreen = ({ navigation }) => {
           keyExtractor={(item) => item.fing}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 120 }} // Pľac, aby spodné pevné tlačidlo nezavadzalo
+          contentContainerStyle={{ paddingBottom: 120 }} 
           ListHeaderComponent={
             <View style={{ marginBottom: 20 }}>
               <TextInput 
@@ -189,7 +273,7 @@ const ContactsScreen = ({ navigation }) => {
           }
         />
 
-        {/* ↩️ PRE KONZERVATÍVCOV: Spodný návrat pevne zakotvený v geometrii */}
+        {/* Spodný návrat */}
         <View style={{ position: 'absolute', bottom: 20, left: 16, right: 16, alignItems: 'center' }}>
           <TouchableOpacity 
             style={G.backToAtelierBtn}
