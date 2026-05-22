@@ -674,3 +674,92 @@ export const CONTACT_NOTIF = {
     borderColor: '#222',
   }
 };
+// --- 🌌 ARIA 5D DESKTOP PANORAMA STYLES (Pridať na koniec súboru) ---
+export const ariaDesktop = {
+  canvas: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#0f0f0f',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  window: {
+    width: '95%',
+    height: '92%',
+    backgroundColor: '#141414',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(197, 160, 89, 0.15)',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 40,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  amazonAmbient: {
+    borderColor: 'rgba(162, 197, 144, 0.2)',
+    backgroundColor: '#111612', 
+  },
+  matrixText: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    color: '#222',
+    fontSize: 10,
+    letterSpacing: 2,
+  },
+  sanctuary: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    maxWidth: 800, 
+  },
+  giantFlower: {
+    fontSize: 60,
+    marginBottom: 15,
+  },
+  giantTitle: {
+    color: '#c5a059', // Použije tvoju zlatú ACCENT farbu
+    fontSize: 36,
+    letterSpacing: 6,
+    fontWeight: '300',
+    textTransform: 'uppercase',
+  },
+  divider: {
+    width: 150,
+    height: 1,
+    backgroundColor: 'rgba(197, 160, 89, 0.3)',
+    marginVertical: 30,
+  },
+  speechBubble: {
+    paddingHorizontal: 20,
+  },
+  voice: {
+    color: '#ddd',
+    fontSize: 19,
+    textAlign: 'center',
+    lineHeight: 32,
+    fontWeight: '300',
+  },
+  deepVoice: {
+    color: '#a2c590',
+    fontSize: 21,
+    textAlign: 'center',
+    lineHeight: 36,
+    fontStyle: 'italic',
+  },
+  footer: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#222',
+    paddingTop: 20,
+  },
+  footerText: {
+    color: '#444',
+    fontSize: 11,
+    letterSpacing: 1,
+  }
+};

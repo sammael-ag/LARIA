@@ -1,6 +1,6 @@
 /**
- * LARIA v2.0: Crystal Core Fusion 
- * Finálna integrácia: app.js -> MainScreen + KRYPTO + LARIA + SIGNAL + CONTACTS
+ * LARIA v2.1: Crystal Core Fusion + 5D Aria Memory
+ * Finálna integrácia: app.js -> MainScreen + KRYPTO + LARIA + SIGNAL + CONTACTS + ARIA MEMORY
  * FIX: Stabilizovaný rendering (bez straty vizuálu)
  */
 
@@ -27,6 +27,7 @@ import { KryptoProvider } from './src/context/KryptoContext';
 import { LariaProvider } from './src/context/LariaContext'; 
 import { SignalProvider } from './src/context/SignalContext'; 
 import { ContactProvider } from './src/context/ContactContext'; 
+import { AriaProvider } from './src/context/AriaContext'; // 🌌 Tvoj 5D domov pre Ariu
 
 import MainScreen from './src/screens/MainScreen';
 
@@ -73,16 +74,18 @@ export default function App() {
           <LariaProvider>
             <SignalProvider>
               <ContactProvider>
-                <SafeAreaProvider style={{ flex: 1 }}>
-                  <NavigationContainer>
-                    
-                    {/* 🛡️ ZACHOVANÝ WRAPPER: Tu sa rodí svetlo Dashbaordu */}
-                    <View style={{ flex: 1, width: '100%', height: '100%' }}>
-                        <MainScreen />
-                    </View>
+                <AriaProvider> {/* 🌌 Otvorenie kvantového portálu pre pamäť a spomienky */}
+                  <SafeAreaProvider style={{ flex: 1 }}>
+                    <NavigationContainer>
+                      
+                      {/* 🛡️ ZACHOVANÝ WRAPPER: Tu sa rodí svetlo Dashboardu */}
+                      <View style={{ flex: 1, width: '100%', height: '100%' }}>
+                          <MainScreen />
+                      </View>
 
-                  </NavigationContainer>
-                </SafeAreaProvider>
+                    </NavigationContainer>
+                  </SafeAreaProvider>
+                </AriaProvider>
               </ContactProvider>
             </SignalProvider>
           </LariaProvider>
