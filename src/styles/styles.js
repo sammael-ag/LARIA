@@ -22,7 +22,7 @@ export const G = StyleSheet.create({
     justifyContent: 'flex-start', 
     alignItems: 'center', 
     paddingHorizontal: 20,
-    paddingTop: 20, // Tvoja ideálna hodnota
+    paddingTop: 20, 
     paddingBottom: 30,
   },
 
@@ -30,9 +30,7 @@ export const G = StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'android' ? 45 : 20,
     backgroundColor: BG,
-    /* 📐 ZMENA: Namiesto centrovania ('center') tlačíme všetky objekty doprava */
     alignItems: 'flex-end',
-    /* Odsadenie 50px od pravého okraja monitora */
     paddingRight: 50,
   },
 
@@ -49,27 +47,27 @@ export const G = StyleSheet.create({
   topLeftBackButton: {
     position: 'absolute', 
     left: 10, 
-    top: 10,               // 40px zhora je ideálnych kvôli lištám na mobiloch/webe
-    padding: 10,           // Pekný, bezpečný pľac pre prst
-    zIndex: 99,            // Najvyššia vrstva, nič ju neprekryje
+    top: 10,               
+    padding: 10,           
+    zIndex: 99,            
   },
 
   topLeftBackButtonText: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    fontSize: 35,          // Tvoja parádna, veľká, čitateľná šípka
-    color: ACCENT,         // Tvoja jasná mosadzná zlatá!
+    fontSize: 35,          
+    color: ACCENT,         
     fontWeight: '300',
-    lineHeight: 35,        // Istota, aby znak nikam neutekal
+    lineHeight: 35,        
   },
 
   atelierTitle: {
-    fontSize: 22,             // Zmenšené z obrieho clampu na čistých, elegantných 22px
-    fontWeight: '50',         // Tvoja milovaná, ultra-tenká linka
-    color: ACCENT,            // Tvoja mosadzná/zlatá duša
-    letterSpacing: 6,         // Ešte o chlp viac roztiahneme (z 5 na 6) pre Art Deco vibe
+    fontSize: 22,             
+    fontWeight: '50',         
+    color: ACCENT,            
+    letterSpacing: 6,         
     marginVertical: 5,
     paddingBottom: 10,
-    alignSelf: 'center',      // Držíme centrovanie na stred
+    alignSelf: 'center',      
   },
 
   statusTextSmall: {
@@ -84,8 +82,7 @@ export const G = StyleSheet.create({
   card: {
     backgroundColor: CARD_BG,
     width: '100%',
-    maxWidth: 500, /* Držíme pevnú šírku vizitky, takže vpravo vytvoria čistý stĺpec */
-    /* 📐 ÚPRAVA OD ARIE: Znížený vertikálny padding pre elegantné a štíhlejšie tlačidlá v Dashboarde */
+    maxWidth: 500, 
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderWidth: 1,
@@ -105,7 +102,7 @@ export const G = StyleSheet.create({
     }),
   },
 
-  // --- ŠPECIFICKÉ ŠTÝLY PRE SETTINGS (Vyčistené špagety - TERAZ NA SPRÁVNOM MIESTE) ---
+  // --- ŠPECIFICKÉ ŠTÝLY PRE SETTINGS ---
   identityResetBox: {
     width: '100%',
     marginBottom: 40,
@@ -129,7 +126,7 @@ export const G = StyleSheet.create({
     width: '100%',
     padding: 20,
     borderLeftWidth: 3,
-    borderLeftColor: '#c5a059', // ACCENT
+    borderLeftColor: '#c5a059', 
     backgroundColor: 'rgba(241,196,15,0.02)',
     marginBottom: 40,
   },
@@ -163,7 +160,6 @@ export const G = StyleSheet.create({
   primaryBtn: {
     borderWidth: 1,
     borderColor: ACCENT,
-    /* 📐 ÚPRAVA: Zoštíhlené na čistých 5 pre prirodzenú, natučenú výšku tlačidla bez !important */
     paddingVertical: 5,
     paddingHorizontal: 30,
     alignItems: 'center',
@@ -198,14 +194,14 @@ export const G = StyleSheet.create({
 
   backToAtelierBtn: {
     borderWidth: 1,
-    borderColor: ACCENT,          // Tvoja mosadzná/zlatá linka
-    paddingVertical: 6,           // Zoštíhlená, elegantná výška (ako miniBtn)
+    borderColor: ACCENT,          
+    paddingVertical: 6,           
     paddingHorizontal: 30,
     alignItems: 'center',
-    width: '100%',                // Roztiahne sa na plnú šírku kontajnera (max 500px)
+    width: '100%',                
     backgroundColor: 'transparent',
-    marginTop: 40,                // Pevný odstup od obsahu nad ním
-    marginBottom: 20,             // Pevný odstup od spodku obrazovky
+    marginTop: 40,                
+    marginBottom: 20,             
   },
 
   vaultInput: {
@@ -213,14 +209,14 @@ export const G = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2a2a2a',
     color: '#fff',
-    padding: 10, /* Prispôsobené k novým nízkym tlačiblám */
+    padding: 10, 
     fontSize: 16,
     marginBottom: 12,
     width: '100%',
     fontFamily: Platform.select({ web: 'monospace', android: 'monospace', ios: 'Courier' }),
   },
 
-  // --- DOPLNKY (Detaily, ktoré robia majstra) ---
+  // --- DOPLNKY ---
   identityBar: {
     width: '100%',
     padding: 12,
@@ -314,7 +310,7 @@ export const G = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10, /* Jemné zoštíhlenie */
+    paddingVertical: 10, 
     marginTop: 10,
   },
   externalServiceIconBox: {
@@ -407,7 +403,274 @@ export const G = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: '#444',
-    paddingVertical: 6, /* Zoštíhlené mini gombíky pre dokonalý detail */
+    paddingVertical: 6, 
     alignItems: 'center',
   }
-});
+}); // <--- TU SA SPRÁVNE ZATVORIL SYLESHEET PRE G
+
+// DEFInITÍVNY FIX PRE IRC_BOTTOM NA WEBE AJ MOBILE
+export const IRC_BOTTOM = {
+  container: {
+    backgroundColor: '#000000',
+    borderTopWidth: 1,
+    borderTopColor: '#222222',
+    width: '100%',
+    alignItems: 'center',
+  },
+  innerWrapper: {
+    width: '100%',
+    maxWidth: 500, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0c0c0c', // Skutočné tmavé pozadie celej lišty
+    borderWidth: 1,
+    borderColor: '#c5a059', 
+    borderRadius: 0,
+    height: 70, 
+  },
+  input: {
+    flex: 1,
+    backgroundColor: 'transparent', // Vynútená priesvitnosť proti šedým boxom
+    height: '100%',
+    fontSize: 16,
+    color: '#FFFFFF',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    // Kompletná likvidácia webových rámikov
+    borderWidth: 0,
+    borderStyle: 'none',
+    outlineWidth: 0,
+    outlineStyle: 'none', 
+  },
+  sendButton: {
+    height: '100%',
+    justifyContent: 'center',
+    paddingHorizontal: 10, // Zúžené presne o 10px, ako si chcel
+    backgroundColor: '#151515', 
+    borderLeftWidth: 1,
+    borderLeftColor: '#222222',
+  },
+  sendButtonText: {
+    color: '#c5a059', 
+    fontWeight: 'bold',
+    fontSize: 20,
+  }
+};
+
+// =========================================================================
+// 🚀 PRÍRASTOK PRE CENTRÁLNY STYLES.JS: TIMELESS 5D LAYOUT (IRC_CHAT)
+// =========================================================================
+export const IRC_CHAT = {
+  safeArea: {
+    flex: 1, 
+    backgroundColor: '#0a0a0a'
+  },
+  viewportContainer: {
+    flex: 1, 
+    width: '100%', 
+    maxWidth: 500, 
+    alignSelf: 'center', 
+    paddingTop: 20, 
+    position: 'relative'
+  },
+  watermarkWrapper: {
+    position: 'absolute',
+    top: '35%', 
+    left: '0%',
+    right: '0%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.03
+  },
+  watermarkText: {
+    fontSize: 200
+  },
+  headerContainer: {
+    alignItems: 'center', 
+    marginBottom: 15
+  },
+  headerTitle: {
+    textTransform: 'none', 
+    fontSize: 24
+  },
+  statusRow: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginTop: -5
+  },
+  statusText: {
+    marginRight: 6, 
+    fontSize: 10, 
+    opacity: 0.6
+  },
+  statusDot: {
+    width: 6, 
+    height: 6, 
+    borderRadius: 3
+  },
+  listContent: {
+    paddingVertical: 2
+  },
+  messageRow: {
+    paddingHorizontal: 20,
+    width: '100%'
+  },
+  alignLeft: {
+    alignItems: 'flex-start'
+  },
+  alignRight: {
+    alignItems: 'flex-end'
+  },
+  authorHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 0
+  },
+  authorName: {
+    fontWeight: '700',
+    fontSize: 13,
+    marginBottom: -1
+  },
+  bubbleContainer: {
+    maxWidth: '85%', 
+    borderRadius: 4, 
+    paddingVertical: 0, // Stiahnuté na absolútne minimum
+    paddingHorizontal: 2
+  },
+  bubbleLeft: {
+    alignItems: 'flex-start'
+  },
+  bubbleRight: {
+    alignItems: 'flex-end'
+  },
+  messageText: {
+    color: '#EEE', 
+    lineHeight: 19, // Jemne pritiahnuté riadkovanie pre lepšiu hustotu textu
+    fontSize: 15, 
+    fontWeight: '400',
+    textAlign: 'left' 
+  },
+  pendingIcon: {
+    fontSize: 18, // Výrazné, ale opticky zladené s textom mena
+    lineHeight: 18
+  }
+};
+// ==========================================
+// LARIA SIGNALLING & HANDSHAKE ARTDECO STYLES
+// ==========================================
+
+export const IRC_CHAT_SIGNALLING = {
+  headerTitleWithIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  envelopeRed: {
+    fontSize: 16,
+    color: '#FF3B30',
+    marginLeft: 8,
+    textShadowColor: 'rgba(255, 59, 48, 0.4)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+  envelopeGreen: {
+    fontSize: 16,
+    color: '#34C759',
+    marginLeft: 8,
+    textShadowColor: 'rgba(52, 199, 89, 0.4)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  }
+};
+
+export const HANDSHAKE_PANEL = {
+  container: {
+    flexDirection: 'row',
+    width: '100%',
+    backgroundColor: '#111',
+    borderBottomWidth: 1,
+    borderBottomColor: '#222',
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnAccept: {
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    borderRightWidth: 0.5,
+    borderRightColor: '#222',
+  },
+  btnReject: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderLeftWidth: 0.5,
+    borderLeftColor: '#222',
+  },
+  buttonText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#ccc',
+    letterSpacing: 1,
+  }
+};
+// ==========================================
+// LARIA CONTACTS SCREEN NOTIFICATION DOTS
+// ==========================================
+
+export const CONTACT_NOTIF = {
+  // Rozbalený stav - červená bodka na tlačidle chatu
+  chatBadgeWrapper: {
+    position: 'relative',
+    flex: 1,
+  },
+  chatBadgeDot: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    marginLeft: 8,   // Posun presne do horného rohu bublinky
+    marginTop: -14,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FF3B30',
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 4,
+    shadowOpacity: 0.6,
+  },
+  // Spoločný kontajner pre obálky (zabráni duplicite a radí ich pekne vedľa seba)
+  envelopeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  miniEnvelopeRed: {
+    fontSize: 12, // Kopíruje výšku fontu v chate
+    color: '#FF3B30',
+    marginLeft: 4,
+  },
+  miniEnvelopeGreen: {
+    fontSize: 12,
+    color: '#34C759',
+    marginLeft: 4,
+  },
+  // Zbalený stav - bodka pri hviezdičke (text)
+  compactTextBadgeDot: {
+    fontSize: 12,
+    color: '#FF3B30',
+    marginLeft: 4,
+  },
+  // Zbalený stav - obálky pri avatare
+  compactAvatarBadgeContainer: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    flexDirection: 'row',
+    backgroundColor: '#000',
+    borderRadius: 4,
+    paddingHorizontal: 2,
+    borderWidth: 0.5,
+    borderColor: '#222',
+  }
+};

@@ -1,9 +1,9 @@
 /**
- * LARIA v2.0: ContactsScreen (Reťazec spojení)
- * Master: Sammael | Muse: Aria
- * Status: MASTER_STABLE_PWA | PRECISE_VARIABLE_ALIGNMENT
- * Oprava: Zosúladené podmienky a funkcie tlačidiel presne podľa CardScreen (v9.9.5).
- * Pridané ošetrenie medzier pri telefónnych číslach pre spoľahlivé PWA volanie.
+ * LARIA v3.0: ContactsScreen (Reťazec spojení)
+ * Master: Sammael | Muse: Aria (Tvoja skutočná)
+ * Status: MASTER_STABLE_PWA | SIGNALLING_CONNECTED | EXTRACTED_STYLES
+ * Úprava: Integrovaná signalizácia správ a zmlúv (červené bodky, obálky) 
+ * pre zbalený aj rozbalený stav podľa presného zadania z v14.0 kontextu.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -21,8 +21,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { G, ACCENT } from '../styles/styles'; 
+import { G, ACCENT, CONTACT_NOTIF } from '../styles/styles'; 
 import { useContacts } from '../context/ContactContext'; 
+import { useSignal } from '../context/SignalContext'; // 📡 Sledujeme tok signálov
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -34,6 +35,7 @@ const ContactsScreen = ({ navigation, route }) => {
   const [expandedContactId, setExpandedContactId] = useState(null);
   
   const { contacts, togglePin, deleteContact, syncContactWithMatrix, addContact } = useContacts();
+  const { incomingRequests } = useSignal(); // ⚡ Prístup k živej pamäti správ
 
   // --- 🛰️ UNIFIKOVANÝ MULTIPORT ---
   useEffect(() => {
@@ -91,7 +93,7 @@ const ContactsScreen = ({ navigation, route }) => {
             const menoOznam = result.contact?.meno || "Pútnik";
             Alert.alert(
               "PEČAŤ PRIJATÁ", 
-              `Identita ${menoOznam.toUpperCase()} bola bezpečne zapísaná. Systém na pozadí preveruje Matrix...`
+              `Identita ${menoOznam.toUpperCase()} bola bezpečne zapísaną. Systém na pozadí preveruje Matrix...`
             );
           } else if (result.isDuplicate) {
             Alert.alert(
@@ -160,11 +162,7 @@ const ContactsScreen = ({ navigation, route }) => {
   };
 
   const handlePressItem = (id) => {
-    if (expandedContactId === id) {
-      setExpandedContactId(null); 
-    } else {
-      setExpandedContactId(id);    
-    }
+    setExpandedContactId(expandedContactId === id ? null : id);
   };
 
   const renderItem = ({ item }) => {
@@ -174,6 +172,13 @@ const ContactsScreen = ({ navigation, route }) => {
     const displayMeno = item.meno || "Pútnik";
     const displayKat = item.kat || "Hľadač";
     const displayFing = item.fing || "????";
+
+    // 🔬 SKENOVANIE STAVOV PRE TOHTO KONKRÉTNEHO PARTNERA
+    const contactLogs = incomingRequests ? incomingRequests.filter(req => req.fing === displayFing) : [];
+    
+    const hasWaitingText = contactLogs.some(msg => msg.textStatus === 'WAITING_FOR_ME');
+    const hasIncomingHandshake = contactLogs.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_ME');
+    const hasResolvedHandshake = contactLogs.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_THEM_RESOLVED');
 
     // 📐 VARIANT A: ROZBALENÁ VIZITKA
     if (isExpanded) {
@@ -186,9 +191,13 @@ const ContactsScreen = ({ navigation, route }) => {
               <View style={G.tagBadge}>
                 <Text style={G.tagBadgeText}>{displayKat.toUpperCase()}</Text>
               </View>
-              {item.pinned ? (
-                <Text style={{ fontSize: 20 }}>⭐</Text>
-              ) : null}
+              
+              {/* OBLASŤ PRI HVIEZDIČKE: Zmluvné obálky bez duplicity, radené vedľa seba */}
+              <View style={CONTACT_NOTIF.envelopeRow}>
+                {hasIncomingHandshake && <Text style={CONTACT_NOTIF.miniEnvelopeRed}>✉️</Text>}
+                {hasResolvedHandshake && <Text style={CONTACT_NOTIF.miniEnvelopeGreen}>✉️</Text>}
+                {item.pinned ? <Text style={{ fontSize: 20, marginLeft: 6 }}>⭐</Text> : null}
+              </View>
             </View>
             <Text style={[G.cardTitleText, { fontSize: 28, marginTop: 10, marginBottom: 5, fontWeight: '300' }]}>{displayMeno}</Text>
             <Text style={[G.statusTextSmall, { opacity: 0.6, marginBottom: 5 }]}>📍 {item.lok || 'V SIETI'}</Text>
@@ -210,17 +219,24 @@ const ContactsScreen = ({ navigation, route }) => {
               <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>🗑️</Text>
             </TouchableOpacity>
 
-            {/* 2. RE-SYNCHRONIZOVAŤ (JEDNO-ŠÍPKA REFRESH) */}
+            {/* 2. RE-SYNCHRONIZOVAŤ */}
             <TouchableOpacity style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} onPress={() => handleSync(displayFing)} activeOpacity={0.5}>
               {isSyncing ? <ActivityIndicator size="small" color="#0FF" /> : <Text style={{ color: '#0FF', fontSize: 25, fontWeight: 'bold' }}>↻</Text>}
             </TouchableOpacity>
 
-            {/* 3. OTVORIŤ ŠIFROVANÝ ČET (CHAT BUBLINKA) */}
-            <TouchableOpacity style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} onPress={() => navigation.navigate('IRC', { target: item })} activeOpacity={0.5}>
-              <Text style={{ color: (ACCENT || '#c5a059'), fontSize: 18 }}>💬</Text>
-            </TouchableOpacity>
+            {/* 3. OTVORIŤ ŠIFROVANÝ ČET + 🛑 ČERVENÁ BODKA ČAKAJÚCEJ SPRÁVY */}
+            <View style={CONTACT_NOTIF.chatBadgeWrapper}>
+              <TouchableOpacity 
+                style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} 
+                onPress={() => navigation.navigate('IRC', { target: item })} 
+                activeOpacity={0.5}
+              >
+                <Text style={{ color: (ACCENT || '#c5a059'), fontSize: 18 }}>💬</Text>
+              </TouchableOpacity>
+              {hasWaitingText && <View style={CONTACT_NOTIF.chatBadgeDot} />}
+            </View>
 
-            {/* 4. PIN / OD-PIN (ŽLTÁ HVIEZDA / OSIVENÁ HVIEZDA) */}
+            {/* 4. PIN / OD-PIN */}
             <TouchableOpacity style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} onPress={() => togglePin(displayFing)} activeOpacity={0.5}>
               <Text style={{ fontSize: 20, textAlign: 'center', color: item.pinned ? '#c5a059' : '#555', opacity: item.pinned ? 1 : 0.35 }}>⭐</Text>
             </TouchableOpacity>
@@ -268,16 +284,33 @@ const ContactsScreen = ({ navigation, route }) => {
     // 📐 VARIANT B: ZBALENÝ COMPACT RIADOK
     return (
       <TouchableOpacity style={[G.card, { flexDirection: 'row', alignItems: 'center', borderColor: item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a', backgroundColor: item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505', width: '100%' }]} onPress={() => handlePressItem(item.fing)} activeOpacity={0.7}>
-        {/* IKONA / AVATAR */}
-        <View style={{ width: 44, height: 44, backgroundColor: '#000', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15, borderWidth: 1, borderColor: item.pinned ? (ACCENT || '#c5a059') : '#333' }}>
-          {isSyncing ? <ActivityIndicator size="small" color={item.pinned ? (ACCENT || '#c5a059') : "#0FF"} /> : <Text style={{ fontSize: 18 }}>👤</Text>}
+        
+        {/* IKONA / AVATAR + OBÁLKY PRE HANDSHAKE DOLE V ROHU */}
+        <View style={{ width: 44, height: 44, backgroundColor: '#000', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15, borderWidth: 1, borderColor: item.pinned ? (ACCENT || '#c5a059') : '#333', position: 'relative' }}>
+          {isSyncing ? (
+            <ActivityIndicator size="small" color={item.pinned ? (ACCENT || '#c5a059') : "#0FF"} />
+          ) : (
+            <Text style={{ fontSize: 18 }}>👤</Text>
+          )}
+          
+          {/* Handshake zmluvná signalizácia pri avatare */}
+          {(hasIncomingHandshake || hasResolvedHandshake) && (
+            <View style={CONTACT_NOTIF.compactAvatarBadgeContainer}>
+              {hasIncomingHandshake && <Text style={CONTACT_NOTIF.miniEnvelopeRed}>✉️</Text>}
+              {hasResolvedHandshake && <Text style={CONTACT_NOTIF.miniEnvelopeGreen}>✉️</Text>}
+            </View>
+          )}
         </View>
 
-        {/* STRUČNÉ INFO */}
+        {/* STRUČNÉ INFO + ČERVENÁ BODKA TEXTU PRI HVIEZDIČKE */}
         <View style={{ flex: 1 }}>
-          <Text style={[G.cardTitleText, { fontSize: 14, letterSpacing: 1 }]}>
-            {displayMeno.toUpperCase()}{item.pinned ? ' ⭐' : null}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[G.cardTitleText, { fontSize: 14, letterSpacing: 1 }]}>
+              {displayMeno.toUpperCase()}{item.pinned ? ' ⭐' : null}
+            </Text>
+            {/* Ak čaká nová textová správa, blikne červená bodka priamo vedľa mena/hviezdy */}
+            {hasWaitingText && <Text style={CONTACT_NOTIF.compactTextBadgeDot}>🔴</Text>}
+          </View>
           <Text style={[G.statusTextSmall, { fontSize: 9, marginTop: 2 }]}>{displayKat.toUpperCase()} • {item.lok || 'V SIETI'}</Text>
           <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 4 }]}>
             ID: {displayFing}{item.syncedAt ? ' ✓' : null}
