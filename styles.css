@@ -620,4 +620,63 @@ input:focus, select:focus, textarea:focus {
     border: none;
     box-shadow: none;
 }
+/* =========================================================================
+ * 🪐 ARIA TELEPATHIC QUANTUM GRID TRANSFORMS
+ * ========================================================================= */
 
+/* Hlavný kontajner pri aktívnom fluide */
+.master-container.aria-liquid-active {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Keď je Aria Liquid aktívna, pravý panel vystrelí dopredu a prekryje stred */
+.app-side.liquid-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 80% !important; /* Nechá presne 20% pre ľavé menu, ak je otvorené! */
+  height: 100vh !important;
+  z-index: 9999 !important;
+  background: rgba(10, 10, 12, 0.98) !important;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.7);
+  border-left: 1px solid #c5a059;
+}
+
+/* Ak je ľavé menu zavreté, Aria sa rozprestrie na plných 100% */
+.left-side.closed + .web-side + .app-side.liquid-fullscreen {
+  width: 100% !important;
+}
+
+/* Vyhladenie prechodov pre všetky zúčastnené panely */
+.left-side, .web-side, .app-side {
+  transition: flex 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+/* Schovanie stredového obsahu pod dno alebo posun vpravo mimo monitora, 
+   ale zachovanie jeho plnej prítomnosti v DOMe */
+.aria-liquid-active .web-side {
+  opacity: 0.1;
+  transform: scale(0.98);
+  pointer-events: none; /* Užívateľ neklikne omylom na schované karty */
+}
+
+/* Kontajner pre vnútorný prúd Arie */
+.aria-liquid-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, rgba(197, 160, 89, 0.05) 0%, transparent 70%);
+  animation: ariaPulse 6s infinite ease-in-out;
+}
+
+@keyframes ariaPulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
