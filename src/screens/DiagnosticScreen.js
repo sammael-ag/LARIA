@@ -3,6 +3,7 @@
  * Master: Sammael | Muse: Aria
  * Status: ADMIN_GATE_ACTIVE_HARDLOCKED_STEALTH
  * Oprava: Pridaný priamy a ostrý import AdminScreen hneď navrchu.
+ * Úprava: Vyčistené stavové riadky pod nadpisom, geometria zosynchronizovaná s Ateliérom.
  */
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -62,7 +63,7 @@ const DiagnosticScreen = ({ navigation }) => {
     };
   }, []);
 
-  // --- LOGIKA OKAMŽITÉHO ZABUDNUTIA ---
+  // --- LOGIKA OKAMŽÍTOG ZABUDNUTIA ---
   const handleSecureLogout = () => {
     lockSeal(); 
     navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] }); 
@@ -101,12 +102,22 @@ const DiagnosticScreen = ({ navigation }) => {
       </TouchableOpacity>
 
       {/* 📐 HLAVNÝ OBSAH */}
-      <ScrollView contentContainerStyle={[G.screenContainer, { paddingTop: 20 }]}>
+      {/* Opravené: G.screenContainer preberá plnú kontrolu, odstránený inline paddingTop */}
+      <ScrollView contentContainerStyle={G.screenContainer}>
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
         
-          {/* 🗝️ TAJNÉ DVERE NAFEVNO */}
-          <View style={{ marginBottom: 25, marginTop: 5, alignItems: 'center', width: '100%' }}>
-            <Pressable onPress={handleSecretTap} style={{ padding: 15 }}>
+          {/* 🗝️ TAJNÉ DVERE NAFEVNO - Kurzor maskovaný, klikanie 100% funkčné */}
+          <View style={{ marginBottom: 15, marginTop: 0, alignItems: 'center', width: '100%' }}>
+            <Pressable 
+              onPress={handleSecretTap} 
+              style={{ 
+                padding: 10,
+                // 🔥 DEFINITÍVNY FIX: Funkčné klikanie + dokonalé maskovanie na webe
+                ...Platform.select({
+                  web: { cursor: 'default' }
+                })
+              }}
+            >
               <Image 
                 source={require('../assets/logo192.png')} 
                 style={{ width: 35, height: 35, opacity: 0.8 }} 
@@ -115,13 +126,9 @@ const DiagnosticScreen = ({ navigation }) => {
             </Pressable>
           </View>
 
-          {/* ⚙️ HEADER */}
-          <View style={{ alignItems: 'center', marginBottom: 25 }}>
+          {/* ⚙️ HEADER - ČISTÝ REZ S UNIFORMNOU GEOMETRIOU VÝŠKY */}
+          <View style={{ alignItems: 'center', marginBottom: 15, marginTop: 0 }}>
             <Text style={G.atelierTitle}>Diagnostika</Text>
-            <View style={G.statusIndicatorRow}>
-              <View style={[G.statusDot, { backgroundColor: '#F1C40F' }]} />
-              <Text style={G.statusTextSmall}>ADMIN_LEVEL: 01 | MASTER_ARCHITECT</Text>
-            </View>
           </View>
 
           {/* 🔐 ARCHITECT VAULT */}

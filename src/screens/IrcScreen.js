@@ -203,10 +203,10 @@ const IRCScreen = ({ route, navigation }) => {
           <Text style={[IRC_CHAT.watermarkText, { color: ACCENT || '#c5a059' }]}>💬</Text>
         </View>
 
-        {/* HEADER */}
-        <View style={IRC_CHAT.headerContainer}>
+        {/* 📐 UNIFORMNE ZLADENÝ HEADER S MATRIX STATUSOM */}
+        <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
           <View style={IRC_CHAT_SIGNALLING.headerTitleWithIcons}>
-            <Text style={[G.atelierTitle, { color: ACCENT }, IRC_CHAT.headerTitle]}>{channelName}</Text>
+            <Text style={G.atelierTitle}>{channelName}</Text>
             
             {hasIncomingHandshake && (
               <Text style={IRC_CHAT_SIGNALLING.envelopeRed}>✉️</Text>
@@ -217,7 +217,7 @@ const IRCScreen = ({ route, navigation }) => {
             )}
           </View>
 
-          <View style={IRC_CHAT.statusRow}>
+          <View style={[IRC_CHAT.statusRow, { marginTop: 5 }]}>
             <Text style={[G.statusTextSmall, IRC_CHAT.statusText, { color: '#c5a059' }]}>
               {isIrcConnected ? "MATRIX_SECURE: ACTIVE" : "MATRIX_SECURE: OFFLINE"}
             </Text>

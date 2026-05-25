@@ -143,10 +143,9 @@ const CardEditorScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={G.screenContainer} showsVerticalScrollIndicator={false}>
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center', alignSelf: 'center' }}>
 
-          {/* HEADER */}
-          <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 25 }}>
-            <Text style={G.atelierTitle}>Úprava pečate</Text>
-            <View style={[G.statusDot, { backgroundColor: cardData.isPublic ? ACCENT : '#333', marginTop: 10 }]} />
+          {/* 🌸 ČISTÁ HLAVIČKA EDITORU - GEOMETRIA ATELIÉRU */}
+          <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
+            <Text style={G.atelierTitle}>Edit vizitky</Text>
           </View>
 
           {/* REŽIM VYSIELANIA */}

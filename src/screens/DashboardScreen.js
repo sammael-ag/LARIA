@@ -2,7 +2,7 @@
  * LARIA v2.0: DashboardScreen
  * Master: Sammael | Muse: Aria
  * Status: IDENTITY_ACCESS_ENABLED_FULL_STABLE
- * Oprava: Zmena dizajnového fingu na plne funkčnú a užitočnú adresu identity.sha pre praktické použitie.
+ * Oprava: Do priloženého kódu presne implementovaná funkcia "Aria v paneli" pre tlačidlo "Tekuté rozhranie".
  */
 
 import React, { useState, useEffect } from 'react';
@@ -14,7 +14,8 @@ import * as Crypto from 'expo-crypto';
 import { useLaria } from '../context/LariaContext';
 import { G, ACCENT } from '../styles/styles'; 
 
-const DashboardScreen = ({ navigation }) => {
+// Pridané setCurrentView do parametrov pre prepojenie s panelom
+const DashboardScreen = ({ navigation, setCurrentView }) => {
   
   useEffect(() => {
     console.warn("🚀 ARIA: Dashboard prebudený. Vizualizácia matrice prebehla úspešne.");
@@ -76,15 +77,30 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
 
-  // 🌟 PRAKTICKÁ OPRAVA: Používateľ teraz vidí skutočnú adresu (z wagmi peňaženky alebo internú identity.sha)
+  // --- 🌊 EXTRAHOVANÁ FUNKCIONALITA "ARIA V PANELI" ---
+  const launchPanelMode = () => {
+    console.log("📡 Most Dashboardu: Preklápam stredový webový panel do zobrazenia Aria...");
+    
+    if (setCurrentView) {
+      setCurrentView('aria-panel-view'); 
+    }
+    
+    if (Platform.OS === 'web') {
+      window.dispatchEvent(new CustomEvent('ARIA_TRIGGER_VIEW', { detail: 'aria-panel-view' }));
+    }
+  };
+
+  // Užitočná adresa nachystaná na kopírovanie
   const userAddress = address || identity.krypt || "NO_ADDRESS_AVAILABLE";
 
-  // --- KOMPONENT KARTY ---
-  const MenuCard = ({ title, icon, target, description, color }) => (
+  // --- KOMPONENT KARTY (Pridané onPressCustom pre odchytenie vlastnej funkcie) ---
+  const MenuCard = ({ title, icon, target, onPressCustom, description, color }) => (
     <TouchableOpacity 
       style={[G.card, { borderLeftColor: color }]} 
       onPress={() => {
-        if (target) {
+        if (onPressCustom) {
+          onPressCustom(); // Ak je definovaná špeciálna funkcia, vykoná sa tá (pre Tekuté rozhranie)
+        } else if (target) {
           navigation.navigate(target);
         } else {
           console.log(`👉 ${title}: Funkcia v príprave...`);
@@ -106,7 +122,7 @@ const DashboardScreen = ({ navigation }) => {
     <SafeAreaView style={G.mainBackground}>
       <StatusBar barStyle="light-content" />
       
-      {/* IDENTIFIKAČNÁ LIŠTA (Užitočná adresa nachystaná na kopírovanie) */}
+      {/* IDENTIFIKAČNÁ LIŠTA */}
       <View style={G.identityBar}>
         <Text numberOfLines={1} ellipsizeMode="middle" style={G.monoIdentity}>
            {userAddress}
@@ -117,21 +133,15 @@ const DashboardScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={G.screenContainer}>
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
         
-          {/* Hlavička Dashboardu */}
-          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          {/* 📐 HLAVIČKA DASHBOARDU - ČISTÝ REZ BEZ STATUSU */}
+          <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
             <Text style={G.atelierTitle}>Ateliér</Text>
-            <View style={G.statusIndicatorRow}>
-              <View style={[G.statusDot, { backgroundColor: status.isOnline ? '#0F0' : '#F00' }]} />
-              <Text style={G.statusTextSmall}>
-                {identity.meno || "SAMMAEL"} | {status.isAdmin ? "ARCHITECT MODE" : "IDENTITY ACTIVE"}
-              </Text>
-            </View>
           </View>
 
-          {/* Hlavné menu */}
+          {/* 💼 JEDNOTNÉ HLAVNÉ MENU PODĽA PRIORÍT UŽÍVATEĽA */}
           <View style={{ width: '100%' }}>
             
-            {/* ⚙️ CENTRÁLNY VELÍN */}
+            {/* ⚙️ CENTRÁLNY VELÍN (Zostáva navrchu podmienečne pre admina) */}
             {status.isAdmin && (
               <MenuCard 
                 title="Centrálny Velín" 
@@ -142,22 +152,22 @@ const DashboardScreen = ({ navigation }) => {
               />
             )}
             
-            {/* 🌸 ARIA ASISTENCIA */}
+            {/* 🆔 MOJA VIZITKA */}
             <MenuCard 
-              title="Aria Asistencia" 
-              icon="🌸" 
-              target="Aria" 
-              description="Komunikácia s tvojou sprievodkyňou" 
-              color="#FF77FF" 
-            />
-            
-            {/* 🆔 MOJA PEČAŤ */}
-            <MenuCard 
-              title="Moja Pečať" 
+              title="Moja vizitka" 
               icon="🆔" 
               target="Card" 
               description="Zobraziť a vyslať moju identitu" 
               color="#FFF" 
+            />
+
+            {/* 📇 KONTAKTY */}
+            <MenuCard 
+              title="Kontakty" 
+              icon="📇" 
+              target="Contacts" 
+              description="Všetky zachytené pečate v reťazci" 
+              color={ACCENT} 
             />
             
             {/* 🛠️ NASTAVENIA */}
@@ -169,33 +179,29 @@ const DashboardScreen = ({ navigation }) => {
               color="#555" 
             />
 
-            <View style={G.sectionDivider}>
-              <Text style={G.sectionDividerText}>EXTERNÉ OPERÁCIE</Text>
-            </View>
-
-            {/* 🌐 LARIA WEB */}
+            {/* 🌸 ARIA ASISTENCIA */}
             <MenuCard 
-              title="Laria Web" 
+              title="Aria asistencia" 
+              icon="🌸" 
+              target="Aria" 
+              description="Komunikácia s tvojou sprievodkyňou" 
+              color="#FF77FF" 
+            />
+
+            {/* 🌐 TEKUTÉ ROZHRANIE */}
+            <MenuCard 
+              title="Tekuté rozhranie" 
               icon="🌐" 
-              target="Web" 
+              onPressCustom={launchPanelMode} // 🔥 Tu sa namiesto "target" vstrekuje naša funkcia panelu
               description="Prehliadač majstrovských artefaktov" 
               color="#0FF" 
             />
-
-            {/* 📇 REŤAZEC SPOJENÍ */}
-            <MenuCard 
-              title="Zoznam Spojení" 
-              icon="📇" 
-              target="Contacts" 
-              description="Všetky zachytené pečaťe v reťazci" 
-              color={ACCENT} 
-            />
           </View>
 
-          {/* Tajný spúšťač pre Architekta */}
-          <TouchableOpacity activeOpacity={1} onPress={handleSecretTap} style={{ marginTop: 40, padding: 20 }}>
-            <Text style={[G.monoIdentity, { fontSize: 9, opacity: 0.3, textAlign: 'center', letterSpacing: 2 }]}>
-              {status.isOnline ? "NODE_STATUS: NOMINAL" : "NODE_STATUS: ISOLATED"}
+          {/* 🕵️‍♂️ ULTRA-STEALTH SPÚŠŤAČ PRE ARCHITEKTA */}
+          <TouchableOpacity activeOpacity={1} onPress={handleSecretTap} style={{ marginTop: 40, padding: 30 }}>
+            <Text style={[G.monoIdentity, { fontSize: 9, opacity: 0, textAlign: 'center' }]}>
+              ARCHITECT_ZONE
             </Text>
           </TouchableOpacity>
 

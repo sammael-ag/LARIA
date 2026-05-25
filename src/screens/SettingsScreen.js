@@ -73,12 +73,9 @@ const SettingsScreen = ({ navigation }) => {
         {/* Pevný stredový obal 500px */}
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center', alignSelf: 'center' }}>
           
-          {/* HEADER */}
-          <View style={{ marginTop: 10, marginBottom: 35, width: '100%', alignItems: 'center' }}>
-            <Text style={[G.atelierTitle, { fontSize: 26, letterSpacing: 5, textAlign: 'center' }]}>Nastavenia</Text>
-            <Text style={[G.statusTextSmall, { color: ACCENT, fontSize: 10, marginTop: 5, textAlign: 'center' }]}>
-               Sammael Engine v8.0.4 | Rákoš Base Matrix
-            </Text>
+          {/* 🌸 ČISTÁ HLAVIČKA NASTAVENÍ - GEOMETRIA ATELIÉRU */}
+          <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
+            <Text style={G.atelierTitle}>Nastavenia</Text>
           </View>
 
           {/* OBNOVA IDENTITY - ČISTÁ TRIEDA */}

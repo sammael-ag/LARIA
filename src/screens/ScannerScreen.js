@@ -4,10 +4,12 @@
  * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER
  * Oprava: Kompletne odstránených 16 km Base64 kódu. Nasadené čisté statické načítanie 
  * pečate z assets cez require(). Nadpisy unifikované podľa jemnej geometrie AriaScreen.
+ * FIX: Pridaný chýbajúci import ScrollView pre správne vykreslenie obsahu.
  */
 
 import React, { useEffect, useState } from 'react';
-import { Text, View, TouchableOpacity, Alert, Platform, ActivityIndicator, Image } from 'react-native';
+// 🛠️ OPRAVA: Pridaný ScrollView do zoznamu importov z react-native
+import { Text, View, TouchableOpacity, Alert, Platform, ActivityIndicator, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg'; 
 import NfcManager from 'react-native-nfc-manager';
@@ -126,20 +128,21 @@ export default function ScannerScreen({ navigation }) {
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
-      <View style={G.containerPaddingCenter}>
-        
-        {/* 📐 Obal s maximálnou šírkou 500px pre dokonalú geometriu */}
+      {/* 📐 HLAVNÝ OBSAH - TERAZ V DOKONALEJ UNIFORMNEJ GEOMETRII */}
+      <ScrollView contentContainerStyle={G.screenContainer}>
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
           
-          {/* 🌸 IDENTITA BAR V JEMNOM ŠTÝLE ARIA_SCREEN */}
-          <View style={{ alignItems: 'center' }}>
+          {/* 🌸 ČISTÁ HLAVIČKA SCANNERU - GEOMETRIA ATELIÉRU */}
+          <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
             <Text style={G.atelierTitle}>
               {scannedData ? 'Hotovo' : 'QR/NFC sken'}
             </Text>
-            <Text style={[G.statusTextSmall, { color: '#c5a059', marginTop: -15, marginBottom: 25 }]}>
-              {scannedData ? '● SIGNAL_LOCKED' : '○ SCANNER_ACTIVE'}
-            </Text>
           </View>
+
+          {/* 📡 STATUS RIADOK PREMIESTNENÝ PRE ČISTOTU NADPISU */}
+          <Text style={[G.statusTextSmall, { color: '#c5a059', marginBottom: 15, textAlign: 'center' }]}>
+            {scannedData ? '● SIGNAL_LOCKED' : '○ SCANNER_ACTIVE'}
+          </Text>
 
           <View style={[G.card, { borderColor: scannedData ? ACCENT : '#222', alignItems: 'center', paddingVertical: 40, width: '100%' }]}>
             
@@ -209,7 +212,7 @@ export default function ScannerScreen({ navigation }) {
           </TouchableOpacity>
 
         </View>
-      </View>
+      </ScrollView> {/* 📐 KONIEC ZJEDNOTENÉHO OBSAHU */}
     </SafeAreaView>
   );
 }

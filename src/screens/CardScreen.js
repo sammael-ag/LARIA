@@ -113,12 +113,9 @@ const CardScreen = ({ navigation }) => {
         {/* Kontajner s max šírkou 500px pre PWA geometriu */}
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
           
-          {/* 🌸 IDENTITA BAR */}
-          <View style={{ alignItems: 'center' }}>
-            <Text style={G.atelierTitle}>Moja pečať</Text>
-            <Text style={[G.statusTextSmall, { color: '#c5a059', marginTop: -15, marginBottom: 20 }]}>
-              FING: {item.fing?.toUpperCase()}
-            </Text>
+          {/* 🌸 ČISTÁ HLAVIČKA SCREENU - GEOMETRIA ATELIÉRU */}
+          <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
+            <Text style={G.atelierTitle}>Moja vizitka</Text>
           </View>
 
           {/* HLAVNÁ KARTA IDENTITY */}

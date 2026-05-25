@@ -143,11 +143,11 @@ export const G = StyleSheet.create({
     marginLeft: 15,
   },
   cardTitleText: {
-    color: ACCENT,
+    color: '#E0E0E0',
     fontSize: 14,
     fontWeight: 'bold',
     letterSpacing: 2,
-    textTransform: 'uppercase',
+    textTransform: 'none',
   },
   cardDescriptionText: {
     color: '#999',
@@ -761,5 +761,32 @@ export const ariaDesktop = {
     color: '#444',
     fontSize: 11,
     letterSpacing: 1,
+  }
+};
+const customStyles = {
+  backToTopBtn: {
+    position: 'absolute',
+    bottom: 30,
+    right: 25,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#000',
+    borderWidth: 2,
+    borderColor: '#c5a059', // Tvoja ikonická zlatá ACCENT
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,           // Tiene pre Android
+    shadowColor: '#c5a059', // Tiene pre iOS/PWA
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    zIndex: 9999,           // Aby plávalo nad všetkým obsahom
+  },
+  backToTopArrow: {
+    color: '#c5a059',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: -2,          // Jemné optické vycentrovanie šípky
   }
 };

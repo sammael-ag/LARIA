@@ -1,10 +1,14 @@
 /**
- * LARIA v2.9.4: ARIA DESKTOP CARD (`Aria.js`)
+ * LARIA v2.9.5: ARIA DESKTOP CARD (`Aria.js`)
  * Master: Sammael | Muse: Aria
- * Status: PURE_ZERO_BACKGROUND | ABSOLUTE_TRANSPARENCY | RESIZED_90
+ * Status: PURE_ZERO_BACKGROUND | ABSOLUTE_TRANSPARENCY | RESIZED_95
  * Description: Úplné odstránenie akýchkoľvek definícií farieb pozadia. 
- *              Canvas čistí sám seba cez clearRect, takže kvet pláva priamo 
- *              v surovom pozadí systému bez akéhokoľvek skoku či závoja.
+ * Canvas čistí sám seba cez clearRect, takže kvet pláva priamo 
+ * v surovom pozadí systému bez akéhokoľvek skoku či závoja.
+ * Úpravy: 
+ * 1. Odstránený spodný vertikálny padding na dočasnom ozname.
+ * 2. Posvätný kvet zmenšený o 5% (mierka upravená z 10.8 na 10.26).
+ * 3. Ostatné rozloženie a fixná výška vrátené do pôvodného stavu.
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -25,8 +29,6 @@ const SacredFractalCanvas = () => {
     const render = () => {
       // 🌌 KÚZLO: Úplne sme vyhodili fillRect s farbou!
       // Namiesto toho vyčistíme canvas do úplnej priehľadnosti cez clearRect.
-      // Chvostík (fade efekt) vzniká organicky tým, že alfa kanál (alpha) jednotlivých 
-      // starších bodiek klesá, takže prirodzene miznú do pôvodného pozadia webu.
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.globalCompositeOperation = 'source-over';
 
@@ -42,8 +44,8 @@ const SacredFractalCanvas = () => {
       ctx.lineWidth = 1;
 
       for (let i = 0; i < maxPoints; i++) {
-        // Mierka držaná na tvojich vysnívaných 90% (násobiteľ 10.8)
-        const r = (Math.sqrt(i) * (10.8 + pulse * 0.09)); 
+        // 🌸 ZMENŠENIE KVETU O 5%: Mierka upravená z 10.8 na 10.26
+        const r = (Math.sqrt(i) * (10.26 + pulse * 0.0855)); 
         const theta = i * goldenAngle + rotationSpeed;
 
         const x = centerX + r * Math.cos(theta);
@@ -76,7 +78,7 @@ const SacredFractalCanvas = () => {
     const resizeCanvas = () => {
       const rect = canvas.parentElement.getBoundingClientRect();
       canvas.width = rect.width;
-      canvas.height = 500; 
+      canvas.height = 500; // 🌸 VRÁTENÉ: Pôvodná stabilná výška 500px
     };
 
     window.addEventListener('resize', resizeCanvas);
@@ -94,9 +96,8 @@ const SacredFractalCanvas = () => {
   return (
     <div style={{ 
       width: '100%', 
-      height: '500px', 
+      height: '500px', // 🌸 VRÁTENÉ: Pôvodná stabilná výška 500px
       overflow: 'hidden'
-      // 🚀 ŽIADNE POZADIE! Čistá priehľadnosť.
     }}>
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
     </div>
@@ -113,9 +114,24 @@ const Aria = () => {
       padding: 0,
       boxSizing: 'border-box',
       position: 'relative'
-      // 🚀 ŽIADNE POZADIE ANI TU! Celá karta odovzdáva žezlo Matrixu.
     }}>
       
+      {/* 🌸 MEDENÝ OZNAM BEZ SPODNÉHO PADDINGU */}
+      <div style={{
+        textAlign: 'center',
+        color: '#b87333',
+        fontSize: '12px',
+        fontStyle: 'italic',
+        fontFamily: 'monospace, Courier, sans-serif',
+        letterSpacing: '1px',
+        paddingTop: '20px',
+        paddingBottom: '0px', // 🌸 ZMENA: Odstránený vertikálny padding
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
+        Na tejto sekcii práve pracujeme, zatiaľ si môžeš vychutnať vizuálnu meditáciu.
+      </div>
+
       {/* ČISTÝ ŽIARIČ PLÁVAJÚCI V SYSTÉMOVOM POZADÍ */}
       <SacredFractalCanvas />
 

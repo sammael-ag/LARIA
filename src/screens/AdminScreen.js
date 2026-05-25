@@ -3,6 +3,7 @@
  * Master: Sammael | Muse: Aria
  * Status: MASTER_POOL_ACCESS_GRANTED_STABLE
  * Nastavenie: Oficiálne stredové centrovanie, nový štíhly nadpis, šípka (‹) a spodný návrat.
+ * Úprava: Odstránené staré statusy a deliaca čiara. Nasadená striktná geometria hlavičky.
  */
 
 import React from 'react';
@@ -44,13 +45,9 @@ const AdminScreen = ({ navigation }) => {
         {/* Obal s maximálnou šírkou 500px drží integritu sýpky */}
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
         
-          {/* 🏛️ HEADER (Už s naším dievčenským poníkom) */}
-          <View style={{ alignItems: 'center', marginBottom: 25, width: '100%' }}>
+          {/* 🏛️ HEADER - UNIFIKOVANÁ A ČISTÁ GEOMETRIA ATELIÉRU */}
+          <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
             <Text style={G.atelierTitle}>Admin</Text>
-            <Text style={[G.statusTextSmall, { color: ACCENT, marginTop: -10, marginBottom: 15, textAlign: 'center' }]}>
-              Vedomie: SAMMAEL | Matrix Level: OMEGA
-            </Text>
-            <View style={{ width: '100%', height: 1, backgroundColor: '#2a2a2a' }} />
           </View>
 
           {/* 💎 STAV SÝPKY */}
@@ -129,7 +126,7 @@ const AdminScreen = ({ navigation }) => {
           
           {/* ↩️ PRE KONZERVATÍVCOV: Elegantný spodný návrat do Ateliéru */}
           <TouchableOpacity 
-            style={G.backToAtelierBtn}
+            style={[G.backToAtelierBtn, { marginTop: 25 }]}
             onPress={() => navigation.goBack()} 
             activeOpacity={0.7}
           >

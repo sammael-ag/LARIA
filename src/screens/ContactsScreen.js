@@ -6,7 +6,7 @@
  * pre zbalený aj rozbalený stav podľa presného zadania z v14.0 kontextu.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -33,10 +33,17 @@ const ContactsScreen = ({ navigation, route }) => {
   const [search, setSearch] = useState('');
   const [syncingId, setSyncingId] = useState(null); 
   const [expandedContactId, setExpandedContactId] = useState(null);
+  // Na začiatok komponentu pod ostatné useState pridaj:
+  const flatListRef = useRef(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   
   const { contacts, togglePin, deleteContact, syncContactWithMatrix, addContact } = useContacts();
   const { incomingRequests } = useSignal(); // ⚡ Prístup k živej pamäti správ
 
+  // Funkcia na plynulý návrat nahor:
+const scrollToTop = () => {
+  flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+};
   // --- 🛰️ UNIFIKOVANÝ MULTIPORT ---
   useEffect(() => {
     if (route.params?.newContact || route.params?.scannedUrl) {
@@ -180,7 +187,7 @@ const ContactsScreen = ({ navigation, route }) => {
     const hasIncomingHandshake = contactLogs.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_ME');
     const hasResolvedHandshake = contactLogs.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_THEM_RESOLVED');
 
-    // 📐 VARIANT A: ROZBALENÁ VIZITKA
+        // 📐 VARIANT A: ROZBALENÁ KARTA (PLNÉ DETAILY)
     if (isExpanded) {
       return (
         <View style={[G.card, { borderColor: item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a', backgroundColor: item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505', width: '100%', padding: 16 }]}>
@@ -199,7 +206,7 @@ const ContactsScreen = ({ navigation, route }) => {
                 {item.pinned ? <Text style={{ fontSize: 20, marginLeft: 6 }}>⭐</Text> : null}
               </View>
             </View>
-            <Text style={[G.cardTitleText, { fontSize: 28, marginTop: 10, marginBottom: 5, fontWeight: '300' }]}>{displayMeno}</Text>
+            <Text style={[G.cardTitleText, { fontSize: 20, marginTop: 10, marginBottom: 5, fontWeight: '300' }]}>{displayMeno}</Text>
             <Text style={[G.statusTextSmall, { opacity: 0.6, marginBottom: 5 }]}>📍 {item.lok || 'V SIETI'}</Text>
           </TouchableOpacity>
           
@@ -306,7 +313,7 @@ const ContactsScreen = ({ navigation, route }) => {
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={[G.cardTitleText, { fontSize: 14, letterSpacing: 1 }]}>
-              {displayMeno.toUpperCase()}{item.pinned ? ' ⭐' : null}
+              {displayMeno}{item.pinned ? ' ⭐' : null}
             </Text>
             {/* Ak čaká nová textová správa, blikne červená bodka priamo vedľa mena/hviezdy */}
             {hasWaitingText && <Text style={CONTACT_NOTIF.compactTextBadgeDot}>🔴</Text>}
@@ -333,17 +340,43 @@ const ContactsScreen = ({ navigation, route }) => {
 
       <View style={{ flex: 1, width: '100%', maxWidth: 500, alignSelf: 'center', paddingHorizontal: 16 }}>
         <FlatList
+          ref={flatListRef}
           data={sortedContacts}
           keyExtractor={(item) => item.fing}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 40, paddingBottom: 40 }} 
+          /* 📐 OPRAVA: Odstránený starý padding, kontrolu preberá naša čistá hlavička. */
+          contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }} 
+
+          // ◄ PRIDAJ TÝCHTO PÁR RIADKOV PRE SLEDOVANIE SCROLLU:
+            onScroll={(event) => {
+              const offsetY = event.nativeEvent.contentOffset.y;
+              if (offsetY > 300) {
+                if (!showBackToTop) setShowBackToTop(true);
+              } else {
+                if (showBackToTop) setShowBackToTop(false);
+              }
+            }}
+            scrollEventThrottle={16} // Zaistí plynulé a citlivé sledovanie pozície
+
           ListHeaderComponent={
-            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            /* 🌸 ČISTÁ HLAVIČKA KONTAKTOV - GEOMETRIA ATELIÉRU */
+            <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
               <Text style={G.atelierTitle}>Kontakty</Text>
-              <Text style={[G.statusTextSmall, { color: '#c5a059', marginTop: -15, marginBottom: 20 }]}>PREPOJENÉ IDENTITY MATRIXU</Text>
-              <TextInput style={[G.vaultInput, { width: '100%' }]} placeholder="HĽADAŤ (MENO, KAT, ID)..." placeholderTextColor="#444" value={search} onChangeText={setSearch} />
-              <TouchableOpacity style={[G.primaryBtn, { marginTop: 10, width: '100%' }]} onPress={() => navigation.navigate('Scanner')} activeOpacity={0.7}>
+              
+              {/* Vyhľadávanie a tlačidlá plynule pod čistým nadpisom */}
+              <TextInput 
+                style={[G.vaultInput, { width: '100%', marginTop: 10 }]} 
+                placeholder="HĽADAŤ (MENO, KAT, ID)..." 
+                placeholderTextColor="#444" 
+                value={search} 
+                onChangeText={setSearch} 
+              />
+              <TouchableOpacity 
+                style={[G.primaryBtn, { marginTop: 10, width: '100%' }]} 
+                onPress={() => navigation.navigate('Scanner')} 
+                activeOpacity={0.7}
+              >
                 <Text style={G.primaryBtnText}>+ PRIJAŤ NOVÚ PEČAŤ</Text>
               </TouchableOpacity>
             </View>
@@ -357,6 +390,16 @@ const ContactsScreen = ({ navigation, route }) => {
           }
         />
       </View>
+      {/* ZLATÉ KOLIESKO BACK TO TOP */}
+      {showBackToTop && (
+        <TouchableOpacity 
+          style={customStyles.backToTopBtn} 
+          onPress={scrollToTop}
+          activeOpacity={0.8}
+        >
+          <Text style={customStyles.backToTopArrow}>▲</Text>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 };
