@@ -269,19 +269,33 @@ const MasterWrapper = () => {
           }}
         >
           <div className="left-menu-wrapper">
-            <button className="btn-menu" onClick={() => { setIsAriaLiquid(false); setCurrentView('domov'); if(isMobile) setIsLeftPanelOpen(false); }}>
+            {/* Domov (Aria Panel) svieti, ak je zobrazená aria */}
+            <button className={`btn-menu ${currentView === 'aria-panel-view' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('aria-panel-view'); if(isMobile) setIsLeftPanelOpen(false); }}>
               Domov
             </button>
-            <button className="btn-menu" onClick={() => { setIsAriaLiquid(false); setCurrentView('co-je-laria'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              ČO JE LARIA
+            
+            {/* LARIA FAQ svieti, ak je zobrazené co-je-laria */}
+            <button className={`btn-menu ${currentView === 'co-je-laria' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('co-je-laria'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              LARIA FAQ
             </button>
-            <button className="btn-menu" onClick={() => { setIsAriaLiquid(false); setCurrentView('fakturant'); if(isMobile) setIsLeftPanelOpen(false); }}>
+            
+            {/* Vizitkár svieti, ak je zobrazený domov (default stav pri štarte) */}
+            <button className={`btn-menu ${currentView === 'domov' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('domov'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              Vizitkár
+            </button>
+            
+            {/* Fakturant svieti, ak je zobrazený fakturant */}
+            <button className={`btn-menu ${currentView === 'fakturant' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('fakturant'); if(isMobile) setIsLeftPanelOpen(false); }}>
               Fakturant
             </button>
-            <button className="btn-menu" onClick={() => { setIsAriaLiquid(false); setCurrentView('free-vs-full'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              FREE alebo FULL
+            
+            {/* FREE vs. FULL svieti, ak je zobrazený free-vs-full */}
+            <button className={`btn-menu ${currentView === 'free-vs-full' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('free-vs-full'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              FREE vs. FULL
             </button>
-            <button className="btn-menu" onClick={() => { setIsAriaLiquid(false); setCurrentView('donate'); if(isMobile) setIsLeftPanelOpen(false); }}>
+            
+            {/* Dotovať svieti, ak je zobrazený donate */}
+            <button className={`btn-menu ${currentView === 'donate' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('donate'); if(isMobile) setIsLeftPanelOpen(false); }}>
               Dotovať
             </button>
             

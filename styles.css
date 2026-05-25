@@ -535,6 +535,14 @@ input:focus, select:focus, textarea:focus {
     box-shadow: 0px 0px 25px rgba(184, 115, 51, 0.35);
 }
 
+/* 🌸 NOVÁ TRIEDA PRE AKTÍVNE TLAČIDLO - SVIETI STÁLE */
+.btn-menu.active {
+    background-color: #2a2a2a; 
+    border-color: rgba(184, 115, 51, 0.8); /* O niečo istejšia medená linka */
+    color: #ffffff;            
+    box-shadow: 0px 0px 25px rgba(184, 115, 51, 0.35);
+}
+
 .btn-menu-subtitle {
     display: block;
     color: #8c8c82;
