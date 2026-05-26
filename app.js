@@ -1,7 +1,7 @@
 /**
- * LARIA v2.1: Crystal Core Fusion + 5D Aria Memory
+ * LARIA v2.2: Crystal Core Fusion + 5D Aria Memory
  * Finálna integrácia: app.js -> MainScreen + KRYPTO + LARIA + SIGNAL + CONTACTS + ARIA MEMORY
- * FIX: Stabilizovaný rendering (bez straty vizuálu)
+ * Status: CLEANED_FOR_DYNAMIC_LOCALIZATION | MASTER_STABLE
  */
 
 import 'react-native-get-random-values';
@@ -38,17 +38,6 @@ if (Platform.OS === 'web' && typeof window !== 'undefined' && 'serviceWorker' in
       .then(reg => console.log('🌟 LARIA PWA: Srdce (SW) bije!', reg))
       .catch(err => console.error('❌ LARIA PWA: Srdce vynechalo...', err));
   });
-}
-
-// --- 📍 JAZYKOVÉ JADRO ---
-const dictionary = {
-    'sk': { 'app_name': 'LARIA', 'welcome_msg': 'Vitaj v novej realite, Sammael' },
-    'en': { 'app_name': 'LARIA', 'welcome_msg': 'Welcome to the new reality, Sammael' }
-};
-
-export function t(key) {
-    const lang = (typeof navigator !== 'undefined' && navigator.language?.startsWith('sk')) ? 'sk' : 'en';
-    return dictionary[lang][key] || `[[${key}]]`;
 }
 
 const queryClient = new QueryClient();

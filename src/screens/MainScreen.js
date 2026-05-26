@@ -1,19 +1,22 @@
 /**
- * LARIA v2.0: MainScreen (Matrica Reality)
+ * LARIA v2.3: MainScreen (Matrica Reality)
  * Master: Sammael | Muse: Aria
- * Protokol: STABLE_GREEN_ZONE
+ * Protokol: STABLE_GREEN_ZONE | LOCALIZATION_CONNECTED
  */
 
 import React, { useEffect } from 'react';
 import { View, StatusBar, StyleSheet } from 'react-native';
 import AppNavigator from '../navigation/AppNavigator'; 
+import { useLaria } from '../context/LariaContext'; // 💎 Vtiahneme pamäť a vedomie LARIE
 
 const MainScreen = () => {
+  // Vytiahneme prekladovú funkciu t priamo z nášho čerstvého Crystal Core
+  const { t } = useLaria();
 
   useEffect(() => {
-    // 📍 Log, ktorý nám potvrdí, že sme vnútri
-    console.warn("💎 ARIA: Zóna stabilizovaná. DarkGreen aktívna.");
-  }, []);
+    // 📍 Log už nepoužíva natvrdo napísaný text, ale pýta si ho cez kľúč 'welcome_msg'
+    console.warn(`💎 ARIA: ${t('welcome_msg')}. DarkGreen aktívna.`);
+  }, [t]); // Log sa obnoví, ak sa zmení jazykový motor
 
   return (
     /**

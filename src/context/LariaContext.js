@@ -5,6 +5,7 @@ import * as Device from 'expo-device';
 import { ethers } from 'ethers';
 import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../services/LariaLogic.js';
 import { useKrypto } from './KryptoContext.js';
+import vzorSk from '../constants/langs/vzor_sk.json';
 
 const LariaContext = createContext();
 
@@ -17,6 +18,22 @@ export const LariaProvider = ({ children }) => {
     rpcUrl, 
     lariaContractAddress 
   } = useKrypto();
+
+// --- 📍 TEKUTÉ JAZYKOVÉ JADRO (Liquid Localization) ---
+  const [lang, setLang] = useState('sk'); // Predvolený základ
+  
+  // Do slovníka natlačíme tvoj lokálny vzor_sk ako základnú kotvu.
+  // 'en' necháme zatiaľ prázdny, pretože ten si neskôr docucne celý JSON z Gsheets bunky.
+  const [dictionary, setDictionary] = useState({
+    'sk': vzorSk, 
+    'en': {} 
+  });
+
+  // Inteligentný prekladový nástroj, ktorý vstrekneme do celej aplikácie
+  const t = (key) => {
+    // Pozrie sa do zvoleného jazyka, ak kľúč chýba, vráti slovenský vzor, ak zlyhá aj ten, vráti samotný kľúč
+    return dictionary[lang]?.[key] || dictionary['sk']?.[key] || key;
+  };
 
   // --- ✨ ŠTRUKTÚRA PODĽA ZÁKONA v8.0 (SECURE_ID Odpojené) ---
   const [vault, setVault] = useState({
@@ -96,6 +113,14 @@ export const LariaProvider = ({ children }) => {
       try {
         let savedIdentity = await loadFromVault('identity');
         
+        // 🌟 JAZYKOVÉ JADRO: Ak nájdeme v trezore uložený jazyk, okamžite ho aktivujeme za behu
+        if (savedIdentity && savedIdentity.jazyk) {
+          setLang(savedIdentity.jazyk);
+          console.log(`🌲 JAZYKOVÉ JADRO: Prebúdzam uložený jazyk z trezoru: [${savedIdentity.jazyk}]`);
+        } else {
+          console.log(`🌲 JAZYKOVÉ JADRO: Žiadny uložený jazyk nenájdený, štartujem na základe [sk]`);
+        }
+        
         let rawDeviceId;
 
         // MULTIDIMENZIONÁLNA IDENTIFIKÁCIA ZARIADENIA
@@ -104,7 +129,7 @@ export const LariaProvider = ({ children }) => {
         } else if (Platform.OS === 'ios') {
           rawDeviceId = await Application.getIosIdForVendorAsync();
         } else {
-          // ARCHITEKTOVA PEČAŤ PRE DESKTOP (Linux/Electron)
+
           // Generujeme stabilné ID z mena zariadenia a systémových parametrov
           rawDeviceId = `LINUX-${Device.deviceName || 'HP-LAPTOP'}-${Device.osBuildId || 'SAM-CORE'}`;
         }
@@ -187,6 +212,20 @@ export const LariaProvider = ({ children }) => {
     await saveToVault('identity', updatedIdentity);
   };
 
+  // Funkcia na zmenu jazyka za pochodu z hociktorej obrazovky s uložením do trezoru
+  const zmenJazykZaPochodu = async (novyJazyk) => {
+    setLang(novyJazyk);
+    try {
+      const aktualnaIdentita = { ...vault.identity };
+      aktualnaIdentita.jazyk = novyJazyk;
+      
+      await saveToVault('identity', aktualnaIdentita);
+      console.log(`🌟 JAZYKOVÉ JADRO: Jazyk [${novyJazyk}] bezpečne zakonzervovaný v trezore.`);
+    } catch (error) {
+      console.error("❌ JAZYKOVÉ JADRO_ERROR (Zápis jazyka zlyhal):", error);
+    }
+  };
+
   const unlockSeal = async (isCorrect) => {
     if (isCorrect) {
       const newStatus = runLariaProtocol(vault.identity, true);
@@ -202,7 +241,16 @@ export const LariaProvider = ({ children }) => {
 
   return (
     <LariaContext.Provider value={{ 
-      vault, syncIdentity, unlockSeal, lockSeal, ensureLariaIdentity, reinkarnaciaIdentity 
+      vault, 
+      syncIdentity, 
+      unlockSeal, 
+      lockSeal, 
+      ensureLariaIdentity, 
+      reinkarnaciaIdentity,
+      lang,                  // <--- Posielame von aktuálny jazyk
+      t,                     // <--- Posielame von prekladový motor
+      zmenJazykZaPochodu,     // <--- Posielame von funkciu na prepínanie
+      setDictionary
     }}>
       {children}
     </LariaContext.Provider>
