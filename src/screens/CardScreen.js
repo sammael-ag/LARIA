@@ -16,7 +16,11 @@ import { useLaria } from '../context/LariaContext';
 import { useContacts } from '../context/ContactContext'; 
 
 const CardScreen = ({ navigation }) => {
-  const { vault } = useLaria();
+  // 💎 Jazykový motor LARIE pre vlastnú vizitku
+  const { t, vault } = useLaria();
+  const txt = t('card') || {};
+  const labels = t('contacts.labels') || {}; // Recyklujeme rovnaké labels z kontaktov
+
   // Ponechané ako skrytá poistka pre stabilitu multidimenzionálneho prepojenia kontextov
   const { togglePin } = useContacts(); 
   
@@ -28,10 +32,10 @@ const CardScreen = ({ navigation }) => {
 
   // --- MAPOVANIE VLASTNEJ IDENTITY (FULL OWNER) ---
   const item = {
-    kat: vault?.identity?.kat || "MASTER ARCHITECT",
+    kat: vault?.identity?.kat || (txt.default_kat || "MASTER ARCHITECT"),
     meno: vault?.identity?.meno || "Sammael",
     lok: vault?.identity?.lok || "Rákoš / Matrix",
-    popis: vault?.identity?.popis || "Rustic, steampunk a avantgardné stolárstvo.",
+    popis: vault?.identity?.popis || (txt.default_popis || "Rustic, steampunk a avantgardné stolárstvo."),
     tel: vault?.identity?.tel,
     email: vault?.identity?.email,
     fb: vault?.identity?.fb,
@@ -48,7 +52,7 @@ const CardScreen = ({ navigation }) => {
   const openLink = (url) => {
     if (!url) return;
     const cleanUrl = url.startsWith('http') ? url : `https://${url}`;
-    Linking.openURL(cleanUrl).catch(() => window.alert("Nepodarilo sa otvoriť odkaz."));
+    Linking.openURL(cleanUrl).catch(() => window.alert(txt.no_link_alert || "Nepodarilo sa otvoriť odkaz."));
   };
 
   // --- 📞 OŠETRENÝ TELEFÓNNY MULTIPORT (WEB CONFIRM) ---
@@ -56,7 +60,8 @@ const CardScreen = ({ navigation }) => {
     if (!item.tel) return;
     const cleanPhone = item.tel.replace(/\s/g, '');
     
-    const potvrdene = window.confirm(`SPOJENIE MAJSTRA\n\nTelefónne číslo: ${item.tel}\n\nChceš aktivovať hovor?`);
+    const msg = (txt.confirm_call || "SPOJENIE MAJSTRA\n\nTelefónne číslo: {phone}\n\nChceš aktivovať hovor?").replace('{phone}', item.tel);
+    const potvrdene = window.confirm(msg);
     if (potvrdene) {
       Linking.openURL(`tel:${cleanPhone}`);
     }
@@ -66,7 +71,8 @@ const CardScreen = ({ navigation }) => {
   const handleEmailPress = () => {
     if (!item.email) return;
     
-    const potvrdene = window.confirm(`KOREŠPONDENCIA MATRIXU\n\nEmailová adresa: ${item.email}\n\nChceš otvoriť poštového klienta?`);
+    const msg = (txt.confirm_email || "KOREŠPONDENCIA MATRIXU\n\nEmailová adresa: {email}\n\nChceš otvoriť poštového klienta?").replace('{email}', item.email);
+    const potvrdene = window.confirm(msg);
     if (potvrdene) {
       Linking.openURL(`mailto:${item.email}`);
     }
@@ -115,7 +121,7 @@ const CardScreen = ({ navigation }) => {
           
           {/* 🌸 ČISTÁ HLAVIČKA SCREENU - GEOMETRIA ATELIÉRU */}
           <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
-            <Text style={G.atelierTitle}>Moja vizitka</Text>
+            <Text style={G.atelierTitle}>{txt.title || "Moja vizitka"}</Text>
           </View>
 
           {/* HLAVNÁ KARTA IDENTITY */}
@@ -132,29 +138,29 @@ const CardScreen = ({ navigation }) => {
             <View style={G.divider} />
             
             <Text style={G.cardDescriptionText}>
-              {item.popis || 'Spiace vedomie bez popisu...'}
+              {item.popis}
             </Text>
 
             {/* SOCIÁLNE SIETE */}
             <View style={[G.actionRow, { marginTop: 10 }]}>
-              {item.fb && <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.fb)}><Text style={G.statusTextSmall}>FACEBOOK</Text></TouchableOpacity>}
-              {item.tg && <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.tg)}><Text style={G.statusTextSmall}>TELEGRAM</Text></TouchableOpacity>}
-              {item.gal && <TouchableOpacity style={[G.miniBtn, { borderColor: '#c5a059' }]} onPress={() => openLink(item.gal)}><Text style={[G.statusTextSmall, { color: '#c5a059' }]}>GALÉRIA</Text></TouchableOpacity>}
+              {item.fb && <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.fb)}><Text style={G.statusTextSmall}>{labels.facebook || "FACEBOOK"}</Text></TouchableOpacity>}
+              {item.tg && <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.tg)}><Text style={G.statusTextSmall}>{labels.telegram || "TELEGRAM"}</Text></TouchableOpacity>}
+              {item.gal && <TouchableOpacity style={[G.miniBtn, { borderColor: '#c5a059' }]} onPress={() => openLink(item.gal)}><Text style={[G.statusTextSmall, { color: '#c5a059' }]}>{labels.gallery || "GALÉRIA"}</Text></TouchableOpacity>}
             </View>
             
             {/* RÝCHLE AKCIE */}
             <View style={G.actionRow}>
               {item.tel && (
                 <TouchableOpacity style={G.miniBtn} onPress={handleCallPress}>
-                  <Text style={G.statusTextSmall}>VOLAŤ</Text>
+                  <Text style={G.statusTextSmall}>{labels.call || "VOLAŤ"}</Text>
                 </TouchableOpacity>
               )}
                <TouchableOpacity style={G.miniBtn} onPress={handleDataPress}>
-                  <Text style={G.statusTextSmall}>LARIA</Text>
+                  <Text style={G.statusTextSmall}>{labels.data || "LARIA"}</Text>
                 </TouchableOpacity>
               {item.email && (
                 <TouchableOpacity style={G.miniBtn} onPress={handleEmailPress}>
-                  <Text style={G.statusTextSmall}>EMAIL</Text>
+                  <Text style={G.statusTextSmall}>{labels.email || "EMAIL"}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -167,7 +173,7 @@ const CardScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('CardEditor')}
               activeOpacity={0.7}
             >
-              <Text style={G.primaryBtnText}>PRETESAŤ MOJU PEČAŤ</Text>
+              <Text style={G.primaryBtnText}>{txt.btn_edit_seal || "PRETESAŤ MOJU PEČAŤ"}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -178,7 +184,7 @@ const CardScreen = ({ navigation }) => {
               }}
               activeOpacity={0.7}
             >
-              <Text style={G.primaryBtnText}>{showQR ? 'SKRYŤ PEČAŤ' : 'VYSTAVIŤ PEČAŤ'}</Text>
+              <Text style={G.primaryBtnText}>{showQR ? (txt.btn_hide_qr || 'SKRYŤ PEČAŤ') : (txt.btn_show_qr || 'VYSTAVIŤ PEČAŤ')}</Text>
             </TouchableOpacity>
 
             {showQR && (
@@ -226,7 +232,7 @@ const CardScreen = ({ navigation }) => {
                   activeOpacity={0.7}
                 >
                   <Text style={[G.primaryBtnText, { color: isNfcActive ? '#1a1a1a' : (ACCENT || '#c5a059') }]}>
-                    {isNfcActive ? '📡 VYSIELAM...' : '📡 NFC BEAM'}
+                    {isNfcActive ? (txt.nfc_beaming || '📡 VYSIELAM...') : (txt.nfc_ready || '📡 NFC BEAM')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -240,7 +246,7 @@ const CardScreen = ({ navigation }) => {
             activeOpacity={0.7}
           >
             <Text style={G.primaryBtnText}>
-              NÁVRAT DO ATELIÉRU
+              {txt.btn_back_atelier || "NÁVRAT DO ATELIÉRU"}
             </Text>
           </TouchableOpacity>
 

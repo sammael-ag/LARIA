@@ -24,12 +24,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { G, ACCENT, CONTACT_NOTIF } from '../styles/styles'; 
 import { useContacts } from '../context/ContactContext'; 
 import { useSignal } from '../context/SignalContext'; // 📡 Sledujeme tok signálov
+import { useLaria } from '../context/LariaContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 const ContactsScreen = ({ navigation, route }) => {
+  const { t } = useLaria();
+  const txt = t('contacts') || {};
+  const labels = txt.labels || {};
+  const alerts = txt.alerts || {};
   const [search, setSearch] = useState('');
   const [syncingId, setSyncingId] = useState(null); 
   const [expandedContactId, setExpandedContactId] = useState(null);
@@ -259,28 +264,28 @@ const scrollToTop = () => {
             </Text>
           </TouchableOpacity>
 
-          {/* SOCIÁLNE SIETE */}
+{/* SOCIÁLNE SIETE */}
           <View style={[G.actionRow, { marginTop: 5 }]}>
-            {item.fb ? <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.fb)}><Text style={G.statusTextSmall}>FACEBOOK</Text></TouchableOpacity> : null}
-            {item.tg ? <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.tg)}><Text style={G.statusTextSmall}>TELEGRAM</Text></TouchableOpacity> : null}
-            {item.gal ? <TouchableOpacity style={[G.miniBtn, { borderColor: (ACCENT || '#c5a059') }]} onPress={() => openLink(item.gal)}><Text style={[G.statusTextSmall, { color: (ACCENT || '#c5a059') }]}>GALÉRIA</Text></TouchableOpacity> : null}
+            {item.fb ? <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.fb)}><Text style={G.statusTextSmall}>{labels.facebook || "FACEBOOK"}</Text></TouchableOpacity> : null}
+            {item.tg ? <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.tg)}><Text style={G.statusTextSmall}>{labels.telegram || "TELEGRAM"}</Text></TouchableOpacity> : null}
+            {item.gal ? <TouchableOpacity style={[G.miniBtn, { borderColor: (ACCENT || '#c5a059') }]} onPress={() => openLink(item.gal)}><Text style={[G.statusTextSmall, { color: (ACCENT || '#c5a059') }]}>{labels.gallery || "GALÉRIA"}</Text></TouchableOpacity> : null}
           </View>
           
           {/* HOVORY / DATA / EMAIL */}
           <View style={G.actionRow}>
             {item.tel ? (
               <TouchableOpacity style={G.miniBtn} onPress={() => Linking.openURL(`tel:${item.tel.replace(/\s/g, '')}`)}>
-                <Text style={G.statusTextSmall}>VOLAŤ</Text>
+                <Text style={G.statusTextSmall}>{labels.call || "VOLAŤ"}</Text>
               </TouchableOpacity>
             ) : null}
             
-            <TouchableOpacity style={G.miniBtn} onPress={() => Alert.alert('DÁTOVÁ PEČAŤ', `FING: ${displayFing}\nSHA: ${item.sha || 'NO_SHA'}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}>
-              <Text style={G.statusTextSmall}>DÁTA</Text>
+            <TouchableOpacity style={G.miniBtn} onPress={() => Alert.alert(alerts.data_title || 'DÁTOVÁ PEČAŤ', `FING: ${displayFing}\nSHA: ${item.sha || 'NO_SHA'}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}>
+              <Text style={G.statusTextSmall}>{labels.data || "DÁTA"}</Text>
             </TouchableOpacity>
             
             {item.email ? (
               <TouchableOpacity style={G.miniBtn} onPress={() => Linking.openURL(`mailto:${item.email}`)}>
-                <Text style={G.statusTextSmall}>EMAIL</Text>
+                <Text style={G.statusTextSmall}>{labels.email || "EMAIL"}</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -318,7 +323,7 @@ const scrollToTop = () => {
             {/* Ak čaká nová textová správa, blikne červená bodka priamo vedľa mena/hviezdy */}
             {hasWaitingText && <Text style={CONTACT_NOTIF.compactTextBadgeDot}>🔴</Text>}
           </View>
-          <Text style={[G.statusTextSmall, { fontSize: 9, marginTop: 2 }]}>{displayKat.toUpperCase()} • {item.lok || 'V SIETI'}</Text>
+          <Text style={[G.statusTextSmall, { fontSize: 9, marginTop: 2 }]}>{displayKat.toUpperCase()} • {item.lok || (txt.status_in_network || 'V SIETI')}</Text>
           <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 4 }]}>
             ID: {displayFing}{item.syncedAt ? ' ✓' : null}
           </Text>
@@ -345,29 +350,27 @@ const scrollToTop = () => {
           keyExtractor={(item) => item.fing}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
-          /* 📐 OPRAVA: Odstránený starý padding, kontrolu preberá naša čistá hlavička. */
           contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }} 
 
-          // ◄ PRIDAJ TÝCHTO PÁR RIADKOV PRE SLEDOVANIE SCROLLU:
-            onScroll={(event) => {
-              const offsetY = event.nativeEvent.contentOffset.y;
-              if (offsetY > 300) {
-                if (!showBackToTop) setShowBackToTop(true);
-              } else {
-                if (showBackToTop) setShowBackToTop(false);
-              }
-            }}
-            scrollEventThrottle={16} // Zaistí plynulé a citlivé sledovanie pozície
+          onScroll={(event) => {
+            const offsetY = event.nativeEvent.contentOffset.y;
+            if (offsetY > 300) {
+              if (!showBackToTop) setShowBackToTop(true);
+            } else {
+              if (showBackToTop) setShowBackToTop(false);
+            }
+          }}
+          scrollEventThrottle={16}
 
           ListHeaderComponent={
             /* 🌸 ČISTÁ HLAVIČKA KONTAKTOV - GEOMETRIA ATELIÉRU */
             <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
-              <Text style={G.atelierTitle}>Kontakty</Text>
+              <Text style={G.atelierTitle}>{txt.title || "Kontakty"}</Text>
               
               {/* Vyhľadávanie a tlačidlá plynule pod čistým nadpisom */}
               <TextInput 
                 style={[G.vaultInput, { width: '100%', marginTop: 10 }]} 
-                placeholder="HĽADAŤ (MENO, KAT, ID)..." 
+                placeholder={txt.search_placeholder || "HĽADAŤ (MENO, KAT, ID)..."} 
                 placeholderTextColor="#444" 
                 value={search} 
                 onChangeText={setSearch} 
@@ -377,14 +380,14 @@ const scrollToTop = () => {
                 onPress={() => navigation.navigate('Scanner')} 
                 activeOpacity={0.7}
               >
-                <Text style={G.primaryBtnText}>+ PRIJAŤ NOVÚ PEČAŤ</Text>
+                <Text style={G.primaryBtnText}>{txt.btn_add_seal || "+ PRIJAŤ NOVÚ PEČAŤ"}</Text>
               </TouchableOpacity>
             </View>
           }
           ListFooterComponent={
             <View style={{ marginTop: 20, alignItems: 'center', width: '100%' }}>
               <TouchableOpacity style={[G.backToAtelierBtn, { width: '100%' }]} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                <Text style={G.primaryBtnText}>NÁVRAT DO ATELIÉRU</Text>
+                <Text style={G.primaryBtnText}>{txt.btn_back_atelier || "NÁVRAT DO ATELIÉRU"}</Text>
               </TouchableOpacity>
             </View>
           }

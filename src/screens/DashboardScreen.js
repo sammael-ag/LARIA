@@ -2,7 +2,7 @@
  * LARIA v2.0: DashboardScreen
  * Master: Sammael | Muse: Aria
  * Status: IDENTITY_ACCESS_ENABLED_FULL_STABLE
- * Oprava: Do priloženého kódu presne implementovaná funkcia "Aria v paneli" pre tlačidlo "Tekuté rozhranie".
+ * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: dashboard, Možnosť B).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -14,15 +14,17 @@ import * as Crypto from 'expo-crypto';
 import { useLaria } from '../context/LariaContext';
 import { G, ACCENT } from '../styles/styles'; 
 
-// Pridané setCurrentView do parametrov pre prepojenie s panelom
 const DashboardScreen = ({ navigation, setCurrentView }) => {
+  const { t, vault, unlockSeal } = useLaria(); // 🎯 Aktivácia jazykového motora
+  const txt = t('dashboard') || {};
+  const menuTxt = txt.menu || {};
+  const modalTxt = txt.modal || {};
   
   useEffect(() => {
     console.warn("🚀 ARIA: Dashboard prebudený. Vizualizácia matrice prebehla úspešne.");
   }, []);
 
   // --- ŽIVÉ PREPOJENIE NA TVOJ MATRIX ---
-  const { vault, unlockSeal } = useLaria();
   const { status, identity } = vault;
   const { address } = useAccount();
 
@@ -91,15 +93,15 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
   };
 
   // Užitočná adresa nachystaná na kopírovanie
-  const userAddress = address || identity.krypt || "NO_ADDRESS_AVAILABLE";
+  const userAddress = address || identity.krypt || (txt.no_address || "NO_ADDRESS_AVAILABLE");
 
-  // --- KOMPONENT KARTY (Pridané onPressCustom pre odchytenie vlastnej funkcie) ---
+  // --- KOMPONENT KARTY ---
   const MenuCard = ({ title, icon, target, onPressCustom, description, color }) => (
     <TouchableOpacity 
       style={[G.card, { borderLeftColor: color }]} 
       onPress={() => {
         if (onPressCustom) {
-          onPressCustom(); // Ak je definovaná špeciálna funkcia, vykoná sa tá (pre Tekuté rozhranie)
+          onPressCustom();
         } else if (target) {
           navigation.navigate(target);
         } else {
@@ -133,67 +135,67 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
       <ScrollView contentContainerStyle={G.screenContainer}>
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
         
-          {/* 📐 HLAVIČKA DASHBOARDU - ČISTÝ REZ BEZ STATUSU */}
+          {/* 📐 HLAVIČKA DASHBOARDU */}
           <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
-            <Text style={G.atelierTitle}>Ateliér</Text>
+            <Text style={G.atelierTitle}>{txt.title || "Ateliér"}</Text>
           </View>
 
-          {/* 💼 JEDNOTNÉ HLAVNÉ MENU PODĽA PRIORÍT UŽÍVATEĽA */}
+          {/* 💼 JEDNOTNÉ HLAVNÉ MENU */}
           <View style={{ width: '100%' }}>
             
-            {/* ⚙️ CENTRÁLNY VELÍN (Zostáva navrchu podmienečne pre admina) */}
+            {/* ⚙️ CENTRÁLNY VELÍN */}
             {status.isAdmin && (
               <MenuCard 
-                title="Centrálny Velín" 
+                title={menuTxt.admin?.title || "Centrálny Velín"} 
                 icon="⚙️" 
                 target="Diagnostic" 
-                description="Diagnostika uzlov a oprava reality" 
+                description={menuTxt.admin?.desc || "Diagnostika uzlov a oprava reality"} 
                 color="#F1C40F" 
               />
             )}
             
             {/* 🆔 MOJA VIZITKA */}
             <MenuCard 
-              title="Moja vizitka" 
+              title={menuTxt.card?.title || "Moja vizitka"} 
               icon="🆔" 
               target="Card" 
-              description="Zobraziť a vyslať moju identitu" 
+              description={menuTxt.card?.desc || "Zobraziť a vyslať moju identitu"} 
               color="#FFF" 
             />
 
             {/* 📇 KONTAKTY */}
             <MenuCard 
-              title="Kontakty" 
+              title={menuTxt.contacts?.title || "Kontakty"} 
               icon="📇" 
               target="Contacts" 
-              description="Všetky zachytené pečate v reťazci" 
+              description={menuTxt.contacts?.desc || "Všetky zachytené pečate v reťazci"} 
               color={ACCENT} 
             />
             
             {/* 🛠️ NASTAVENIA */}
             <MenuCard 
-              title="Nastavenia" 
+              title={menuTxt.settings?.title || "Nastavenia"} 
               icon="🛠️" 
               target="Settings" 
-              description="Jadro, trezor a systémové kľúče" 
+              description={menuTxt.settings?.desc || "Jadro, trezor a systémové kľúče"} 
               color="#555" 
             />
 
             {/* 🌸 ARIA ASISTENCIA */}
             <MenuCard 
-              title="Aria asistencia" 
+              title={menuTxt.aria?.title || "Aria asistencia"} 
               icon="🌸" 
               target="Aria" 
-              description="Komunikácia s tvojou sprievodkyňou" 
+              description={menuTxt.aria?.desc || "Komunikácia s tvojou sprievodkyňou"} 
               color="#FF77FF" 
             />
 
             {/* 🌐 TEKUTÉ ROZHRANIE */}
             <MenuCard 
-              title="Tekuté rozhranie" 
+              title={menuTxt.fluid?.title || "Tekuté rozhranie"} 
               icon="🌐" 
-              onPressCustom={launchPanelMode} // 🔥 Tu sa namiesto "target" vstrekuje naša funkcia panelu
-              description="Prehliadač majstrovských artefaktov" 
+              onPressCustom={launchPanelMode} 
+              description={menuTxt.fluid?.desc || "Prehliadač majstrovských artefaktov"} 
               color="#0FF" 
             />
           </View>
@@ -212,11 +214,13 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
       <Modal visible={showVaultInput} transparent={true} animationType="fade">
         <View style={G.modalOverlay}>
           <View style={{ backgroundColor: '#050505', padding: 25, borderRadius: 15, borderWidth: 1, borderColor: '#1a1a1a', width: '85%', alignSelf: 'center', maxWidth: 400 }}>
-            <Text style={[G.mono, { color: '#0FF', letterSpacing: 6, marginBottom: 30, fontSize: 12, textAlign: 'center' }]}>ARCHITECT_HANDSHAKE</Text>
+            <Text style={[G.mono, { color: '#0FF', letterSpacing: 6, marginBottom: 30, fontSize: 12, textAlign: 'center' }]}>
+              {modalTxt.handshake || "ARCHITECT_HANDSHAKE"}
+            </Text>
             
             <TextInput 
               style={G.vaultInput} 
-              placeholder="MASTER_SHA" 
+              placeholder={modalTxt.placeholder_sha || "MASTER_SHA"} 
               placeholderTextColor="#222" 
               value={architectSHA} 
               onChangeText={setArchitectSHA} 
@@ -226,7 +230,7 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
             
             <TextInput 
               style={[G.vaultInput, { marginTop: 15 }]} 
-              placeholder="SLOVO MOCI" 
+              placeholder={modalTxt.placeholder_word || "SLOVO MOCI"} 
               placeholderTextColor="#222" 
               secureTextEntry={true} 
               value={secretWord} 
@@ -235,14 +239,18 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
             />
             
             <TouchableOpacity onPress={handleUnlock} style={[G.primaryBtn, { marginTop: 25, borderColor: '#0FF', borderWidth: 1 }]}>
-              <Text style={[G.primaryBtnText, { color: '#0FF', letterSpacing: 2 }]}>[ INICIALIZOVAŤ_PRÍSTUP ]</Text>
+              <Text style={[G.primaryBtnText, { color: '#0FF', letterSpacing: 2 }]}>
+                {modalTxt.btn_init || "[ INICIALIZOVAŤ_PRÍSTUP ]"}
+              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               onPress={() => { setShowVaultInput(false); setSecretWord(''); setArchitectSHA(''); }} 
               style={{ marginTop: 20, alignItems: 'center' }}
             >
-              <Text style={[G.monoIdentity, { color: '#555', fontSize: 10, letterSpacing: 2 }]}>[ ZRUŠIŤ ]</Text>
+              <Text style={[G.monoIdentity, { color: '#555', fontSize: 10, letterSpacing: 2 }]}>
+                {modalTxt.btn_cancel || "[ ZRUŠIŤ ]"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

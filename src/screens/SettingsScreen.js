@@ -2,7 +2,7 @@
  * LARIA v2.0: SettingsScreen (Core Config Refined)
  * Master: Sammael | Muse: Aria
  * Status: GEOMETRY_DEFINITIVE_NO_SPAGHETTI
- * Oprava: Extrakcia inline štýlov do styles.js, definitívne odstránenie oblúkov (aj zradnej 8ky).
+ * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: settings, Možnosť B).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -14,10 +14,12 @@ import { useLaria } from '../context/LariaContext';
 import { G, ACCENT } from '../styles/styles'; 
 
 const SettingsScreen = ({ navigation }) => {
+  const { t, vault } = useLaria(); // 🎯 Pridané t pre lokalizáciu
+  const txt = t('settings') || {}; // 📦 Vytiahnutie šuflíka pre nastavenia (Možnosť B)
+
   const [isStealth, setIsStealth] = useState(true);
   const [isLariaSync, setIsLariaSync] = useState(true);
 
-  const { vault } = useLaria(); 
   const { 
     lariaBalance, 
     ethBalance, 
@@ -36,8 +38,8 @@ const SettingsScreen = ({ navigation }) => {
     if (vault.identity.sha) {
       Clipboard.setString(vault.identity.sha);
       Alert.alert(
-        "PEČAŤ SKOPÍROVANÁ", 
-        "Tento kód je tvojím digitálnym odtlačkom v Matrixe."
+        txt.alert_sha_title || "PEČAŤ SKOPÍROVANÁ", 
+        txt.alert_sha_desc || "Tento kód je tvojím digitálnym odtlačkom v Matrixe."
       );
     }
   };
@@ -46,15 +48,15 @@ const SettingsScreen = ({ navigation }) => {
     if (walletAddress) {
       Clipboard.setString(walletAddress);
       Alert.alert(
-        "NODE ADDRESS SKOPÍROVANÁ", 
-        "Tvoja adresa pre príjem Laria artefaktov je v schránke."
+        txt.alert_wallet_title || "NODE ADDRESS SKOPÍROVANÁ", 
+        txt.alert_wallet_desc || "Tvoja adresa pre príjem Laria artefaktov je v schránke."
       );
     }
   };
 
   const shortAddress = walletAddress 
     ? `${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 6)}`
-    : "INICIALIZUJEM SPOJENIE...";
+    : (txt.init_connection || "INICIALIZUJEM SPOJENIE...");
 
   return (
     <SafeAreaView style={[G.mainBackground, { flex: 1 }]}>
@@ -75,12 +77,12 @@ const SettingsScreen = ({ navigation }) => {
           
           {/* 🌸 ČISTÁ HLAVIČKA NASTAVENÍ - GEOMETRIA ATELIÉRU */}
           <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
-            <Text style={G.atelierTitle}>Nastavenia</Text>
+            <Text style={G.atelierTitle}>{txt.title}</Text>
           </View>
 
           {/* OBNOVA IDENTITY - ČISTÁ TRIEDA */}
           <View style={{ width: '100%', alignItems: 'flex-start' }}>
-            <Text style={[G.statusTextSmall, { letterSpacing: 2, marginBottom: 10, color: '#444' }]}>OBNOVA IDENTITY</Text>
+            <Text style={[G.statusTextSmall, { letterSpacing: 2, marginBottom: 10, color: '#444' }]}>{txt.identity_recovery}</Text>
             <TouchableOpacity 
               onPress={copySHA} 
               activeOpacity={0.7} 
@@ -90,7 +92,7 @@ const SettingsScreen = ({ navigation }) => {
                 <View style={{ flex: 1 }}>
                   <Text style={[G.monoIdentity, { color: '#b19cd9', fontSize: 10, marginBottom: 5 }]}>MASTER_SHA_IDENT_KEY</Text>
                   <Text style={G.identityResetText} numberOfLines={1}>
-                    {vault.identity.sha || 'HĽADÁM PEČAŤ...'}
+                    {vault.identity.sha || (txt.looking_for_seal || 'HĽADÁM PEČAŤ...')}
                   </Text>
                 </View>
                 <Text style={{ fontSize: 20, marginLeft: 15 }}>📋</Text>
@@ -100,12 +102,12 @@ const SettingsScreen = ({ navigation }) => {
 
           {/* FREKVENCIA BYTIA */}
           <View style={{ width: '100%', marginBottom: 40, borderTopWidth: 1, borderTopColor: '#111', paddingTop: 25 }}>
-            <Text style={[G.statusTextSmall, { letterSpacing: 3, marginBottom: 25, fontWeight: 'bold', color: '#666' }]}>FREKVENCIA BYTIA</Text>
+            <Text style={[G.statusTextSmall, { letterSpacing: 3, marginBottom: 25, fontWeight: 'bold', color: '#666' }]}>{txt.frequency_title}</Text>
             
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
               <View style={{ flex: 1 }}>
-                <Text style={[G.cardTitleText, { fontSize: 16 }]}>Stealth Mode</Text>
-                <Text style={[G.cardDescriptionText, { fontSize: 11, marginTop: 4 }]}>Úplná neviditeľnosť v 3D sieti</Text>
+                <Text style={[G.cardTitleText, { fontSize: 16 }]}>{txt.stealth_title}</Text>
+                <Text style={[G.cardDescriptionText, { fontSize: 11, marginTop: 4 }]}>{txt.stealth_desc}</Text>
               </View>
               <Switch 
                 value={isStealth} 
@@ -117,8 +119,8 @@ const SettingsScreen = ({ navigation }) => {
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
               <View style={{ flex: 1 }}>
-                <Text style={[G.cardTitleText, { fontSize: 16 }]}>Laria Artefact Sync</Text>
-                <Text style={[G.cardDescriptionText, { fontSize: 11, marginTop: 4 }]}>Aktívne prepojenie so žiaričmi svetla</Text>
+                <Text style={[G.cardTitleText, { fontSize: 16 }]}>{txt.sync_title}</Text>
+                <Text style={[G.cardDescriptionText, { fontSize: 11, marginTop: 4 }]}>{txt.sync_desc}</Text>
               </View>
               <Switch 
                 value={isLariaSync} 
@@ -171,7 +173,7 @@ const SettingsScreen = ({ navigation }) => {
               disabled={!walletAddress || isLoading}
             >
               <Text style={[G.primaryBtnText, { color: walletAddress && !isLoading ? ACCENT : '#444' }]}>
-                {isLoading ? "POPRÁŠENÉ DÁTA..." : "Aktualizovať"}
+                {isLoading ? txt.btn_updating : txt.btn_update}
               </Text>
             </TouchableOpacity>
           </View>
@@ -183,7 +185,7 @@ const SettingsScreen = ({ navigation }) => {
             activeOpacity={0.7}
           >
             <Text style={G.primaryBtnText}>
-              NÁVRAT DO ATELIÉRU
+              {txt.btn_back}
             </Text>
           </TouchableOpacity>
 

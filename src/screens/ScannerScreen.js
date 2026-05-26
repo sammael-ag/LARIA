@@ -2,13 +2,10 @@
  * LARIA v2.0: ScannerScreen
  * Master: Sammael | Muse: Aria
  * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER
- * Oprava: Kompletne odstránených 16 km Base64 kódu. Nasadené čisté statické načítanie 
- * pečate z assets cez require(). Nadpisy unifikované podľa jemnej geometrie AriaScreen.
- * FIX: Pridaný chýbajúci import ScrollView pre správne vykreslenie obsahu.
+ * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: scanner, Možnosť B).
  */
 
 import React, { useEffect, useState } from 'react';
-// 🛠️ OPRAVA: Pridaný ScrollView do zoznamu importov z react-native
 import { Text, View, TouchableOpacity, Alert, Platform, ActivityIndicator, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg'; 
@@ -16,8 +13,12 @@ import NfcManager from 'react-native-nfc-manager';
 
 import { G, ACCENT } from '../styles/styles';
 import { useContacts } from '../context/ContactContext';
+import { useLaria } from '../context/LariaContext'; // 🌐 Import lokalizačného nervu
 
 export default function ScannerScreen({ navigation }) {
+  const { t } = useLaria(); // 🎯 Aktivácia jazykového motora
+  const txt = t('scanner') || {}; // 📦 Vytiahnutie šuflíka pre Scanner (Možnosť B)
+
   const { addContact } = useContacts();
   const [scannedData, setScannedData] = useState(null); 
   const [displayInfo, setDisplayInfo] = useState(null);
@@ -34,7 +35,7 @@ export default function ScannerScreen({ navigation }) {
         
         incomingData = {
           fing: params.get('id'),
-          meno: decodeURIComponent(params.get('m') || "Pútnik"),
+          meno: decodeURIComponent(params.get('m') || (txt.default_traveler || "Pútnik")),
           krypt: params.get('k') || "NO_KRYPT",
           kat: "OBJAVITEĽ",
           v: "9.9.6"
@@ -53,7 +54,7 @@ export default function ScannerScreen({ navigation }) {
       }
 
       if (!incomingData || !incomingData.fing) {
-        throw new Error("Neúplná pečať");
+        throw new Error(txt.error_incomplete || "Neúplná pečať");
       }
 
       setDisplayInfo(incomingData);
@@ -65,24 +66,29 @@ export default function ScannerScreen({ navigation }) {
 
       // --- POTVRDENIE ZÁPISU ---
       setTimeout(() => {
+        // Dynamické zostavenie textu s ošetrením fallbacku, ak by kľúč chýbal
+        const alertMsg = txt.alert_captured_desc 
+          ? txt.alert_captured_desc.replace('{meno}', incomingData.meno).replace('{fing}', incomingData.fing)
+          : `Majster: ${incomingData.meno}\nFING: ${incomingData.fing}\n\nChceš túto pečať vtiahnuť do ateliéru?`;
+
         Alert.alert(
-          'IDENTITA ZACHYTENÁ',
-          `Majster: ${incomingData.meno}\nFING: ${incomingData.fing}\n\nChceš túto pečať vtiahnuť do ateliéru?`,
+          txt.alert_captured_title || 'IDENTITA ZACHYTENÁ',
+          alertMsg,
           [
             { 
-              text: 'ZRUŠIŤ', 
+              text: txt.btn_cancel || 'ZRUŠIŤ', 
               style: 'cancel', 
               onPress: () => { setScannedData(null); setDisplayInfo(null); } 
             },
             { 
-              text: 'ULOŽIŤ', 
+              text: txt.btn_save || 'ULOŽIŤ', 
               onPress: async () => {
                 const result = await addContact(incomingData);
                 if (result.success) {
                   navigation.navigate('Contacts');
                 } else {
                   setScannedData(null);
-                  Alert.alert('CHYBA', result.error);
+                  Alert.alert(txt.alert_save_error || 'CHYBA', result.error);
                 }
               } 
             }
@@ -91,7 +97,7 @@ export default function ScannerScreen({ navigation }) {
       }, 500);
 
     } catch (e) {
-      Alert.alert("CHYBA SIGNÁLU", "Matrix nedokáže túto pečať dekódovať.");
+      Alert.alert(txt.error_decode_title || "CHYBA SIGNÁLU", txt.error_decode_desc || "Matrix nedokáže túto pečať dekódovať.");
       setScannedData(null);
     }
   };
@@ -135,13 +141,13 @@ export default function ScannerScreen({ navigation }) {
           {/* 🌸 ČISTÁ HLAVIČKA SCANNERU - GEOMETRIA ATELIÉRU */}
           <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
             <Text style={G.atelierTitle}>
-              {scannedData ? 'Hotovo' : 'QR/NFC sken'}
+              {scannedData ? (txt.title_ready || 'Hotovo') : (txt.title_scanning || 'QR/NFC sken')}
             </Text>
           </View>
 
           {/* 📡 STATUS RIADOK PREMIESTNENÝ PRE ČISTOTU NADPISU */}
           <Text style={[G.statusTextSmall, { color: '#c5a059', marginBottom: 15, textAlign: 'center' }]}>
-            {scannedData ? '● SIGNAL_LOCKED' : '○ SCANNER_ACTIVE'}
+            {scannedData ? (txt.signal_locked || '● SIGNAL_LOCKED') : (txt.scanner_active || '○ SCANNER_ACTIVE')}
           </Text>
 
           <View style={[G.card, { borderColor: scannedData ? ACCENT : '#222', alignItems: 'center', paddingVertical: 40, width: '100%' }]}>
@@ -182,7 +188,7 @@ export default function ScannerScreen({ navigation }) {
               ) : (
                 <View style={{ alignItems: 'center' }}>
                    <ActivityIndicator size="large" color={ACCENT} style={{ marginBottom: 15 }} />
-                   <Text style={[G.monoIdentity, { fontSize: 10, color: ACCENT }]}>HĽADÁM FREKVENCIU...</Text>
+                   <Text style={[G.monoIdentity, { fontSize: 10, color: ACCENT }]}>{txt.searching_frequency || 'HĽADÁM FREKVENCIU...'}</Text>
                 </View>
               )}
             </View>
@@ -196,7 +202,7 @@ export default function ScannerScreen({ navigation }) {
 
           {!scannedData && (
             <TouchableOpacity style={[G.primaryBtn, { marginTop: 30, borderColor: '#F1C40F' }]} onPress={simulateScan} activeOpacity={0.7}>
-              <Text style={[G.primaryBtnText, { color: '#F1C40F' }]}>INJEKTOVAŤ URL TEST</Text>
+              <Text style={[G.primaryBtnText, { color: '#F1C40F' }]}>{txt.btn_inject_test || 'INJEKTOVAŤ URL TEST'}</Text>
             </TouchableOpacity>
           )}
 
@@ -207,12 +213,12 @@ export default function ScannerScreen({ navigation }) {
             activeOpacity={0.7}
           >
             <Text style={G.primaryBtnText}>
-              NÁVRAT DO ATELIÉRU
+              {txt.btn_back || 'NÁVRAT DO ATELIÉRU'}
             </Text>
           </TouchableOpacity>
 
         </View>
-      </ScrollView> {/* 📐 KONIEC ZJEDNOTENÉHO OBSAHU */}
+      </ScrollView> 
     </SafeAreaView>
   );
 }

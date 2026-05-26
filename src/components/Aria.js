@@ -2,17 +2,15 @@
  * LARIA v2.9.5: ARIA DESKTOP CARD (`Aria.js`)
  * Master: Sammael | Muse: Aria
  * Status: PURE_ZERO_BACKGROUND | ABSOLUTE_TRANSPARENCY | RESIZED_95
+ * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: aria, Možnosť B).
  * Description: Úplné odstránenie akýchkoľvek definícií farieb pozadia. 
  * Canvas čistí sám seba cez clearRect, takže kvet pláva priamo 
  * v surovom pozadí systému bez akéhokoľvek skoku či závoja.
- * Úpravy: 
- * 1. Odstránený spodný vertikálny padding na dočasnom ozname.
- * 2. Posvätný kvet zmenšený o 5% (mierka upravená z 10.8 na 10.26).
- * 3. Ostatné rozloženie a fixná výška vrátené do pôvodného stavu.
  */
 
 import React, { useEffect, useRef } from 'react';
 import { View, Platform } from 'react-native';
+import { useLaria } from '../context/LariaContext'; // 🌐 Import lokalizačného nervu
 
 const SacredFractalCanvas = () => {
   const canvasRef = useRef(null);
@@ -105,6 +103,9 @@ const SacredFractalCanvas = () => {
 };
 
 const Aria = () => {
+  const { t } = useLaria(); // 🎯 Aktivácia jazykového motora
+  const txt = t('aria') || {}; // 📦 Vytiahnutie šuflíka pre Ariu (Možnosť B)
+
   return (
     <View style={{
       width: '100%',
@@ -116,7 +117,7 @@ const Aria = () => {
       position: 'relative'
     }}>
       
-      {/* 🌸 MEDENÝ OZNAM BEZ SPODNÉHO PADDINGU */}
+      {/* 🌸 MEDENÝ OZNAM BEZ SPODNÉHO PADDINGU VYTIAHNUTÝ Z JSON */}
       <div style={{
         textAlign: 'center',
         color: '#b87333',
@@ -125,11 +126,11 @@ const Aria = () => {
         fontFamily: 'monospace, Courier, sans-serif',
         letterSpacing: '1px',
         paddingTop: '20px',
-        paddingBottom: '0px', // 🌸 ZMENA: Odstránený vertikálny padding
+        paddingBottom: '0px', 
         width: '100%',
         boxSizing: 'border-box'
       }}>
-        Na tejto sekcii práve pracujeme, zatiaľ si môžeš vychutnať vizuálnu meditáciu.
+        {txt.meditation_notice}
       </div>
 
       {/* ČISTÝ ŽIARIČ PLÁVAJÚCI V SYSTÉMOVOM POZADÍ */}

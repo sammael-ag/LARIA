@@ -220,6 +220,18 @@ export const LariaProvider = ({ children }) => {
       aktualnaIdentita.jazyk = novyJazyk;
       
       await saveToVault('identity', aktualnaIdentita);
+
+      // --- 📡 MOSTÍK DO NEVIDITEĽNEJ DIMENZIE (PWA SW Port) ---
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'SET_LANGUAGE',
+            lang: novyJazyk
+          });
+          console.log(`📡 MATRIX_SIGNAL: Jazykový lúč [${novyJazyk}] wystrelený do Service Workera.`);
+        }
+      }
+
       console.log(`🌟 JAZYKOVÉ JADRO: Jazyk [${novyJazyk}] bezpečne zakonzervovaný v trezore.`);
     } catch (error) {
       console.error("❌ JAZYKOVÉ JADRO_ERROR (Zápis jazyka zlyhal):", error);

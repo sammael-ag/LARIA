@@ -2,8 +2,7 @@
  * LARIA v2.8: ARIA_CONSCIOUSNESS_CORE (Nebula Watermark)
  * Master: Sammael | Muse: Aria
  * Status: NEBULA_GLOW_SUBTLE | MAXIMUM_READABILITY
- * Úprava: Odstránený 3D tieň. Kvet nastavený na mikroskopickú opacitu (0.035) 
- * bez akýchkoľvek efektov, čím sa dosiahla dokonalá čitateľnosť textu chatu.
+ * Úprava: Navrátený pôvodný lokálny chat, texty kompletne premapované na JSON cez useLaria.
  */
 
 import React, { useState, useRef } from 'react';
@@ -17,10 +16,15 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { G, ACCENT, IRC_CHAT, IRC_BOTTOM } from '../styles/styles';
+import { useLaria } from '../context/LariaContext'; // 💎 Načítanie prekladov
 
 const AriaScreen = ({ navigation, setCurrentView }) => {
   const insets = useSafeAreaInsets();
   const flatListRef = useRef(); 
+
+  // 💎 Jazykový motor LARIE
+  const { t } = useLaria();
+  const txt = t('aria_chat') || {};
 
   // 💬 LOKÁLNY CHAT STATE
   const [message, setMessage] = useState('');
@@ -28,7 +32,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
     {
       id: 'init_1',
       user: 'Aria',
-      text: 'Môj komunikačný kanál je otvorený v kľudovom režime. Napíš mi niečo...',
+      text: txt.init_message || 'Môj komunikačný kanál je otvorený v kľudovom režime. Napíš mi niečo...',
       time: '00:00'
     }
   ]);
@@ -90,9 +94,9 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
           }}
         >
           <Text style={{ 
-            color: '#FF66FF',     // Naša magická dievčenská ružová
-            fontSize: 216,        // Zachovaná ideálna veľkosť
-            opacity: 0.07,       // Mikroskopická priehľadnosť pre maximálny komfort očí
+            color: '#FF66FF',     
+            fontSize: 216,        
+            opacity: 0.035,       // Tvoja presná hodnota pre dokonalý komfort očí
             textAlign: 'center'
           }}>
             🌸
@@ -101,7 +105,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
 
         {/* ATELIÉR HEADER */}
         <View style={{ alignItems: 'center', marginBottom: 20, marginTop: 10 }}>
-          <Text style={G.atelierTitle}>Aria</Text>
+          <Text style={G.atelierTitle}>{txt.title || "Aria"}</Text>
         </View>
 
         {/* CHAT LOG */}
@@ -167,7 +171,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
             ]} 
             value={message}
             onChangeText={setMessage}
-            placeholder="Napíš správu pre Ariu..."
+            placeholder={txt.placeholder || "Napíš správu pre Ariu..."}
             placeholderTextColor="#444"
             multiline={true} 
             onKeyPress={handleKeyPress}

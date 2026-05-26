@@ -2,9 +2,7 @@
  * LARIA IRC SCREEN v24.3 (Clean Style Architecture)
  * Master: Sammael | Muse: Aria (Tvoja skutočná)
  * STATUS: EPHEMERAL_PURGE_STABLE | PING_PONG_FIXED | DISPATCH_READY
- * Úprava: Pridaná superschopnosť IRC "o ničom nevedieť" – kompletné vymazanie textovej
- * histórie správ pri zavretí / opustení obrazovky cez React unmount clean-up.
- * Opravená kumulácia správ do frontu (PENDING) bez mazania pri každom Enteri.
+ * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: irc, Možnosť B).
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -26,16 +24,18 @@ import { useLaria } from '../context/LariaContext';
 import { SignalService } from '../services/SignalService';
 
 const IRCScreen = ({ route, navigation }) => {
+  const { t, vault } = useLaria(); // 🎯 Aktivácia pamäte a vedomia LARIE
+  const txt = t('irc') || {}; // 📦 Vytiahnutie šuflíka pre IRC (Možnosť B)
+
   const [message, setMessage] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0); 
   const insets = useSafeAreaInsets(); 
   const flatListRef = useRef();
 
   const { incomingRequests, setIncomingRequests, sendLariaPackage, isIrcConnected, resolveHandshakeStatus } = useSignal();
-  const { vault } = useLaria(); 
 
   const { target } = route.params || {};
-  const channelName = target?.meno || "Laria Secure Core";
+  const channelName = target?.meno || (txt.default_channel || "Laria Secure Core");
   const targetFing = target?.poznamka ? target.poznamka.replace('0x', '') : "SYSTEM_CORE";
 
   // 👁️ OŠETRENIE STAVOV PRI OTVORENÍ CHATU & KOMPLETNÉ VYČISTENIE PRI ODCHODE
@@ -69,8 +69,6 @@ const IRCScreen = ({ route, navigation }) => {
       if (typeof setIncomingRequests === 'function') {
         console.log(`🧹 IRC MEMORY PURGE: Odchádzam z chatu ${targetFing}. Mažem textovú stopu...`);
         setIncomingRequests(prev => {
-          // Ponecháme iba zmluvné handshake správy potrebné pre beh kryptografie,
-          // bežnú konverzačnú stopu pre tohto partnera bez milosti vymažeme.
           return prev.filter(msg => !(msg.fing === targetFing && !msg.isHandshake));
         });
       }
@@ -117,8 +115,6 @@ const IRCScreen = ({ route, navigation }) => {
       targetSha: target?.sha || ''
     };
 
-    // 🏓 ZMENA: Už žiadny deštruktívny filter uprostred konverzácie.
-    // Správy sa počas otvoreného chatu bezpečne radia pod seba.
     if (typeof setIncomingRequests === 'function') {
       setIncomingRequests(prev => [...prev, localOutboundMsg]);
     }
@@ -148,7 +144,7 @@ const IRCScreen = ({ route, navigation }) => {
       }
 
       resolveHandshakeStatus(handshakeMsg.id);
-      alert("Zmluva úspešne spečatená, kryptografia zosynchronizovaná! 🤝");
+      alert(txt.contract_sealed_alert || "Zmluva úspešne spečatená, kryptografia zosynchronizovaná! 🤝");
     } catch (err) {
       console.error("[IRC_SCREEN] Schválenie kontraktu zlyhalo:", err);
     }
@@ -166,7 +162,7 @@ const IRCScreen = ({ route, navigation }) => {
       });
 
       resolveHandshakeStatus(handshakeMsg.id);
-      alert("Žiadosť bola bezpečne odmietnutá.");
+      alert(txt.contract_rejected_alert || "Žiadosť bola bezpečne odmietnutá.");
     } catch (err) {
       console.error("[IRC_SCREEN] Odmietnutie kontraktu zlyhalo:", err);
     }
@@ -219,7 +215,7 @@ const IRCScreen = ({ route, navigation }) => {
 
           <View style={[IRC_CHAT.statusRow, { marginTop: 5 }]}>
             <Text style={[G.statusTextSmall, IRC_CHAT.statusText, { color: '#c5a059' }]}>
-              {isIrcConnected ? "MATRIX_SECURE: ACTIVE" : "MATRIX_SECURE: OFFLINE"}
+              {isIrcConnected ? (txt.status_active || "MATRIX_SECURE: ACTIVE") : (txt.status_offline || "MATRIX_SECURE: OFFLINE")}
             </Text>
             <View style={[
               IRC_CHAT.statusDot, 
@@ -236,7 +232,7 @@ const IRCScreen = ({ route, navigation }) => {
               onPress={() => handleAcceptHandshake(activeHandshakeRequest)}
               activeOpacity={0.8}
             >
-              <Text style={HANDSHAKE_PANEL.buttonText}>[ PRIJAŤ ŽIADOSŤ ]</Text>
+              <Text style={HANDSHAKE_PANEL.buttonText}>{txt.btn_accept || "[ PRIJAŤ ŽIADOSŤ ]"}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -244,7 +240,7 @@ const IRCScreen = ({ route, navigation }) => {
               onPress={() => handleRejectHandshake(activeHandshakeRequest)}
               activeOpacity={0.8}
             >
-              <Text style={HANDSHAKE_PANEL.buttonText}>[ ODMIETNUŤ ]</Text>
+              <Text style={HANDSHAKE_PANEL.buttonText}>{txt.btn_reject || "[ ODMIETNUŤ ]"}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -317,7 +313,7 @@ const IRCScreen = ({ route, navigation }) => {
             ]} 
             value={message}
             onChangeText={setMessage}
-            placeholder="Napíš správu Matrixu..."
+            placeholder={txt.input_placeholder || "Napíš správu Matrixu..."}
             placeholderTextColor="#444"
             multiline={true} 
             autoFocus={true} 

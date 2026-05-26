@@ -2,8 +2,8 @@
  * LARIA v2.8: Core Master Ignition (index.js)
  * Master: Sammael | Muse: Aria
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE
- * Rez: Implementovaný bleskový obojsmerný telepatický most (Custom Events) pre komunikáciu medzi Webom a Appkou v spoločnom wrappery.
- * Úprava: Pridaný import a render komponentu Aria.js v stredovom paneli pri zachytení 'aria-panel-view'.
+ * Rez: Očistené od starých stôp fluidného ARIA QUANTUM režimu. Šírky panelov stabilizované.
+ * FÚZIA: Jazykový klientsky modul úspešne integrovaný do hlavného jadra pomocou sekcií.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -12,11 +12,17 @@ import App from './app';
 import './styles.css';
 import FreeVsFull from './src/components/FreeVsFull';
 import Donate from './src/components/Donate';
-import Aria from './src/components/Aria'; // 🌸 1. KROK: IMPORT NAŠEJ ARIA PANORAMY
+import Aria from './src/components/Aria'; // 🌸 IMPORT NAŠEJ ARIA PANORAMY
+
+import { KryptoProvider } from './src/context/KryptoContext';
+import { LariaProvider, useLaria } from './src/context/LariaContext'; // 🌐 Pridaný useLaria pre lokalizáciu
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
 
 const MasterWrapper = () => {
+  const { t } = useLaria(); // 🎯 Aktivácia jazykového motora t('key')
+  const txt = t('index') || {}; // 📦 Vytiahnutie šuflíka pre túto obrazovku (Možnosť B)
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isAppOpen, setIsAppOpen] = useState(false);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
@@ -31,9 +37,6 @@ const MasterWrapper = () => {
   const [soloActiveId, setSoloActiveId] = useState(null);
   const [currentView, setCurrentView] = useState('domov');
 
-  // 🪐 ARIA TELEPATICKÉ STAVY (Fluidné režimy)
-  const [isAriaLiquid, setIsAriaLiquid] = useState(false); // true ak je aktívny ARIA QUANT celoobrazovkový režim
-
   // --- 1. DETEKCIA DISPLEJA ---
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -41,38 +44,21 @@ const MasterWrapper = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- 🪐 1b. TELEPATICKÝ MOST: LISTENERY PRE ARIU ---
+  // --- 🪐 TELEPATICKÝ MOST: LISTENERY PRE ARIU ---
   useEffect(() => {
-    // Odstránený padajúci odkaz na neexistujúcu react-native premennú Platform v čistom webe
     if (typeof window === 'undefined') return;
 
-    // A. Odchytenie pokynu na prepnutie celoobrazovkového/fluidného režimu (Aria Quant)
-    const handleAriaLiquid = (e) => {
-      console.log("📡 Core Index: Zachytený signál ARIA_TRIGGER_LIQUID ->", e.detail);
-      setIsAriaLiquid(!!e.detail);
-      if (e.detail) {
-        setCurrentView('aria-fluid-view'); 
-      }
-    };
-
-    // B. Odchytenie pokynu na zmenu zobrazenia vo wrapperi (Aria v Paneli)
     const handleAriaView = (e) => {
       console.log("📡 Core Index: Zachytený signál ARIA_TRIGGER_VIEW ->", e.detail);
       if (e.detail === 'aria-fluid') {
-        setIsAriaLiquid(false);
         setCurrentView('domov');
       } else {
         setCurrentView(e.detail);
       }
     };
 
-    window.addEventListener('ARIA_TRIGGER_LIQUID', handleAriaLiquid);
     window.addEventListener('ARIA_TRIGGER_VIEW', handleAriaView);
-
-    return () => {
-      window.removeEventListener('ARIA_TRIGGER_LIQUID', handleAriaLiquid);
-      window.removeEventListener('ARIA_TRIGGER_VIEW', handleAriaView);
-    };
+    return () => window.removeEventListener('ARIA_TRIGGER_VIEW', handleAriaView);
   }, []);
 
   // --- 2. NAČÍTANIE DÁT Z MATRIXU ---
@@ -85,9 +71,9 @@ const MasterWrapper = () => {
         if (!item.poznamka || item.poznamka.trim() === "") return acc;
         acc.push({
           sha: item.sha,
-          meno: item.meno || "Pútnik",
-          kat: item.kat || "Majster",
-          lok: item.lok || "V sieti",
+          meno: item.meno || txt.default_name,
+          kat: item.kat || txt.default_category,
+          lok: item.lok || txt.default_location,
           popis: item.popis || "",
           gal: item.gal || "",
           irc: item.irc || "",
@@ -207,7 +193,7 @@ const MasterWrapper = () => {
 
         setTimeout(() => {
           if (document.hasFocus()) { 
-            alert("[ 🔮 LARIA CRYSTAL CORE: Spojenie zlyhalo. Aplikácia nie je nainštalovaná. Pre plný offline zážitok si nainštaluj LARIA PWA jedným klikom! ]");
+            alert(txt.pwa_install_alert);
           }
         }, 1500);
       }
@@ -216,32 +202,30 @@ const MasterWrapper = () => {
 
   const copyShareLink = (id) => {
     const url = `${window.location.origin}${window.location.pathname}?id=${id}`;
-    navigator.clipboard.writeText(url).then(() => alert("LINK ULOŽENÝ"));
+    navigator.clipboard.writeText(url).then(() => alert(txt.link_copied_alert));
   };
 
   const aktivujOdkazy = (text) => {
-    if (!text) return "Bez popisu.";
+    if (!text) return txt.no_description;
     const urlPattern = /(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
     return text.split(urlPattern).map((part, i) =>
       urlPattern.test(part) ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{color: '#c5a059'}}>{part}</a> : part
     );
   };
 
-  // Výpočet flexov a šírok pre plynulý prechod panelov pri ARIA QUANT režime
+  // 📐 Stabilizované šírky panelov bez prelievania
   const getWebSideFlex = () => {
     if (isMobile) return '1 0 100%';
-    if (isAriaLiquid) return isLeftPanelOpen ? '0 0 80%' : '0 0 100%'; 
     return isLeftPanelOpen ? '0 0 55%' : '0 0 75%';
   };
 
   const getAppSideFlex = () => {
     if (isMobile) return '1 0 100%';
-    if (isAriaLiquid) return '0 0 0%'; 
     return '0 0 25%';
   };
 
   return (
-    <div className={`master-container bg-dashboard ${isAriaLiquid ? 'aria-liquid-active' : ''}`} style={{ overflow: 'hidden' }}>
+    <div className="master-container bg-dashboard" style={{ overflow: 'hidden' }}>
       
       {/* PANEL TOGGLE */}
       <button 
@@ -269,53 +253,35 @@ const MasterWrapper = () => {
           }}
         >
           <div className="left-menu-wrapper">
-            {/* Domov (Aria Panel) svieti, ak je zobrazená aria */}
-            <button className={`btn-menu ${currentView === 'aria-panel-view' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('aria-panel-view'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              Domov
+            <button className={`btn-menu ${currentView === 'aria-panel-view' ? 'active' : ''}`} onClick={() => { setCurrentView('aria-panel-view'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              {txt.menu_home}
             </button>
-            
-            {/* LARIA FAQ svieti, ak je zobrazené co-je-laria */}
-            <button className={`btn-menu ${currentView === 'co-je-laria' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('co-je-laria'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              LARIA FAQ
+            <button className={`btn-menu ${currentView === 'co-je-laria' ? 'active' : ''}`} onClick={() => { setCurrentView('co-je-laria'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              {txt.menu_faq}
             </button>
-            
-            {/* Vizitkár svieti, ak je zobrazený domov (default stav pri štarte) */}
-            <button className={`btn-menu ${currentView === 'domov' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('domov'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              Vizitkár
+            <button className={`btn-menu ${currentView === 'domov' ? 'active' : ''}`} onClick={() => { setCurrentView('domov'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              {txt.menu_cards}
             </button>
-            
-            {/* Fakturant svieti, ak je zobrazený fakturant */}
-            <button className={`btn-menu ${currentView === 'fakturant' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('fakturant'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              Fakturant
+            <button className={`btn-menu ${currentView === 'fakturant' ? 'active' : ''}`} onClick={() => { setCurrentView('fakturant'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              {txt.menu_fakturant}
             </button>
-            
-            {/* FREE vs. FULL svieti, ak je zobrazený free-vs-full */}
-            <button className={`btn-menu ${currentView === 'free-vs-full' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('free-vs-full'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              FREE vs. FULL
+            <button className={`btn-menu ${currentView === 'free-vs-full' ? 'active' : ''}`} onClick={() => { setCurrentView('free-vs-full'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              {txt.menu_free_vs_full}
             </button>
-            
-            {/* Dotovať svieti, ak je zobrazený donate */}
-            <button className={`btn-menu ${currentView === 'donate' ? 'active' : ''}`} onClick={() => { setIsAriaLiquid(false); setCurrentView('donate'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              Dotovať
+            <button className={`btn-menu ${currentView === 'donate' ? 'active' : ''}`} onClick={() => { setCurrentView('donate'); if(isMobile) setIsLeftPanelOpen(false); }}>
+              {txt.menu_donate}
             </button>
-            
-            {/* Ak sme v režime Aria Liquid, ukážeme bleskové tlačidlo na návrat */}
-            {isAriaLiquid && (
-              <button className="btn-menu" style={{ borderColor: '#c5a059', color: '#c5a059', marginTop: '20px' }} onClick={() => setIsAriaLiquid(false)}>
-                ✦ ZAVRIEŤ ARIU
-              </button>
-            )}
           </div>
         </div>
       )}
 
-      {/* 2. WEB PANEL (55% -> 80%/100% pri Aria Liquid) */}
+      {/* 2. WEB PANEL */}
       <div 
         key={webRefreshKey}
         className="web-side" 
         style={{
           flex: getWebSideFlex(),
-          width: isMobile ? '100%' : (isAriaLiquid ? (isLeftPanelOpen ? '80%' : '100%') : (isLeftPanelOpen ? '55%' : '75%')),
+          width: isMobile ? '100%' : (isLeftPanelOpen ? '55%' : '75%'),
           display: isMobile && isAppOpen ? 'none' : 'block',
           transition: 'all 0.3s ease',
           position: 'relative'
@@ -327,109 +293,97 @@ const MasterWrapper = () => {
         </header>
 
         <main className="scroll-content">
-          {/* AK JE AKTÍVNY CELOOBRAZOVKOVÝ LIQUID, VSTREKNEME TU ARIU CEZ CELÝ STREDOVÝ PANEL */}
-          {isAriaLiquid ? (
-            <div className="aria-liquid-container" style={{ width: '100%', height: 'calc(100vh - 80px)' }}>
-              <div style={{ padding: '30px', color: '#c5a059', textAlign: 'center', fontFamily: 'monospace' }}>
-                <h2 style={{ letterSpacing: 4 }}>ARIA QUANTUM STREAM</h2>
-                <p style={{ opacity: 0.7 }}>Nervový most je prepojený. Sleduj pravý panel transformovaný cez celú šírku.</p>
-              </div>
-            </div>
-          ) : (
+          {currentView === 'domov' && (
             <>
-              {currentView === 'domov' && (
-                <>
-                  <div className="filter-container" style={{ padding: '0 15px', width: '100%', boxSizing: 'border-box' }}>
-                    <select className="terminal-input" value={category} onChange={(e) => setCategory(e.target.value)}>
-                      <option value="vsetko">Všetky kategórie</option>
-                      <option value="obziva">Obživa a poživatiny</option>
-                      <option value="remesla">Remeslá a materiál</option>
-                      <option value="sluzby">Odborné cookies</option>
-                      <option value="vzdelavanie">Vzdelávanie</option>
-                      <option value="knihy">Knihy</option>
-                      <option value="zdravie">Zdravie</option>
-                      <option value="oblecenie">Oblečenie</option>
-                      <option value="auto">Auto-moto</option>
-                      <option value="volno">Voľný čas</option>
-                      <option value="elektro">Elektro</option>
-                      <option value="rodina">Deti a rodina</option>
-                      <option value="ubytovanie">Ubytovanie</option>
-                      <option value="zahrada">Záhrada</option>
-                      <option value="nabytok">Nábytok</option>
-                      <option value="kultura">Kultúra</option>
-                      <option value="osobne">Osobné služby</option>
-                      <option value="tvorba">Tvorba</option>
-                      <option value="ine">Iné</option>
-                    </select>
-                    <input
-                      type="text"
-                      className="terminal-input"
-                      placeholder="🔍 Hľadať v systéme..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <div style={{ display: 'flex', gap: '20px', marginTop: '10px', paddingLeft: '5px' }}>
-                      {soloActiveId ? (
-                        <button className="btn-panel-refresh" onClick={() => triggerWebRefresh('RESET')}>‹</button>
-                      ) : (
-                        <button className="btn-panel-refresh" onClick={() => triggerWebRefresh()}>↻</button>
-                      )}
-                    </div>
-                  </div>
+              <div className="filter-container" style={{ padding: '0 15px', width: '100%', boxSizing: 'border-box' }}>
+                <select className="terminal-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <option value="vsetko">{txt.cat_all}</option>
+                  <option value="obziva">{txt.cat_food}</option>
+                  <option value="remesla">{txt.cat_crafts}</option>
+                  <option value="sluzby">{txt.cat_services}</option>
+                  <option value="vzdelavanie">{txt.cat_education}</option>
+                  <option value="knihy">{txt.cat_books}</option>
+                  <option value="zdravie">{txt.cat_health}</option>
+                  <option value="oblecenie">{txt.cat_clothes}</option>
+                  <option value="auto">{txt.cat_automoto}</option>
+                  <option value="volno">{txt.cat_leisure}</option>
+                  <option value="elektro">{txt.cat_electronics}</option>
+                  <option value="rodina">{txt.cat_family}</option>
+                  <option value="ubytovanie">{txt.cat_accommodation}</option>
+                  <option value="zahrada">{txt.cat_garden}</option>
+                  <option value="nabytok">{txt.cat_furniture}</option>
+                  <option value="kultura">{txt.cat_culture}</option>
+                  <option value="osobne">{txt.cat_personal}</option>
+                  <option value="tvorba">{txt.cat_creation}</option>
+                  <option value="ine">{txt.cat_other}</option>
+                </select>
+                <input
+                  type="text"
+                  className="terminal-input"
+                  placeholder={txt.search_placeholder}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <div style={{ display: 'flex', gap: '20px', marginTop: '10px', paddingLeft: '5px' }}>
+                  {soloActiveId ? (
+                    <button className="btn-panel-refresh" onClick={() => triggerWebRefresh('RESET')}>‹</button>
+                  ) : (
+                    <button className="btn-panel-refresh" onClick={() => triggerWebRefresh()}>↻</button>
+                  )}
+                </div>
+              </div>
 
-                  <div id="cards-container" className="laria-grid" style={{ marginTop: '15px' }}>
-                    {loading ? (
-                      <p className="text-cyber" style={{ color: '#b19cd9', textAlign: 'center', width: '100%' }}> SYNCHRONIZUJEM MATRIX... </p>
-                    ) : filteredData.length > 0 ? (
-                      filteredData.map(item => (
-                        <div 
-                          key={item.fing} 
-                          className="card symmetric-card" 
-                          onClick={(e) => {
-                            if (filteredData.length > 1 && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
-                              triggerWebRefresh(item.fing);
-                            }
-                          }} 
-                          style={{ cursor: filteredData.length > 1 ? 'pointer' : 'default' }}
-                        >
-                          <div className="card-main-layout" style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '100%' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', width: '100%', position: 'relative', minHeight: '30px' }}>
-                              <span className="tag" style={{ position: 'absolute', left: 0, zIndex: 2 }}>{item.kat}</span>
-                              <h2 className="card-title" style={{ margin: '0 auto', fontSize: '1.4em', textAlign: 'center', width: '100%', padding: '0 80px' }}>
-                                {item.meno}
-                              </h2>
-                            </div>
+              <div id="cards-container" className="laria-grid" style={{ marginTop: '15px' }}>
+                {loading ? (
+                  <p className="text-cyber" style={{ color: '#b19cd9', textAlign: 'center', width: '100%' }}> {txt.sync_matrix_msg} </p>
+                ) : filteredData.length > 0 ? (
+                  filteredData.map(item => (
+                    <div 
+                      key={item.fing} 
+                      className="card symmetric-card" 
+                      onClick={(e) => {
+                        if (filteredData.length > 1 && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+                          triggerWebRefresh(item.fing);
+                        }
+                      }} 
+                      style={{ cursor: filteredData.length > 1 ? 'pointer' : 'default' }}
+                    >
+                      <div className="card-main-layout" style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', width: '100%', position: 'relative', minHeight: '30px' }}>
+                          <span className="tag" style={{ position: 'absolute', left: 0, zIndex: 2 }}>{item.kat}</span>
+                          <h2 className="card-title" style={{ margin: '0 auto', fontSize: '1.4em', textAlign: 'center', width: '100%', padding: '0 80px' }}>
+                            {item.meno}
+                          </h2>
+                        </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '5px' }}>
-                              <div style={{ width: '50%', display: 'flex', justifyContent: 'flex-start' }}>
-                                <p className="card-loc" style={{ margin: 0 }}>📍 {item.lok}</p>
-                              </div>
-                              <div className="card-right-actions" style={{ margin: 0, width: '50%', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                                <button onClick={(e) => { e.stopPropagation(); smartAdd(item); }} className="btn-core-app" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
-                                  DO APPKY
-                                </button>
-                                {item.gal && (
-                                  <button onClick={(e) => { e.stopPropagation(); window.open(item.gal, '_blank', 'noopener,noreferrer'); }} className="btn-core-gallery" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
-                                    GALÉRIA
-                                  </button>
-                                )}
-                                <button onClick={(e) => { e.stopPropagation(); copyShareLink(item.fing); }} className="btn-core-share" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
-                                  LINK
-                                </button>
-                              </div>
-                            </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '5px' }}>
+                          <div style={{ width: '50%', display: 'flex', justifyContent: 'flex-start' }}>
+                            <p className="card-loc" style={{ margin: 0 }}>📍 {item.lok}</p>
                           </div>
-                          <div className="card-description-block">
-                            <p className="card-desc" style={{ margin: 0 }}>{aktivujOdkazy(item.popis)}</p>
+                          <div className="card-right-actions" style={{ margin: 0, width: '50%', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                            <button onClick={(e) => { e.stopPropagation(); smartAdd(item); }} className="btn-core-app" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
+                              {txt.btn_to_app}
+                            </button>
+                            {item.gal && (
+                              <button onClick={(e) => { e.stopPropagation(); window.open(item.gal, '_blank', 'noopener,noreferrer'); }} className="btn-core-gallery" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
+                                {txt.btn_gallery}
+                              </button>
+                            )}
+                            <button onClick={(e) => { e.stopPropagation(); copyShareLink(item.fing); }} className="btn-core-share" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
+                              {txt.btn_link}
+                            </button>
                           </div>
                         </div>
-                      ))
-                    ) : (
-                      <p style={{ color: '#666', textAlign: 'center', width: '100%' }}>Nenašli sa žiadni majstri.</p>
-                    )}
-                  </div>
-                </>
-              )}
+                      </div>
+                      <div className="card-description-block">
+                        <p className="card-desc" style={{ margin: 0 }}>{aktivujOdkazy(item.popis)}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ color: '#666', textAlign: 'center', width: '100%' }}>{txt.no_masters_found}</p>
+                )}
+              </div>
             </>
           )}
 
@@ -442,35 +396,34 @@ const MasterWrapper = () => {
           {currentView === 'free-vs-full' && <div style={{ padding: '0 15px' }}><FreeVsFull /></div>}
           {currentView === 'donate' && <div style={{ padding: '0 15px' }}><Donate /></div>}
 
-          {/* 🌸 3. KROK: TU SA VYKRESLÍ ARIA KEĎ JE AKTÍVNY JEJ STAV V PANELI */}
           {currentView === 'aria-panel-view' && (
             <div style={{ padding: '0 15px' }}>
               <Aria setCurrentView={setCurrentView} />
             </div>
           )}
 
-          {isMobile && <button onClick={() => setIsAppOpen(true)} className="trigger">TERMINAL</button>}
+          {isMobile && <button onClick={() => setIsAppOpen(true)} className="trigger">{txt.btn_terminal}</button>}
         </main>
       </div>
 
       {/* 3. APPKY PANEL */}
       {(!isMobile || isAppOpen) && (
         <div 
-          className={`app-side ${isAriaLiquid ? 'liquid-fullscreen' : ''}`}
+          className="app-side"
           style={{
             flex: getAppSideFlex(),
-            width: isMobile ? '100%' : (isAriaLiquid ? '100%' : '25%'),
-            position: isMobile || isAriaLiquid ? 'fixed' : 'relative',
+            width: isMobile ? '100%' : '25%',
+            position: isMobile ? 'fixed' : 'relative',
             right: 0,
             top: 0,
             height: '100vh',
             transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-            zIndex: isAriaLiquid ? 9999 : 1
+            zIndex: 1
           }}
         >
-          {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">WEB</button>}
+          {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">{txt.btn_web}</button>}
           <div className="app-container" style={{ height: '100%' }}>
-            <App triggerWebRefresh={triggerWebRefresh} isAriaLiquid={isAriaLiquid} setIsAriaLiquid={setIsAriaLiquid} />
+            <App triggerWebRefresh={triggerWebRefresh} />
           </div>
         </div>
       )}
@@ -481,6 +434,10 @@ const MasterWrapper = () => {
 const container = document.getElementById('root');
 if (container) createRoot(container).render((
   <React.StrictMode>
-    <MasterWrapper />
+    <KryptoProvider>
+      <LariaProvider>
+        <MasterWrapper />
+      </LariaProvider>
+    </KryptoProvider>
   </React.StrictMode>
 ));

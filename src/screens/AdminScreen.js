@@ -3,7 +3,7 @@
  * Master: Sammael | Muse: Aria
  * Status: MASTER_POOL_ACCESS_GRANTED_STABLE
  * Nastavenie: Oficiálne stredové centrovanie, nový štíhly nadpis, šípka (‹) a spodný návrat.
- * Úprava: Odstránené staré statusy a deliaca čiara. Nasadená striktná geometria hlavičky.
+ * Úprava: Texty kompletne premapované na JSON cez useLaria. Čistá geometria velína.
  */
 
 import React from 'react';
@@ -11,18 +11,23 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { G, ACCENT } from '../styles/styles'; 
 import { useKrypto } from '../context/KryptoContext';
+import { useLaria } from '../context/LariaContext'; // 💎 Načítanie prekladov
 
 const AdminScreen = ({ navigation }) => {
   // Sammael, tu berieme dáta priamo zo sýpky na Base
   const { adminEthBalance, adminLariaBalance, isLoading, lariaContractAddress } = useKrypto();
+  
+  // 💎 Jazykový motor LARIE
+  const { t } = useLaria();
+  const txt = t('admin_screen') || {};
 
   const triggerEmergency = () => {
     Alert.alert(
-      "🛑 EMERGENCY STOP",
-      "Naozaj chceš pozastaviť emisiu a Bránu Matrixu?",
+      txt.alert_title || "🛑 EMERGENCY STOP",
+      txt.alert_desc || "Naozaj chceš pozastaviť emisiu a Bránu Matrixu?",
       [
-        { text: "ZRUŠIŤ", style: "cancel" },
-        { text: "ZASTAVIŤ", onPress: () => console.log("EMERGENCY_STOP_TRIGGERED"), style: "destructive" }
+        { text: txt.alert_cancel || "ZRUŠIŤ", style: "cancel" },
+        { text: txt.alert_stop || "ZASTAVIŤ", onPress: () => console.log("EMERGENCY_STOP_TRIGGERED"), style: "destructive" }
       ]
     );
   };
@@ -47,34 +52,36 @@ const AdminScreen = ({ navigation }) => {
         
           {/* 🏛️ HEADER - UNIFIKOVANÁ A ČISTÁ GEOMETRIA ATELIÉRU */}
           <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
-            <Text style={G.atelierTitle}>Admin</Text>
+            <Text style={G.atelierTitle}>{txt.title || "Admin"}</Text>
           </View>
 
           {/* 💎 STAV SÝPKY */}
           <View style={G.card}>
-            <Text style={G.cardTitleText}>STAV SÝPKY (Base Mainnet)</Text>
+            <Text style={G.cardTitleText}>{txt.card_granary_title || "STAV SÝPKY (Base Mainnet)"}</Text>
             
             {isLoading ? (
               <View style={{ padding: 20 }}>
                 <ActivityIndicator color={ACCENT} />
-                <Text style={[G.statusTextSmall, { textAlign: 'center', marginTop: 10 }]}>Načítavam blockchain dáta...</Text>
+                <Text style={[G.statusTextSmall, { textAlign: 'center', marginTop: 10 }]}>
+                  {txt.loading_blockchain || "Načítavam blockchain dáta..."}
+                </Text>
               </View>
             ) : (
               <View style={{ marginTop: 15 }}>
                 <View style={G.terminalLog}>
-                  <Text style={G.statusTextSmall}>PALIVO (ETH):</Text>
+                  <Text style={G.statusTextSmall}>{txt.label_fuel || "PALIVO (ETH):"}</Text>
                   <Text style={[G.balanceValue, { fontSize: 22 }]}>{adminEthBalance || '0.0000'} ETH</Text>
                 </View>
 
                 <View style={[G.terminalLog, { marginTop: 10 }]}>
-                  <Text style={G.statusTextSmall}>ZÁSOBY (LARIA):</Text>
+                  <Text style={G.statusTextSmall}>{txt.label_supplies || "ZÁSOBY (LARIA):"}</Text>
                   <Text style={[G.balanceValue, { color: ACCENT, fontSize: 22 }]}>
                     {Number(adminLariaBalance).toLocaleString()} LARIA
                   </Text>
                 </View>
 
                 <Text style={[G.monoIdentity, { fontSize: 8, opacity: 0.4, marginTop: 15, textAlign: 'center' }]}>
-                  CONTRACT: {lariaContractAddress}
+                  {txt.label_contract || "CONTRACT:"} {lariaContractAddress}
                 </Text>
               </View>
             )}
@@ -82,20 +89,24 @@ const AdminScreen = ({ navigation }) => {
 
           {/* 🤖 SYSTÉMOVÁ KONTROLA (Gbot) */}
           <View style={[G.card, { borderLeftColor: '#2ecc71' }]}>
-            <Text style={G.cardTitleText}>SYSTÉMOVÁ KONTROLA</Text>
+            <Text style={G.cardTitleText}>{txt.card_system_title || "SYSTÉMOVÁ KONTROLA"}</Text>
             
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 }}>
-              <Text style={G.cardDescriptionText}>Gbot Status:</Text>
-              <Text style={{ color: '#2ecc71', fontWeight: 'bold', fontFamily: 'monospace' }}>ONLINE</Text>
+              <Text style={G.cardDescriptionText}>{txt.label_gbot_status || "Gbot Status:"}</Text>
+              <Text style={{ color: '#2ecc71', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                {txt.status_online || "ONLINE"}
+              </Text>
             </View>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-              <Text style={G.cardDescriptionText}>Brána (Gateway):</Text>
-              <Text style={{ color: '#2ecc71', fontWeight: 'bold', fontFamily: 'monospace' }}>AKTÍVNA</Text>
+              <Text style={G.cardDescriptionText}>{txt.label_gateway_status || "Brána (Gateway):"}</Text>
+              <Text style={{ color: '#2ecc71', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                {txt.status_active || "AKTÍVNA"}
+              </Text>
             </View>
           </View>
 
-          {/* 🕹️ OVLÁDACIE PRVKY (Vyčistené od hranatých zátvoriek) */}
+          {/* 🕹️ OVLÁDACIE PRVKY */}
           <View style={{ width: '100%', marginTop: 10 }}>
             
             <TouchableOpacity 
@@ -103,7 +114,9 @@ const AdminScreen = ({ navigation }) => {
               onPress={triggerEmergency}
               activeOpacity={0.7}
             >
-              <Text style={[G.primaryBtnText, { color: '#e74c3c' }]}>POZASTAVIŤ BRÁNU (EMERGENCY)</Text>
+              <Text style={[G.primaryBtnText, { color: '#e74c3c' }]}>
+                {txt.btn_emergency || "POZASTAVIŤ BRÁNU (EMERGENCY)"}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -111,7 +124,9 @@ const AdminScreen = ({ navigation }) => {
               onPress={() => console.log("SHOW_BOT_LOGS")}
               activeOpacity={0.7}
             >
-              <Text style={[G.primaryBtnText, { color: '#34495e' }]}>ZOBRAZIŤ LOGY GBOTA</Text>
+              <Text style={[G.primaryBtnText, { color: '#34495e' }]}>
+                {txt.btn_bot_logs || "ZOBRAZIŤ LOGY GBOTA"}
+              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -119,7 +134,9 @@ const AdminScreen = ({ navigation }) => {
               onPress={() => console.log("FORCE_SYNC_MATRIX")}
               activeOpacity={0.7}
             >
-              <Text style={[G.primaryBtnText, { color: ACCENT }]}>VYNÚTIŤ SYNC MATRIXU</Text>
+              <Text style={[G.primaryBtnText, { color: ACCENT }]}>
+                {txt.btn_force_sync || "VYNÚTIŤ SYNC MATRIXU"}
+              </Text>
             </TouchableOpacity>
 
           </View>
@@ -131,7 +148,7 @@ const AdminScreen = ({ navigation }) => {
             activeOpacity={0.7}
           >
             <Text style={G.primaryBtnText}>
-              ZAVRIEŤ VELÍN
+              {txt.btn_close_velin || "ZAVRIEŤ VELÍN"}
             </Text>
           </TouchableOpacity>
 

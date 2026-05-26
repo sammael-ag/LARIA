@@ -9,6 +9,7 @@ const ASSETS_TO_CACHE = [
   './logo192.png',
   './logo512.png'
 ];
+let currentLang = 'sk'; // Neviditeľný jazykový port pre Service Worker
 
 // Inštalácia - učeň si ukladá náradie do debny (cache)
 self.addEventListener('install', (event) => {
@@ -63,4 +64,12 @@ self.addEventListener('fetch', (event) => {
       return response || fetch(event.request);
     })
   );
+});
+
+// JAZYKOVÝ PORT: Načúvanie správam z hlavnej aplikácie
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SET_LANGUAGE') {
+    currentLang = event.data.lang;
+    console.log(`🌲 SW DIALKOVÝ PORT: Jazyk na pozadí úspešne prepnutý na: [${currentLang}]`);
+  }
 });
