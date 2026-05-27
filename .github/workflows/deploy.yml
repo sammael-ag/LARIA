@@ -3,7 +3,7 @@ name: LARIA v2 Deployer
 on:
   push:
     branches:
-      - legacy-full
+      - main
 
 permissions:
   contents: write
