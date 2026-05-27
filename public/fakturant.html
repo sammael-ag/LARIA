@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LARIA - Profesionálna Faktúra</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         /* 🛡️ IZOLOVANÝ ZÁKLAD PRE FAKTURANTA - Už sa nebije s hlavnou appkou! */
@@ -178,10 +177,11 @@
         }
     </style>
 </head>
-<body class="body-fakturant"> <h3 class="fakturant-title">Fakturant</h3>
+<body class="body-fakturant"> 
+
+    <h3 class="fakturant-title">Fakturant</h3>
 
     <div class="pdf-preview-container">
-        
         <table class="invoice-table">
             <tr>
                 <td style="width: 50%;">
@@ -378,7 +378,7 @@
 
                 <div style="margin-top: 40px; font-size: 10px; color: #333;">
                     Dodávateľ nie je platiteľom DPH.<br>
-                    Dodanie is oslobodené od dane podľa zákona o DPH.
+                    Dodanie je oslobodené od dane podľa zákona o DPH.
                 </div>
                 
                 <div style="margin-top: 80px; text-align: center; border-top: 1px solid #eee; padding-top: 10px; font-size: 9px; color: #999;">
@@ -387,15 +387,18 @@
             </div>
         `;
 
-        const opt = {
-            margin: [5, 5, 5, 5],
-            filename: 'Faktura_' + d.vs + '.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        html2pdf().from(pdfContent).set(opt).save();
+        // Vytvorenie čistého tlačového okna na pozadí
+        const tlacoveOkno = window.open('', '_blank', 'height=600,width=800');
+        tlacoveOkno.document.write('<html><head><title>Faktura_' + d.vs + '</title></head><body style="margin:0; padding:0;">');
+        tlacoveOkno.document.write(pdfContent);
+        tlacoveOkno.document.write('</body></html>');
+        tlacoveOkno.document.close();
+        
+        // Odpálime natívne systémové okno pre uloženie čistého PDF
+        setTimeout(() => {
+            tlacoveOkno.print();
+            tlacoveOkno.close();
+        }, 300);
     }
 </script>
 
