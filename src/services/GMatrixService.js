@@ -1,5 +1,5 @@
 /**
- * LARIA G-MATRIX SERVICE v8.5
+ * LARIA G-MATRIX SERVICE v8.5 (POST Localization Edition)
  * Status: SYNCED / THE LAW / MULTILANG READY
  * Popis: Centralizovaný prístup k Matrixu so striktným mapovaním premenných (A-Q) a oddeleným modulom pre lokalizáciu.
  */
@@ -81,7 +81,7 @@ export const saveToGMatrix = async (identityData) => {
 };
 
 /**
- * 3. LÚČ PREKLADOV (Volanie nového 5. skriptu pre overenie/stiahnutie cache)
+ * 3. LÚČ PREKLADOV (Ostré volanie 5. skriptu cez POST pre maximálne bezpečie)
  */
 export const fetchLariaTranslations = async (targetLang, fing = "system_sync") => {
     if (!G_MATRIX_LANG_URL || G_MATRIX_LANG_URL.includes("TU_VLOŽ_SVOJ_NOVÝ_LINK")) {
@@ -90,19 +90,33 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
     }
 
     try {
-        // Posielame požiadavku na tvoj Web App skript s parametrami 'lang' a 'fing'
-        const response = await fetch(`${G_MATRIX_LANG_URL}?lang=${targetLang}&fing=${fing}&nocache=${Date.now()}`);
-        if (!response.ok) throw new Error('Jazykový Matrix neodpovedá');
+        console.log(`📡 Sammael, odosielam POST lúč pre jazyk [${targetLang}] s tvojím fingom...`);
+
+        const response = await fetch(G_MATRIX_LANG_URL, {
+            method: 'POST',
+            mode: 'cors',
+            redirect: 'follow',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8', // Google Apps Script vyžaduje text/plain pri CORS POSToch
+            },
+            body: JSON.stringify({
+                lang: targetLang,
+                fing: fing
+            })
+        });
+
+        if (!response.ok) throw new Error('Jazykový Matrix neodpovedá (HTTP ' + response.status + ')');
         
         const result = await response.json();
         
-        // Ak skript v tabuľke vrátil hotový JSON z cache, vrátime ho priamo do appky
+        // Ak skript v tabuľke vrátil úspešnú odpoveď s dátami
         if (result && result.status === "success") {
             console.log(`✅ Preklad pre [${targetLang}] úspešne stiahnutý z cache Matrixu.`);
+            // Bezpečné ošetrenie pre prípad, že dáta prišli ako string alebo už naparsovaný objekt
             return typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
         }
         
-        console.log(`📡 Jazyk [${targetLang}] sa na pozadí Matrixu začal prekladať cez AI...`);
+        console.log(`📡 Jazyk [${targetLang}] zatiaľ nie je v cache. Na pozadí Matrixu sa začal prekladať cez AI...`);
         return null;
     } catch (error) {
         console.error(`❌ Sammael, Jazykový Matrix pri načítaní [${targetLang}] zlyhal:`, error);
