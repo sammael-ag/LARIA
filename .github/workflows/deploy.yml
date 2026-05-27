@@ -1,0 +1,43 @@
+name: LARIA v2 Deployer
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v3
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: 🛠️ Build PWA (Expo Web)
+        run: npx expo export --platform web --output-dir dist
+
+      - name: 🛡️ Fix GitHub Jekyll Issue
+        # Tento krok vytvorí .nojekyll priamo v dist priečinku tesne pred deployom
+        run: touch dist/.nojekyll
+
+      - name: 🚀 Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist
+          branch: gh-pages
+          clean: true
+          # Pridávame poistku, aby zachoval skryté súbory
+          clean-exclude: |
+            .nojekyll
