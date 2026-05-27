@@ -1,14 +1,17 @@
 /**
- * LARIA G-MATRIX SERVICE v8.3
- * Status: SYNCED / THE LAW / HANDSHAKE READY
- * Popis: Centralizovaný prístup k Matrixu so striktným mapovaním premenných (SECURE_ID, sha, date...).
+ * LARIA G-MATRIX SERVICE v8.5
+ * Status: SYNCED / THE LAW / MULTILANG READY
+ * Popis: Centralizovaný prístup k Matrixu so striktným mapovaním premenných (A-Q) a oddeleným modulom pre lokalizáciu.
  */
 
 const G_MATRIX_READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
 const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbyD0INZlUfMJaBYFp8Q9ndgi9gQqYjPPyql9BjmulvvoF6LU6HLLP6gTRHHbrHbgZt6/exec";
 
+// 🌐 5. SKRIPT - CENTRÁLNY ROZVÁDZAČ PRE AUTOMATIZÁCIU JAZYKOV (Liquid Localization)
+const G_MATRIX_LANG_URL = "https://script.google.com/macros/s/AKfycbwLdeRMkIzSJFUH3adAMhUBjivD-zpt7b6JDtuaLF4KpfZWyjouoa-cgTsxtQe-xAvu/exec"; 
+
 /**
- * 1. ČÍTANIE Z MATRIXU
+ * 1. ČÍTANIE Z MATRIXU (Identity)
  */
 export const fetchGMatrix = async () => {
     try {
@@ -22,15 +25,15 @@ export const fetchGMatrix = async () => {
 };
 
 /**
- * 2. ZÁPIS DO MATRIXU (Striktné mapovanie A-P)
+ * 2. ZÁPIS DO MATRIXU (Striktné mapovanie A-Q)
  */
 export const saveToGMatrix = async (identityData) => {
     try {
-        // --- PROTIKOL MAPOVANIA (PORADIE JE ZÁKON) ---
+        // --- PROTOKOL MAPOVANIA (PORADIE JE ZÁKON V8.5) ---
         const protocolPayload = {
             SECURE_ID: identityData.SECURE_ID, // A (V editore nastavené na null)
             sha: identityData.sha,             // B
-            date: identityData.date,           // C (Pridané!)
+            date: identityData.date,           // C
             meno: identityData.meno,           // D
             kat: identityData.kat,             // E
             lok: identityData.lok,             // F
@@ -43,12 +46,13 @@ export const saveToGMatrix = async (identityData) => {
             isPublic: identityData.isPublic,   // M
             irc: identityData.irc,             // N
             poznamka: identityData.poznamka,   // O (Tvoj FING)
-            krypt: identityData.krypt          // P
+            krypt: identityData.krypt,         // P
+            jazyk: identityData.jazyk || 'sk'   // Q 🔥 NOVÝ STĺPEC (Aktuálny jazyk prostredia)
         };
 
         const uniqueWriteUrl = `${G_MATRIX_WRITE_URL}?nocache=${Date.now()}`;
         
-        console.log("📡 Sammael, odosielam tvoju pečať (v8.3) do Matrixu...");
+        console.log("📡 Sammael, odosielam tvoju pečať (v8.5) do Matrixu s jazykovým lúčom...");
 
         const response = await fetch(uniqueWriteUrl, {
             method: 'POST',
@@ -76,4 +80,34 @@ export const saveToGMatrix = async (identityData) => {
     }
 };
 
-export { G_MATRIX_READ_URL, G_MATRIX_WRITE_URL };
+/**
+ * 3. LÚČ PREKLADOV (Volanie nového 5. skriptu pre overenie/stiahnutie cache)
+ */
+export const fetchLariaTranslations = async (targetLang, fing = "system_sync") => {
+    if (!G_MATRIX_LANG_URL || G_MATRIX_LANG_URL.includes("TU_VLOŽ_SVOJ_NOVÝ_LINK")) {
+        console.log(`📡 G-MATRIX_LANG: Lúč pre jazyk [${targetLang}] je odpojený, doplň reálny link.`);
+        return null;
+    }
+
+    try {
+        // Posielame požiadavku na tvoj Web App skript s parametrami 'lang' a 'fing'
+        const response = await fetch(`${G_MATRIX_LANG_URL}?lang=${targetLang}&fing=${fing}&nocache=${Date.now()}`);
+        if (!response.ok) throw new Error('Jazykový Matrix neodpovedá');
+        
+        const result = await response.json();
+        
+        // Ak skript v tabuľke vrátil hotový JSON z cache, vrátime ho priamo do appky
+        if (result && result.status === "success") {
+            console.log(`✅ Preklad pre [${targetLang}] úspešne stiahnutý z cache Matrixu.`);
+            return typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+        }
+        
+        console.log(`📡 Jazyk [${targetLang}] sa na pozadí Matrixu začal prekladať cez AI...`);
+        return null;
+    } catch (error) {
+        console.error(`❌ Sammael, Jazykový Matrix pri načítaní [${targetLang}] zlyhal:`, error);
+        return null;
+    }
+};
+
+export { G_MATRIX_READ_URL, G_MATRIX_WRITE_URL, G_MATRIX_LANG_URL };

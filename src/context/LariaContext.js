@@ -6,6 +6,7 @@ import { ethers } from 'ethers';
 import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../services/LariaLogic.js';
 import { useKrypto } from './KryptoContext.js';
 import vzorSk from '../constants/langs/vzor_sk.json';
+import { fetchLariaTranslations } from '../services/GMatrixService.js';
 
 const LariaContext = createContext();
 
@@ -57,7 +58,8 @@ export const LariaProvider = ({ children }) => {
       irc: "", 
       poznamka: "", 
       krypt: null,     
-      privateKey: null 
+      privateKey: null,
+      jazyk: "sk"
     }
   });
 
@@ -112,43 +114,66 @@ export const LariaProvider = ({ children }) => {
     const initializeVault = async () => {
       try {
         let savedIdentity = await loadFromVault('identity');
+        let aktivnyJazyk = 'sk'; // Predvolený základ bezpečnosti
         
-        // 🌟 JAZYKOVÉ JADRO: Ak nájdeme v trezore uložený jazyk, okamžite ho aktivujeme za behu
+        // 🌟 JAZYKOVÉ JADRO: Ak nájdeme v trezore uložený jazyk, okamžite ho zachytíme
         if (savedIdentity && savedIdentity.jazyk) {
-          setLang(savedIdentity.jazyk);
-          console.log(`🌲 JAZYKOVÉ JADRO: Prebúdzam uložený jazyk z trezoru: [${savedIdentity.jazyk}]`);
+          aktivnyJazyk = savedIdentity.jazyk;
+          setLang(aktivnyJazyk);
+          console.log(`🌲 JAZYKOVÉ JADRO: Prebúdzam uložený jazyk z trezoru: [${aktivnyJazyk}]`);
         } else {
-          console.log(`🌲 JAZYKOVÉ JADRO: Žiadny uložený jazyk nenájdený, štartujem na základe [sk]`);
+          // Ak v trezore nič nie je, pozrieme sa na systémovú automatiku prehliadača
+          aktivnyJazyk = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
+          setLang(aktivnyJazyk);
+          console.log(`🌲 JAZYKOVÉ JADRO: Žiadny uložený jazyk, štartujem na automatike systému: [${aktivnyJazyk}]`);
         }
-        
-        let rawDeviceId;
 
-        // MULTIDIMENZIONÁLNA IDENTIFIKÁCIA ZARIADENIA
+        // --- 🤖 MULTIDIMENZIONÁLNA IDENTIFIKÁCIA ZARIADENIA A VÝPOČET FING ---
+        let rawDeviceId;
         if (Platform.OS === 'android') {
           rawDeviceId = Application.androidId || Device.osBuildId || "S_DEVICE_A";
         } else if (Platform.OS === 'ios') {
           rawDeviceId = await Application.getIosIdForVendorAsync();
         } else {
-
           // Generujeme stabilné ID z mena zariadenia a systémových parametrov
           rawDeviceId = `LINUX-${Device.deviceName || 'HP-LAPTOP'}-${Device.osBuildId || 'SAM-CORE'}`;
         }
 
-        // Generujeme SHA cez tvoj LariaLogic mlynček
+        // Generujeme SHA a hlavný FING (odtlačok prsta) pred volaním prekladov
         const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.meno || "Sammael");
-        // Generujeme FING (odtlačok)
         const currentFing = currentSha.substring(0, 12);
 
+        // --- 🔥 ASYNCHRÓNNY CYKLUS AUTOMATIZÁCIE JAZYKOV ---
+        if (aktivnyJazyk !== 'sk') {
+          console.log(`📡 JAZYKOVÉ JADRO: Detegovaný externý lúč [${aktivnyJazyk}] pre FING [${currentFing}], volám Matrix...`);
+          
+          // 🔥 TU JE ZMENA: Posielame jazyk AJ tvoj vypočítaný FING, aby ho skript v tabuľke vedel spracovať a uložiť!
+          const externyPrekladJSON = await fetchLariaTranslations(aktivnyJazyk, currentFing);
+          
+          if (externyPrekladJSON) {
+            setDictionary(prev => ({
+              ...prev,
+              [aktivnyJazyk]: externyPrekladJSON
+            }));
+            console.log(`✅ JAZYKOVÉ JADRO: Prekladový slovník [${aktivnyJazyk}] bol úspešne načítaný z cache!`);
+          } else {
+            console.log(`⚠️ JAZYKOVÉ JADRO: Preklad pre [${aktivnyJazyk}] nebol v cache. Skript v tabuľke na pozadí prebúdza AI...`);
+          }
+        }
+
+        // --- 🗄️ ZAKONZERVOVANIE IDENTITY DO STAVU ---
         if (!savedIdentity) {
           savedIdentity = { 
             ...vault.identity, 
             sha: currentSha,
             poznamka: currentFing,
+            jazyk: aktivnyJazyk,
             SECURE_ID: null 
           };
         } else {
           savedIdentity.sha = currentSha;
           savedIdentity.poznamka = currentFing;
+          savedIdentity.jazyk = aktivnyJazyk;
           savedIdentity.SECURE_ID = null;
         }
 
