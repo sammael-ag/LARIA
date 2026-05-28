@@ -10,7 +10,8 @@
   "scripts": {
     "start": "expo start --web",
     "build:web": "npx expo export --platform web",
-    "clear": "npx expo start --clear"
+    "clear": "npx expo start --clear",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@coinbase/cdp-sdk": "^1.48.2",
@@ -61,6 +62,7 @@
     "@babel/core": "^7.24.0",
     "@nomicfoundation/hardhat-ignition-viem": "^3.1.4",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.4",
+    "@tauri-apps/cli": "^2.11.2",
     "@types/react": "~18.2.79",
     "babel-preset-expo": "~11.0.15",
     "dotenv": "^17.4.2",
