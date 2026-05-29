@@ -37,7 +37,7 @@
     "web": {
       "favicon": "./favicon.png",
       "bundler": "metro",
-      "baseUrl": "./",
+      "baseUrl": "/LARIA",
       "title": "LARIA 3D",
       "description": "Sieť Majstrov a tvorcov novej reality",
       "config": {
