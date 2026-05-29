@@ -37,7 +37,7 @@
     "web": {
       "favicon": "./favicon.png",
       "bundler": "metro",
-      "baseUrl": "/LARIA",
+      "baseUrl": "https://sammael-ag.github.io/LARIA",
       "title": "LARIA 3D",
       "description": "Sieť Majstrov a tvorcov novej reality",
       "config": {
