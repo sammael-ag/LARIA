@@ -27,9 +27,9 @@ jobs:
 
       - name: Build PWA Expo Web
         run: NODE_ENV=production npx expo export --platform web
-
+        
       - name: SED FIX Oprava ciest pre GitHub Pages
-        run: sed -i 's|"/_expo/|"/LARIA/_expo/|g' dist/index.html && sed -i 's|"_expo/|"LARIA/_expo/|g' dist/index.html
+        run: sed -i 's/"\/_expo\//"\/LARIA\/_expo\//g' dist/index.html && sed -i 's/"_expo\//"LARIA\/_expo\//g' dist/index.html
 
       - name: Fix GitHub Jekyll Issue
         run: touch dist/.nojekyll
