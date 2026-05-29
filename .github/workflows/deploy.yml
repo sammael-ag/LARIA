@@ -26,11 +26,15 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: 🛠️ Build PWA (Expo Web)
-        # Vynútime produkčné prostredie a necháme Expo vyexportovať kód prirodzene do priečinka dist
         run: NODE_ENV=production npx expo export --platform web
 
+      - name: 🪄 SED FIX: Oprava ciest pre GitHub Pages podadresár
+        # Tento magický príkaz nájde v index.html všetky chybné cesty a opraví ich na /LARIA/_expo/
+        run: |
+          sed -i 's|"/_expo/|"/LARIA/_expo/|g' dist/index.html
+          sed -i 's|"_expo/|"LARIA/_expo/|g' dist/index.html
+
       - name: 🛡️ Fix GitHub Jekyll Issue
-        # Tento krok vytvorí .nojekyll priamo v dist priečinku tesne pred deployom
         run: touch dist/.nojekyll
 
       - name: 🚀 Deploy to GitHub Pages
@@ -39,6 +43,5 @@ jobs:
           folder: dist
           branch: gh-pages
           clean: true
-          # Pridávame poistku, aby zachoval skryté súbory
           clean-exclude: |
             .nojekyll
