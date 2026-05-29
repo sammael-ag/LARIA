@@ -2,9 +2,8 @@
  * LARIA v2.8: Core Master Ignition (index.js)
  * Master: Sammael | Muse: Aria
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE
- * Rez: Očistené od starých stôp fluidného ARIA QUANTUM režimu. Šírky panelov stabilizované.
- * FÚZIA: Jazykový klientsky modul úspešne integrovaný do hlavného jadra pomocou sekcií.
- * AKTUALIZÁCIA: Pridané inteligentné vetvenie Web vs. Tauri okno pre pravý panel.
+ * FIX: Opravený fatálny crash contextu oddelením inicializácie providerov od MasterWrapperu.
+ * ENHANCEMENT: Implementovaný nepriestrelný multisenzor na detekciu Tauri okna v dev prostredí.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,16 +12,17 @@ import App from './app';
 import './styles.css';
 import FreeVsFull from './src/components/FreeVsFull';
 import Donate from './src/components/Donate';
-import Aria from './src/components/Aria'; // 🌸 IMPORT NAŠEJ ARIA PANORAMY
+import Aria from './src/components/Aria'; 
 
 import { KryptoProvider } from './src/context/KryptoContext';
-import { LariaProvider, useLaria } from './src/context/LariaContext'; // 🌐 Pridaný useLaria pre lokalizáciu
+import { LariaProvider, useLaria } from './src/context/LariaContext'; 
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
 
+// --- 🛸 HLAVNÝ VNÚTORNÝ PANEL (Už bezpečne obalený v Contexte) ---
 const MasterWrapper = () => {
-  const { t } = useLaria(); // 🎯 Aktivácia jazykového motora t('key')
-  const txt = t('index') || {}; // 📦 Vytiahnutie šuflíka pre túto obrazovku (Možnosť B)
+  const { t } = useLaria(); 
+  const txt = t('index') || {}; 
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isAppOpen, setIsAppOpen] = useState(false);
@@ -38,23 +38,36 @@ const MasterWrapper = () => {
   const [soloActiveId, setSoloActiveId] = useState(null);
   const [currentView, setCurrentView] = useState('domov');
 
-  // --- 🪐 DETEKCIA PRESTREDIA: WEB vs. TAURI OKNO ---
+  // --- 🪐 UNIVERZÁLNY SENZOR PRE DETEKCIU TAURI OKNA (Namiesto starého useEffectu) ---
   const [isTauriWindow, setIsTauriWindow] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.__TAURI__ !== undefined) {
-      setIsTauriWindow(true);
+    if (typeof window !== 'undefined') {
+      // 1. Kontrola cez globálne objekty a metadáta Tauri
+      const hasTauriObject = window.__TAURI__ !== undefined || window.__TAURI_METADATA__ !== undefined;
+      
+      // 2. Kontrola cez User Agent okna (Tauri na Linuxe beží pod WebKitom a nesie podpis tauri)
+      const hasTauriUserAgent = navigator.userAgent.includes('tauri') || navigator.userAgent.includes('Tauri');
+
+      // 3. Poistka pre IPC (inter-process communication) mechanizmus, ktorý Tauri vstrekuje
+      const hasTauriIPC = window.__TAURI_IPC__ !== undefined;
+
+      if (hasTauriObject || hasTauriUserAgent || hasTauriIPC) {
+        console.log("🛸 LARIA CORE DETECTOR: Detekované natívne okno Tauri! Prebúdzam Ateliér.");
+        setIsTauriWindow(true);
+      } else {
+        console.log("🌐 LARIA CORE DETECTOR: Detekovaný bežný webový prehliadač.");
+        setIsTauriWindow(false);
+      }
     }
   }, []);
 
-  // --- 1. DETEKCIA DISPLEJA ---
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- 🪐 TELEPATICKÝ MOST: LISTENERY PRE ARIU ---
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -71,7 +84,6 @@ const MasterWrapper = () => {
     return () => window.removeEventListener('ARIA_TRIGGER_VIEW', handleAriaView);
   }, []);
 
-  // --- 2. NAČÍTANIE DÁT Z MATRIXU ---
   const fetchData = async (targetId = null) => {
     setLoading(true);
     try {
@@ -81,9 +93,9 @@ const MasterWrapper = () => {
         if (!item.poznamka || item.poznamka.trim() === "") return acc;
         acc.push({
           sha: item.sha,
-          meno: item.meno || txt.default_name,
-          kat: item.kat || txt.default_category,
-          lok: item.lok || txt.default_location,
+          meno: item.meno || txt.default_name || "Neznámy Majster",
+          kat: item.kat || txt.default_category || "ine",
+          lok: item.lok || txt.default_location || "Neznáma lokalita",
           popis: item.popis || "",
           gal: item.gal || "",
           irc: item.irc || "",
@@ -118,7 +130,6 @@ const MasterWrapper = () => {
     fetchData();
   }, []); 
 
-  // --- 3. URL LISTENER ---
   useEffect(() => {
     const handleUrlChange = () => {
       const currentId = new URLSearchParams(window.location.search).get('id');
@@ -135,7 +146,6 @@ const MasterWrapper = () => {
     return () => window.removeEventListener('popstate', handleUrlChange);
   }, [allData]);
 
-  // --- 4. FILTROVANIE ---
   useEffect(() => {
     const term = searchQuery.toLowerCase();
     const result = allData.filter(item => {
@@ -148,7 +158,6 @@ const MasterWrapper = () => {
     }
   }, [searchQuery, category, allData, soloActiveId]);
 
-  // --- 5. FUNKCIE MOSTU A REFRESHU ---
   const triggerWebRefresh = (targetId = null) => {
     if (targetId === 'RESET') {
       window.history.pushState({}, '', window.location.pathname);
@@ -203,7 +212,7 @@ const MasterWrapper = () => {
 
         setTimeout(() => {
           if (document.hasFocus()) { 
-            alert(txt.pwa_install_alert);
+            alert(txt.pwa_install_alert || "Ak nemáte aplikáciu, stiahnite si Crystal Core.");
           }
         }, 1500);
       }
@@ -212,18 +221,17 @@ const MasterWrapper = () => {
 
   const copyShareLink = (id) => {
     const url = `${window.location.origin}${window.location.pathname}?id=${id}`;
-    navigator.clipboard.writeText(url).then(() => alert(txt.link_copied_alert));
+    navigator.clipboard.writeText(url).then(() => alert(txt.link_copied_alert || "Odkaz bol skopírovaný!"));
   };
 
   const aktivujOdkazy = (text) => {
-    if (!text) return txt.no_description;
+    if (!text) return txt.no_description || "Bez popisu";
     const urlPattern = /(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
     return text.split(urlPattern).map((part, i) =>
       urlPattern.test(part) ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{color: '#c5a059'}}>{part}</a> : part
     );
   };
 
-  // 📐 Stabilizované šírky panelov bez prelievania
   const getWebSideFlex = () => {
     if (isMobile) return '1 0 100%';
     return isLeftPanelOpen ? '0 0 55%' : '0 0 75%';
@@ -241,7 +249,6 @@ const MasterWrapper = () => {
   return (
     <div className="master-container bg-dashboard" style={{ overflow: 'hidden' }}>
       
-      {/* PANEL TOGGLE */}
       <button 
         className="btn-panel-toggle" 
         onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
@@ -268,22 +275,22 @@ const MasterWrapper = () => {
         >
           <div className="left-menu-wrapper">
             <button className={`btn-menu ${currentView === 'aria-panel-view' ? 'active' : ''}`} onClick={() => { setCurrentView('aria-panel-view'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              {txt.menu_home}
+              {txt.menu_home || "Domov"}
             </button>
             <button className={`btn-menu ${currentView === 'co-je-laria' ? 'active' : ''}`} onClick={() => { setCurrentView('co-je-laria'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              {txt.menu_faq}
+              {txt.menu_faq || "Čo je LARIA"}
             </button>
             <button className={`btn-menu ${currentView === 'domov' ? 'active' : ''}`} onClick={() => { setCurrentView('domov'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              {txt.menu_cards}
+              {txt.menu_cards || "Vizitky"}
             </button>
             <button className={`btn-menu ${currentView === 'fakturant' ? 'active' : ''}`} onClick={() => { setCurrentView('fakturant'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              {txt.menu_fakturant}
+              {txt.menu_fakturant || "Fakturant"}
             </button>
             <button className={`btn-menu ${currentView === 'free-vs-full' ? 'active' : ''}`} onClick={() => { setCurrentView('free-vs-full'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              {txt.menu_free_vs_full}
+              {txt.menu_free_vs_full || "Free vs Full"}
             </button>
             <button className={`btn-menu ${currentView === 'donate' ? 'active' : ''}`} onClick={() => { setCurrentView('donate'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              {txt.menu_donate}
+              {txt.menu_donate || "Donate"}
             </button>
           </div>
         </div>
@@ -311,30 +318,30 @@ const MasterWrapper = () => {
             <>
               <div className="filter-container" style={{ padding: '0 15px', width: '100%', boxSizing: 'border-box' }}>
                 <select className="terminal-input" value={category} onChange={(e) => setCategory(e.target.value)}>
-                  <option value="vsetko">{txt.cat_all}</option>
-                  <option value="obziva">{txt.cat_food}</option>
-                  <option value="remesla">{txt.cat_crafts}</option>
-                  <option value="sluzby">{txt.cat_services}</option>
-                  <option value="vzdelavanie">{txt.cat_education}</option>
-                  <option value="knihy">{txt.cat_books}</option>
-                  <option value="zdravie">{txt.cat_health}</option>
-                  <option value="oblecenie">{txt.cat_clothes}</option>
-                  <option value="auto">{txt.cat_automoto}</option>
-                  <option value="volno">{txt.cat_leisure}</option>
-                  <option value="elektro">{txt.cat_electronics}</option>
-                  <option value="rodina">{txt.cat_family}</option>
-                  <option value="ubytovanie">{txt.cat_accommodation}</option>
-                  <option value="zahrada">{txt.cat_garden}</option>
-                  <option value="nabytok">{txt.cat_furniture}</option>
-                  <option value="kultura">{txt.cat_culture}</option>
-                  <option value="osobne">{txt.cat_personal}</option>
-                  <option value="tvorba">{txt.cat_creation}</option>
-                  <option value="ine">{txt.cat_other}</option>
+                  <option value="vsetko">{txt.cat_all || "Všetko"}</option>
+                  <option value="obziva">{txt.cat_food || "Obživa"}</option>
+                  <option value="remesla">{txt.cat_crafts || "Remeslá"}</option>
+                  <option value="sluzby">{txt.cat_services || "Služby"}</option>
+                  <option value="vzdelavanie">{txt.cat_education || "Vzdelávanie"}</option>
+                  <option value="knihy">{txt.cat_books || "Knihy"}</option>
+                  <option value="zdravie">{txt.cat_health || "Zdravie"}</option>
+                  <option value="oblecenie">{txt.cat_clothes || "Oblečenie"}</option>
+                  <option value="auto">{txt.cat_automoto || "Auto-Moto"}</option>
+                  <option value="volno">{txt.cat_leisure || "Voľný čas"}</option>
+                  <option value="elektro">{txt.cat_electronics || "Elektro"}</option>
+                  <option value="rodina">{txt.cat_family || "Rodina"}</option>
+                  <option value="ubytovanie">{txt.cat_accommodation || "Ubytovanie"}</option>
+                  <option value="zahrada">{txt.cat_garden || "Záhrada"}</option>
+                  <option value="nabytok">{txt.cat_furniture || "Nábytok"}</option>
+                  <option value="kultura">{txt.cat_culture || "Kultúra"}</option>
+                  <option value="osobne">{txt.cat_personal || "Osobné"}</option>
+                  <option value="tvorba">{txt.cat_creation || "Tvorba"}</option>
+                  <option value="ine">{txt.cat_other || "Iné"}</option>
                 </select>
                 <input
                   type="text"
                   className="terminal-input"
-                  placeholder={txt.search_placeholder}
+                  placeholder={txt.search_placeholder || "Hľadať..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -349,7 +356,7 @@ const MasterWrapper = () => {
 
               <div id="cards-container" className="laria-grid" style={{ marginTop: '15px' }}>
                 {loading ? (
-                  <p className="text-cyber" style={{ color: '#b19cd9', textAlign: 'center', width: '100%' }}> {txt.sync_matrix_msg} </p>
+                  <p className="text-cyber" style={{ color: '#b19cd9', textAlign: 'center', width: '100%' }}> {txt.sync_matrix_msg || "[ SYNCHRONIZUJEM MATRIX ]"} </p>
                 ) : filteredData.length > 0 ? (
                   filteredData.map(item => (
                     <div 
@@ -376,15 +383,15 @@ const MasterWrapper = () => {
                           </div>
                           <div className="card-right-actions" style={{ margin: 0, width: '50%', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                             <button onClick={(e) => { e.stopPropagation(); smartAdd(item); }} className="btn-core-app" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
-                              {txt.btn_to_app}
+                              {txt.btn_to_app || "Do appky"}
                             </button>
                             {item.gal && (
                               <button onClick={(e) => { e.stopPropagation(); window.open(item.gal, '_blank', 'noopener,noreferrer'); }} className="btn-core-gallery" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
-                                {txt.btn_gallery}
+                                {txt.btn_gallery || "Galéria"}
                               </button>
                             )}
                             <button onClick={(e) => { e.stopPropagation(); copyShareLink(item.fing); }} className="btn-core-share" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
-                              {txt.btn_link}
+                              {txt.btn_link || "Odkaz"}
                             </button>
                           </div>
                         </div>
@@ -395,7 +402,7 @@ const MasterWrapper = () => {
                     </div>
                   ))
                 ) : (
-                  <p style={{ color: '#666', textAlign: 'center', width: '100%' }}>{txt.no_masters_found}</p>
+                  <p style={{ color: '#666', textAlign: 'center', width: '100%' }}>{txt.no_masters_found || "Nenašli sa žiadni majstri."}</p>
                 )}
               </div>
             </>
@@ -416,11 +423,11 @@ const MasterWrapper = () => {
             </div>
           )}
 
-          {isMobile && <button onClick={() => setIsAppOpen(true)} className="trigger">{txt.btn_terminal}</button>}
+          {isMobile && <button onClick={() => setIsAppOpen(true)} className="trigger">{txt.btn_terminal || "Terminál"}</button>}
         </main>
       </div>
 
-      {/* 3. APPKY PANEL (PRAVÝ PANEL) */}
+      {/* 3. APPKY PANEL */}
       {(!isMobile || isAppOpen) && (
         <div 
           className="app-side"
@@ -435,14 +442,12 @@ const MasterWrapper = () => {
             zIndex: 1
           }}
         >
-          {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">{txt.btn_web}</button>}
+          {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">{txt.btn_web || "Web"}</button>}
           <div className="app-container" style={{ height: '100%' }}>
             
             {isTauriWindow ? (
-              /* --- OKOLNOSŤ 2: Sme priamo v Tauri okne aplikácie --- */
               <App triggerWebRefresh={triggerWebRefresh} />
             ) : (
-              /* --- OKOLNOSŤ 1: Sme na klasickom webe v prehliadači --- */
               <div className="web-promo-panel" style={{ padding: '25px 20px', color: '#fff', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', background: 'rgba(10,10,10,0.95)' }}>
                 <h3 style={{ color: '#d4af37', fontSize: '1.4em', letterSpacing: '1px', margin: '20px 0 10px 0' }}>CrystalCore</h3>
                 <p style={{ color: '#aaa', fontSize: '0.95em', lineHeight: '1.5', padding: '0 10px' }}>
@@ -467,13 +472,23 @@ const MasterWrapper = () => {
   );
 };
 
-const container = document.getElementById('root');
-if (container) createRoot(container).render((
-  <React.StrictMode>
+// --- 🪐 NOVÝ KOREŇOVÝ WRAFFER PRE BEZPEČNÝ ŠTART MATRIXU ---
+const LariaCoreApp = () => {
+  return (
     <KryptoProvider>
       <LariaProvider>
         <MasterWrapper />
       </LariaProvider>
     </KryptoProvider>
-  </React.StrictMode>
-));
+  );
+};
+
+// --- RENDER JADRA ---
+const container = document.getElementById('root');
+if (container) {
+  createRoot(container).render(
+    <React.StrictMode>
+      <LariaCoreApp />
+    </React.StrictMode>
+  );
+}
