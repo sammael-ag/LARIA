@@ -16,12 +16,28 @@
     <div id="root">
         <div class="initial-loader">
             <h1 style="color: #c5a059; font-family: sans-serif; text-align: center; margin-top: 20%;">Načítavam svetlo...</h1>
-            <p style="color: #b19cd9; text-align: center; font-family: monospace;">[ SYNCHRONIZUJEM MATRIX ]</p>
+            <p style="color: #b19cd9; text-align: center; font-family: monospace;">[ SYNCHRONIZUZEM MATRIX ]</p>
         </div>
+    </div>
+
+    <!-- Tlačidlo na vstup do systému, ktoré priamo spustí náš test -->
+    <div style="text-align: center; margin-top: 20px;">
+        <button onclick="spustitSvetlo()" class="irc-button" style="padding: 15px 30px; background: #c5a059; color: #000; border: 1px solid #b19cd9; font-weight: bold; cursor: pointer;">
+            VSTÚPIŤ DO SYSTÉMU (DZIG)
+        </button>
     </div>
 
     <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" id="backToTop" class="irc-button" style="position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; display: none; background: #b19cd9; color: #000; border: none; border-radius: 50%; cursor: pointer; z-index: 99;">↑</button>
 
-    <script src="./index.js" type="module"></script>
+    <!-- Načítanie hlavného JS súboru relatívne k sub-priečinku -->
+    <script src="index.js" type="module"></script>
+
+    <!-- Núdzový inline skript pre test, či vôbec žijeme -->
+    <script>
+        function spustitSvetlo() {
+            alert("Svetlo aktivované! Ak toto vidíš, HTML komunikuje s prehliadačom.");
+            console.log("Manuálny dzig úspešný!");
+        }
+    </script>
 </body>
 </html>
