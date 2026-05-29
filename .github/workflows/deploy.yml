@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: 📥 Check out repository
         uses: actions/checkout@v3
 
-      - name: Deploy to GitHub Pages
+      - name: 🚀 Poštár doručuje tvoje hotové dist na GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist
+          folder: ./dist
           branch: gh-pages
           clean: true
