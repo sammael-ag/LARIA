@@ -19,6 +19,6 @@ jobs:
       - name: Poštár doručuje tvoje hotové dist na GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: ./dist
+          folder: ${{ github.workspace }}/dist
           branch: gh-pages
           clean: true
