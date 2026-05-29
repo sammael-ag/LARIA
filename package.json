@@ -9,7 +9,7 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start --web",
-    "build:web": "npx expo export --platform web && sed -i 's/href=\"\\/_expo/href=\"\\/LARIA\\/_expo/g' dist/index.html && sed -i 's/src=\"\\/_expo/src=\"\\/LARIA\\/_expo/g' dist/index.html && sed -i 's/href=\"\\/favicon/href=\"\\/LARIA\\/favicon/g' dist/index.html",
+    "build:web": "npx expo export --platform web && sed -i 's/href=\"\\/_expo/href=\"\\/LARIA\\/_expo/g' dist/index.html && sed -i 's/src=\"\\/_expo/src=\"\\/LARIA\\/_expo/g' dist/index.html && sed -i 's/href=\"\\/favicon/href=\"\\/LARIA\\/favicon/g' dist/index.html && touch dist/.nojekyll",
     "clear": "npx expo start --clear",
     "tauri": "tauri"
   },
