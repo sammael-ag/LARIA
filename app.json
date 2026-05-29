@@ -2,6 +2,7 @@
   "expo": {
     "name": "LARIA",
     "slug": "laria",
+    "baseUrl": "/LARIA/",
     "version": "1.0.0",
     "platforms": [
       "ios",
