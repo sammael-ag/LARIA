@@ -4,6 +4,7 @@
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE
  * Rez: Očistené od starých stôp fluidného ARIA QUANTUM režimu. Šírky panelov stabilizované.
  * FÚZIA: Jazykový klientsky modul úspešne integrovaný do hlavného jadra pomocou sekcií.
+ * AKTUALIZÁCIA: Pridané inteligentné vetvenie Web vs. Tauri okno pre pravý panel.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -36,6 +37,15 @@ const MasterWrapper = () => {
   const [webRefreshKey, setWebRefreshKey] = useState(0);
   const [soloActiveId, setSoloActiveId] = useState(null);
   const [currentView, setCurrentView] = useState('domov');
+
+  // --- 🪐 DETEKCIA PRESTREDIA: WEB vs. TAURI OKNO ---
+  const [isTauriWindow, setIsTauriWindow] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.__TAURI__ !== undefined) {
+      setIsTauriWindow(true);
+    }
+  }, []);
 
   // --- 1. DETEKCIA DISPLEJA ---
   useEffect(() => {
@@ -224,6 +234,10 @@ const MasterWrapper = () => {
     return '0 0 25%';
   };
 
+  const handleDownloadClick = () => {
+    console.log("📥 LARIA CORE: Používateľ klikol na tlačidlo stiahnutia Crystal Core z webu.");
+  };
+
   return (
     <div className="master-container bg-dashboard" style={{ overflow: 'hidden' }}>
       
@@ -406,7 +420,7 @@ const MasterWrapper = () => {
         </main>
       </div>
 
-      {/* 3. APPKY PANEL */}
+      {/* 3. APPKY PANEL (PRAVÝ PANEL) */}
       {(!isMobile || isAppOpen) && (
         <div 
           className="app-side"
@@ -423,7 +437,29 @@ const MasterWrapper = () => {
         >
           {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">{txt.btn_web}</button>}
           <div className="app-container" style={{ height: '100%' }}>
-            <App triggerWebRefresh={triggerWebRefresh} />
+            
+            {isTauriWindow ? (
+              /* --- OKOLNOSŤ 2: Sme priamo v Tauri okne aplikácie --- */
+              <App triggerWebRefresh={triggerWebRefresh} />
+            ) : (
+              /* --- OKOLNOSŤ 1: Sme na klasickom webe v prehliadači --- */
+              <div className="web-promo-panel" style={{ padding: '25px 20px', color: '#fff', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', background: 'rgba(10,10,10,0.95)' }}>
+                <h3 style={{ color: '#d4af37', fontSize: '1.4em', letterSpacing: '1px', margin: '20px 0 10px 0' }}>CrystalCore</h3>
+                <p style={{ color: '#aaa', fontSize: '0.95em', lineHeight: '1.5', padding: '0 10px' }}>
+                  Pre plnú synchronizáciu so sieťami, Gopher protokolom a prístup k hardvérovým uzlom spustite lokálny systém.
+                </p>
+                <div style={{ marginTop: 'auto', marginBottom: '40px' }}>
+                  <button 
+                    onClick={handleDownloadClick}
+                    className="btn-core-app" 
+                    style={{ width: '100%', padding: '14px', fontSize: '1em', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}
+                  >
+                    Stiahnuť Crystal Core
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       )}
