@@ -26,7 +26,8 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: 🛠️ Build PWA (Expo Web)
-        run: npx expo export --platform web --output-dir dist
+        # Vynútime produkčné prostredie a necháme Expo vyexportovať kód prirodzene do priečinka dist
+        run: NODE_ENV=production npx expo export --platform web
 
       - name: 🛡️ Fix GitHub Jekyll Issue
         # Tento krok vytvorí .nojekyll priamo v dist priečinku tesne pred deployom
