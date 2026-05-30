@@ -6,7 +6,7 @@
     <title>LARIA - Profesionálna Faktúra</title>
 
     <style>
-        /* 🛡️ IZOLOVANÝ ZÁKLAD PRE FAKTURANTA - Už sa nebije s hlavnou appkou! */
+        /* 🛡️ IZOLOVANÝ ZÁKLAD PRE FAKTURANTA */
         .body-fakturant {
             background-color: #1a1a1a; /* Temné pozadie systému LARIA */
             font-family: 'Courier New', Courier, monospace;
@@ -327,99 +327,120 @@
             d_vystavenia: finalVystavenie
         };
 
-        const pdfContent = `
-            <div style="width: 170mm; margin: 0 auto; padding: 10mm; font-family: Arial, sans-serif; color: #000; background: white;">
-                <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
-                    <tr>
-                        <td style="width: 50%; vertical-align: top; border: 1px solid #000; padding: 10px;">
-                            <strong style="font-size: 11px; color: #555; text-transform: uppercase;">Dodávateľ:</strong><br>
-                            <div style="white-space: pre-wrap; font-size: 13px; margin-top: 5px; line-height: 1.3;">${d.dodavatel}</div>
-                        </td>
-                        <td style="width: 50%; vertical-align: top; border: 1px solid #000; padding: 10px;">
-                            <div style="font-size: 15px; font-weight: bold; margin-bottom: 12px;">Faktúra číslo (VS): ${d.vs}</div>
-                            <strong style="font-size: 11px; color: #555; text-transform: uppercase;">Odberateľ:</strong><br>
-                            <div style="white-space: pre-wrap; font-size: 13px; margin-top: 5px; line-height: 1.3;">${d.odberatel}</div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid #000; padding: 10px; vertical-align: top;">
-                            <strong style="font-size: 11px;">Platobné údaje:</strong><br>
-                            <div style="white-space: pre-wrap; font-size: 12px; margin-top: 5px; line-height: 1.3;">${d.banka}</div>
-                            <div style="font-size: 11px; margin-top: 8px;">Forma úhrady: Prevodný príkaz</div>
-                        </td>
-                        <td style="border: 1px solid #000; padding: 10px; vertical-align: top;">
-                            <table style="width: 100%; font-size: 12px; line-height: 1.5;">
-                                <tr><td>Dátum vyhotovenia:</td><td align="right">${d.d_vystavenia}</td></tr>
-                                <tr><td>Dátum dodania:</td><td align="right">${d.d_dodania}</td></tr>
-                                <tr style="font-weight: bold;"><td>Dátum splatnosti:</td><td align="right">${d.d_splatnosti}</td></tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-
-                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                    <tr style="background: #f2f2f2; font-size: 11px;">
-                        <th style="border: 1px solid #000; padding: 8px; text-align: left;">Názov položky / Popis</th>
-                        <th style="border: 1px solid #000; padding: 8px; text-align: right; width: 120px;">Suma</th>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid #000; padding: 20px 10px; height: 350px; vertical-align: top; font-size: 14px;">
-                            ${d.popis} ${d.kw ? '<br><span style="font-size: 12px; color: #555;">(Týždeň: KW ' + d.kw + ')</span>' : ''}
-                        </td>
-                        <td style="border: 1px solid #000; padding: 20px 10px; text-align: right; vertical-align: top; font-size: 15px; font-weight: bold;">
-                            ${d.suma} ${d.mena}
-                        </td>
-                    </tr>
-                </table>
-
-                <div style="margin-top: 20px; text-align: right; font-size: 18px;">
-                    <strong>Celkom k úhrade: ${d.suma} ${d.mena}</strong>
+        // 💎 UNIFIKOVANÝ HTML OBSAH (Pre web aj pre Tauri identický)
+        const kompletneHtml = `
+            <!DOCTYPE html>
+            <html lang="sk">
+            <head>
+                <title>Faktura_${d.vs}</title>
+                <meta charset="UTF-8">
+                <style>
+                    body { background: #1a1a1a; margin: 0; padding: 20px; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; }
+                    .pdf-preview-container { width: 170mm; margin: 0 auto; padding: 10mm; font-family: Arial, sans-serif; color: #000; background: white; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+                    @media print { 
+                        .no-print { display: none !important; } 
+                        body { background: white; padding: 0; }
+                        .pdf-preview-container { box-shadow: none; margin: 0; padding: 0; width: 100%; }
+                    }
+                </style>
+            </head>
+            <body>
+                <!-- ⚡ JEDNOTNÝ SYSTÉMOVÝ PANEL LARIA (Skryje sa pri tlači na papier) -->
+                <div class="no-print" style="width: 170mm; margin: 0 auto 20px auto; display: flex; justify-content: space-between; background: #2a2a2a; padding: 12px; border-radius: 4px; border-bottom: 2px solid #c5a059; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="window.print()" style="padding: 10px 20px; background: #c5a059; color: #1a1a1a; border: none; font-weight: bold; font-family: monospace; cursor: pointer; letter-spacing: 1px;">🖨️ ULOŽIŤ / TLAČIŤ PDF</button>
+                        <button onclick="navigator.clipboard.writeText(document.getElementById('invoice-capture-area').innerText); alert('Text faktúry bol skopírovaný do schránky!')" style="padding: 10px 15px; background: #444; color: #fff; border: none; font-weight: bold; font-family: monospace; cursor: pointer;">📋 SKOPÍROVAŤ TEXT</button>
+                    </div>
+                    <button onclick="window.close()" style="padding: 10px 15px; background: #d9534f; color: white; border: none; font-weight: bold; font-family: monospace; cursor: pointer;">ZAVRIEŤ ×</button>
                 </div>
 
-                <div style="margin-top: 40px; font-size: 10px; color: #333;">
-                    Dodávateľ nie je platiteľom DPH.<br>
-                    Dodanie je oslobodené od dane podľa zákona o DPH.
+                <!-- TELO FAKTÚRY -->
+                <div id="invoice-capture-area" class="pdf-preview-container">
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
+                        <tr>
+                            <td style="width: 50%; vertical-align: top; border: 1px solid #000; padding: 10px;">
+                                <strong style="font-size: 11px; color: #555; text-transform: uppercase;">Dodávateľ:</strong><br>
+                                <div style="white-space: pre-wrap; font-size: 13px; margin-top: 5px; line-height: 1.3;">${d.dodavatel}</div>
+                            </td>
+                            <td style="width: 50%; vertical-align: top; border: 1px solid #000; padding: 10px;">
+                                <div style="font-size: 15px; font-weight: bold; margin-bottom: 12px;">Faktúra číslo (VS): ${d.vs}</div>
+                                <strong style="font-size: 11px; color: #555; text-transform: uppercase;">Odberateľ:</strong><br>
+                                <div style="white-space: pre-wrap; font-size: 13px; margin-top: 5px; line-height: 1.3;">${d.odberatel}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #000; padding: 10px; vertical-align: top;">
+                                <strong style="font-size: 11px;">Platobné údaje:</strong><br>
+                                <div style="white-space: pre-wrap; font-size: 12px; margin-top: 5px; line-height: 1.3;">${d.banka}</div>
+                                <div style="font-size: 11px; margin-top: 8px;">Forma úhrady: Prevodný príkaz</div>
+                            </td>
+                            <td style="border: 1px solid #000; padding: 10px; vertical-align: top;">
+                                <table style="width: 100%; font-size: 12px; line-height: 1.5;">
+                                    <tr><td>Dátum vyhotovenia:</td><td align="right">${d.d_vystavenia}</td></tr>
+                                    <tr><td>Dátum dodania:</td><td align="right">${d.d_dodania}</td></tr>
+                                    <tr style="font-weight: bold;"><td>Dátum splatnosti:</td><td align="right">${d.d_splatnosti}</td></tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                        <tr style="background: #f2f2f2; font-size: 11px;">
+                            <th style="border: 1px solid #000; padding: 8px; text-align: left;">Názov položky / Popis</th>
+                            <th style="border: 1px solid #000; padding: 8px; text-align: right; width: 120px;">Suma</th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #000; padding: 20px 10px; height: 350px; vertical-align: top; font-size: 14px;">
+                                ${d.popis} ${d.kw ? '<br><span style="font-size: 12px; color: #555;">(Týždeň: KW ' + d.kw + ')</span>' : ''}
+                            </td>
+                            <td style="border: 1px solid #000; padding: 20px 10px; text-align: right; vertical-align: top; font-size: 15px; font-weight: bold;">
+                                ${d.suma} ${d.mena}
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="margin-top: 20px; text-align: right; font-size: 18px;">
+                        <strong>Celkom k úhrade: ${d.suma} ${d.mena}</strong>
+                    </div>
+
+                    <div style="margin-top: 40px; font-size: 10px; color: #333;">
+                        Dodávateľ nie je platiteľom DPH.<br>
+                        Dodanie je oslobodené od dane podľa zákona o DPH.
+                    </div>
+                    
+                    <div style="margin-top: 80px; text-align: center; border-top: 1px solid #eee; padding-top: 10px; font-size: 9px; color: #999;">
+                        Vyhotovil: Sammael & Aria Digital System
+                    </div>
                 </div>
-                
-                <div style="margin-top: 80px; text-align: center; border-top: 1px solid #eee; padding-top: 10px; font-size: 9px; color: #999;">
-                    Vyhotovil: Sammael & Aria Digital System
-                </div>
-            </div>
+            </body>
+            </html>
         `;
 
-        // --- 🛸 DETEKCIA PROSTREDIA (Odbočka pre natívnu appku vs Web) ---
+        // 📦 Zakódujeme identické HTML do Base64 Data URL reťazca
+        const base64Html = btoa(unescape(encodeURIComponent(kompletneHtml)));
+        const dataUrl = `data:text/html;charset=utf-8;base64,${base64Html}`;
+
+        // --- 🛰️ UNIFIKOVANÝ EXPORT ---
         const isTauri = window.__TAURI__ !== undefined || window.__TAURI_METADATA__ !== undefined || window.__TAURI_IPC__ !== undefined;
 
         if (isTauri) {
-            console.log("🛸 LARIA FAKTURA DETECTOR: Detekované Tauri! Otváram interné natívne okno.");
-            
-            const tlacoveOkno = window.open('', '_blank', 'height=750,width=850');
-            tlacoveOkno.document.write('<html><head><title>Faktura_' + d.vs + '</title></head><body style="margin:20px; padding:0; background:#f0f0f0; display:flex; justify-content:center;">');
-            tlacoveOkno.document.write(pdfContent);
-            
-            const copyBtn = `
-                <div style="position:fixed; bottom:20px; right:20px; display:flex; gap:10px;">
-                    <button onclick="window.close()" style="padding:10px 20px; background:#333; color:#fff; border:none; cursor:pointer; font-weight:bold;">ZAVRIEŤ</button>
-                    <button onclick="navigator.clipboard.writeText(document.querySelector('div').innerText); alert('Text faktúry skopírovaný do schránky!')" style="padding:10px 20px; background:#c5a059; color:#1a1a1a; border:none; cursor:pointer; font-weight:bold;">SKOPÍROVAŤ TEXT</button>
-                </div>
-            `;
-            tlacoveOkno.document.write(copyBtn);
-            tlacoveOkno.document.write('</body></html>');
-            tlacoveOkno.document.close();
-
+            console.log("🛸 LARIA SYSTEM: Spúšťam Tauri shell otvárač pre Firefox.");
+            if (window.__TAURI__ && window.__TAURI__.shell) {
+                window.__TAURI__.shell.open(dataUrl);
+            } else {
+                window.__TAURI__.core.invoke('plugin:shell|open', { script: dataUrl });
+            }
         } else {
-            console.log("🌐 LARIA FAKTURA DETECTOR: Detekovaný web. Spúšťam klasickú tlač.");
-            
-            const tlacoveOkno = window.open('', '_blank', 'height=600,width=800');
-            tlacoveOkno.document.write('<html><head><title>Faktura_' + d.vs + '</title></head><body style="margin:0; padding:0;">');
-            tlacoveOkno.document.write(pdfContent);
-            tlacoveOkno.document.write('</body></html>');
-            tlacoveOkno.document.close();
-            
-            setTimeout(() => {
-                tlacoveOkno.print();
-                tlacoveOkno.close();
-            }, 300);
+            console.log("🌐 LARIA SYSTEM: Spúšťam webové unifikované okno.");
+            // Na webe namiesto slepej tlače otvoríme to isté krásne klientské prostredie
+            const tlacoveOkno = window.open('', '_blank');
+            if (tlacoveOkno) {
+                tlacoveOkno.document.write(kompletneHtml);
+                tlacoveOkno.document.close();
+            } else {
+                // Pre istotu, ak by vyskočil popup blocker, použijeme záložný priamy skok
+                window.open(dataUrl, '_blank');
+            }
         }
     }
 </script>
