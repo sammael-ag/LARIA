@@ -409,10 +409,10 @@ const MasterWrapper = () => {
           )}
 
           {currentView === 'co-je-laria' && (
-            <iframe src="/co-je-laria.html" style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} title="Čo je Laria" />
+            <iframe src="./co-je-laria.html" style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} title="Čo je Laria" />
           )}
           {currentView === 'fakturant' && (
-            <iframe src="/fakturant.html" style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} title="Fakturant" />
+            <iframe src="./fakturant.html" style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} title="Fakturant" />
           )}
           {currentView === 'free-vs-full' && <div style={{ padding: '0 15px' }}><FreeVsFull /></div>}
           {currentView === 'donate' && <div style={{ padding: '0 15px' }}><Donate /></div>}

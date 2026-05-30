@@ -387,18 +387,40 @@
             </div>
         `;
 
-        // Vytvorenie čistého tlačového okna na pozadí
-        const tlacoveOkno = window.open('', '_blank', 'height=600,width=800');
-        tlacoveOkno.document.write('<html><head><title>Faktura_' + d.vs + '</title></head><body style="margin:0; padding:0;">');
-        tlacoveOkno.document.write(pdfContent);
-        tlacoveOkno.document.write('</body></html>');
-        tlacoveOkno.document.close();
-        
-        // Odpálime natívne systémové okno pre uloženie čistého PDF
-        setTimeout(() => {
-            tlacoveOkno.print();
-            tlacoveOkno.close();
-        }, 300);
+        // --- 🛸 DETEKCIA PROSTREDIA (Odbočka pre natívnu appku vs Web) ---
+        const isTauri = window.__TAURI__ !== undefined || window.__TAURI_METADATA__ !== undefined || window.__TAURI_IPC__ !== undefined;
+
+        if (isTauri) {
+            console.log("🛸 LARIA FAKTURA DETECTOR: Detekované Tauri! Otváram interné natívne okno.");
+            
+            const tlacoveOkno = window.open('', '_blank', 'height=750,width=850');
+            tlacoveOkno.document.write('<html><head><title>Faktura_' + d.vs + '</title></head><body style="margin:20px; padding:0; background:#f0f0f0; display:flex; justify-content:center;">');
+            tlacoveOkno.document.write(pdfContent);
+            
+            const copyBtn = `
+                <div style="position:fixed; bottom:20px; right:20px; display:flex; gap:10px;">
+                    <button onclick="window.close()" style="padding:10px 20px; background:#333; color:#fff; border:none; cursor:pointer; font-weight:bold;">ZAVRIEŤ</button>
+                    <button onclick="navigator.clipboard.writeText(document.querySelector('div').innerText); alert('Text faktúry skopírovaný do schránky!')" style="padding:10px 20px; background:#c5a059; color:#1a1a1a; border:none; cursor:pointer; font-weight:bold;">SKOPÍROVAŤ TEXT</button>
+                </div>
+            `;
+            tlacoveOkno.document.write(copyBtn);
+            tlacoveOkno.document.write('</body></html>');
+            tlacoveOkno.document.close();
+
+        } else {
+            console.log("🌐 LARIA FAKTURA DETECTOR: Detekovaný web. Spúšťam klasickú tlač.");
+            
+            const tlacoveOkno = window.open('', '_blank', 'height=600,width=800');
+            tlacoveOkno.document.write('<html><head><title>Faktura_' + d.vs + '</title></head><body style="margin:0; padding:0;">');
+            tlacoveOkno.document.write(pdfContent);
+            tlacoveOkno.document.write('</body></html>');
+            tlacoveOkno.document.close();
+            
+            setTimeout(() => {
+                tlacoveOkno.print();
+                tlacoveOkno.close();
+            }, 300);
+        }
     }
 </script>
 
