@@ -207,6 +207,27 @@ input:focus, select:focus, textarea:focus {
     border-color: var(--accent-color);
 }
 
+/* Špecifický tuning pre výber kategórií, aby nesvietil na bielo */
+select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='50' fill='%23c5a059'><polygon points='0,0 100,0 50,50'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 10px;
+    padding-right: 40px !important;
+    appearance: none; /* Skryje starú systémovú šípku */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+/* Štýl pre možnosti vo vnútri zoznamu */
+select option {
+    background-color: #1a1a1a !important;
+    color: #fff !important;
+    font-family: var(--font-mono);
+    padding: 10px;
+}
+
 /* 7. STATUSY A DIÓDY */
 .status-indicator-row {
     display: flex;
@@ -718,4 +739,39 @@ input:focus, select:focus, textarea:focus {
   font-weight: bold;
   margin-top: -2px;
   user-select: none;
+}
+
+/* ==========================================================================
+   LARIA v2.0: SYSTEM SCROLLBARS (Zatmavenie a mosadzný prach)
+   ========================================================================== */
+
+/* Pre Webkit prehliadače (Chrome, Safari, Tauri/Tauri Core) */
+::-webkit-scrollbar {
+    width: 8px;     /* Užší, elegantný posuvník */
+    height: 8px;    /* Pre horizontálny posuv */
+}
+
+/* Pozadie dráhy posuvníka */
+::-webkit-scrollbar-track {
+    background: #0d0d0d; 
+    border-left: 1px solid rgba(197, 160, 89, 0.05);
+}
+
+/* Samotné tiahlo (bežec) - v štýle mosadzného monolitu */
+::-webkit-scrollbar-thumb {
+    background: #3a3a3a; 
+    border: 1px solid rgba(197, 160, 89, 0.2);
+    border-radius: 0px; /* Striktne pravé uhly! */
+}
+
+/* Keď na posuvník nabehneš myšou, mierne sa rozsvieti do zlata */
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+    box-shadow: 0 0 10px rgba(197, 160, 89, 0.4);
+}
+
+/* Pre Firefox (špecifická podpora) */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #3a3a3a #0d0d0d;
 }
