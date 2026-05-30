@@ -448,20 +448,41 @@ const MasterWrapper = () => {
             {isTauriWindow ? (
               <App triggerWebRefresh={triggerWebRefresh} />
             ) : (
-              <div className="web-promo-panel" style={{ padding: '25px 20px', color: '#fff', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', background: 'rgba(10,10,10,0.95)' }}>
-                <h3 style={{ color: '#d4af37', fontSize: '1.4em', letterSpacing: '1px', margin: '20px 0 10px 0' }}>CrystalCore</h3>
-                <p style={{ color: '#aaa', fontSize: '0.95em', lineHeight: '1.5', padding: '0 10px' }}>
+              /* 🪐 VYČISTENÝ PROMO PANEL (Naviazaný na tvoj master stylesheet) */
+              <div className="aria-liquid-container" style={{ padding: '30px 20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                
+                {/* Elegantný tenký Art Deco nadpis z tvojho CSS */}
+                <div className="modal-title" style={{ marginBottom: '20px', marginTop: '40px' }}>
+                  CrystalCore
+                </div>
+
+                {/* Štýlová deliaca linka z ateliéru */}
+                <div className="section-divider">
+                  <span className="section-divider-text">NODE SYSTEM</span>
+                </div>
+
+                {/* Popisný text využívajúci tvoje nastavenia písma a riadkovania */}
+                <div className="card-description-text" style={{ textAlign: 'center', padding: '0 10px', marginBottom: '40px', fontSize: '13px', lineHeight: '22px' }}>
                   Pre plnú synchronizáciu so sieťami, Gopher protokolom a prístup k hardvérovým uzlom spustite lokálny systém.
-                </p>
-                <div style={{ marginTop: 'auto', marginBottom: '40px' }}>
-                  <button 
-                    onClick={handleDownloadClick}
-                    className="btn-core-app" 
-                    style={{ width: '100%', padding: '14px', fontSize: '1em', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}
-                  >
-                    Stiahnuť Crystal Core
+                </div>
+
+                {/* Flexibilná výplň, ktorá drží akciu pevne na spodku */}
+                <div style={{ flexGrow: 1 }}></div>
+
+                {/* Hlavné sťahovacie tlačidlo - plne naviazané na BRONZE_GLOW efekty */}
+                <div style={{ width: '100%', maxWidth: '320px', alignSelf: 'center', marginBottom: '30px' }}>
+                  <button className="primary-btn" onClick={handleDownloadClick}>
+                    <span className="primary-btn-text">{txt.btn_download || "Stiahnuť Crystal Core"}</span>
                   </button>
                 </div>
+
+                {/* Tichý systémový podpis na úplnom spodku panela */}
+                <div style={{ textAlign: 'center', opacity: 0.3, marginTop: 'auto', marginBottom: '10px' }}>
+                  <span className="text-terminal" style={{ fontSize: '9px', letterSpacing: '1px' }}>
+                    SYSTEM_READY // BYTES_ALIGNED // 2026
+                  </span>
+                </div>
+
               </div>
             )}
 
