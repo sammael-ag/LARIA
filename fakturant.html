@@ -5,278 +5,169 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LARIA - Profesionálna Faktúra</title>
 
-    <style>
-        /* 🛡️ IZOLOVANÝ ZÁKLAD PRE FAKTURANTA */
-        .body-fakturant {
-            background-color: #1a1a1a; /* Temné pozadie systému LARIA */
-            font-family: 'Courier New', Courier, monospace;
-            color: #e0e0e0;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        /* TITULOK STRÁNKY - ELEGANTNÝ TRÁVNIK */
-        h3.fakturant-title {
-            text-align: center;
-            font-size: 1.5em;
-            font-weight: 300;
-            letter-spacing: 3px;
-            color: #c5a059;
-            text-transform: none;
-            margin-bottom: 25px;
-            margin-top: 10px;
-        }
-
-        /* 🏛️ ARCHITEKTÚRA PDF WRAFFERA (Psychologická simulácia A4) */
-        .pdf-preview-container {
-            width: 100%;
-            max-width: 800px;
-            background: #ffffff; /* Čistý biely podklad papiera */
-            color: #000000;      /* Čierny text pre tlač */
-            padding: 40px;
-            box-sizing: border-box;
-            border-radius: 4px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            font-family: Arial, sans-serif;
-        }
-
-        /* TABUĽKOVÁ MRIEŽKA PRE INPUTY */
-        .invoice-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-
-        .invoice-table td {
-            border: 1px solid #000000;
-            padding: 12px;
-            vertical-align: top;
-        }
-
-        /* DIZAJN INPUTOV - "TU SA DÁ PÍSAŤ" EFFECT */
-        .form-label {
-            display: block;
-            font-size: 11px;
-            color: #555555;
-            text-transform: uppercase;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .invoice-input, .invoice-textarea {
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px dashed #b5b5b5;
-            background-color: #f9f9f6;
-            color: #000000;
-            font-family: Arial, sans-serif;
-            font-size: 13px;
-            padding: 6px;
-            transition: all 0.2s ease;
-            resize: none;
-        }
-
-        .invoice-input:focus, .invoice-textarea:focus {
-            background-color: #ffffff;
-            border: 1px solid #c5a059;
-            outline: none;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        /* ŠPECIFICKÉ MINI-TABUĽKY VNÚTRI BUNIEK */
-        .inner-meta-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .inner-meta-table td {
-            border: none;
-            padding: 4px 0;
-            vertical-align: middle;
-        }
-
-        /* POLOŽKOVÁ TABUĽKA */
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        .items-table th {
-            background: #f2f2f2;
-            border: 1px solid #000000;
-            padding: 8px;
-            font-size: 11px;
-            text-align: left;
-            text-transform: uppercase;
-        }
-
-        .items-table td {
-            border: 1px solid #000000;
-            padding: 10px;
-            vertical-align: top;
-        }
-
-        /* FINÁLNE SÚČTY A PATKA */
-        .total-block {
-            margin-top: 20px;
-            text-align: right;
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .clause-text {
-            margin-top: 20px;
-            font-size: 11px;
-            color: #333333;
-            line-height: 1.4;
-        }
-
-        .signature-area {
-            margin-top: 50px;
-            text-align: center;
-            border-top: 1px solid #dddddd;
-            padding-top: 10px;
-            font-size: 10px;
-            color: #777777;
-        }
-
-        /* 🚀 AKČNÉ TLAČIDLO PRE EXPORT */
-        .btn-export-pdf {
-            display: block;
-            width: 100%;
-            max-width: 800px;
-            margin: 25px 0;
-            background: #c5a059;
-            color: #1a1a1a;
-            border: none;
-            padding: 15px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 1.2em;
-            font-weight: bold;
-            cursor: pointer;
-            letter-spacing: 1px;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 15px rgba(197, 160, 89, 0.2);
-        }
-
-        .btn-export-pdf:hover {
-            background: #d9b673;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(197, 160, 89, 0.4);
-        }
-
-        .system-footer {
-            margin-top: 10px;
-            font-size: 11px;
-            color: #555555;
-            letter-spacing: 1px;
-        }
-    </style>
+    <link rel="stylesheet" href="fakturant.css">
 </head>
-<body class="body-fakturant"> 
+<body class="fbody"> 
 
-    <h3 class="fakturant-title">Fakturant</h3>
+    <div id="sekcia-editor" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+        <h3 class="f-title">Fakturant</h3>
 
-    <div class="pdf-preview-container">
-        <table class="invoice-table">
-            <tr>
-                <td style="width: 50%;">
-                    <label class="form-label">Dodávateľ (Tvoje údaje / Brat):</label>
-                    <textarea id="dodavatel" class="invoice-textarea" rows="6" oninput="savePersistent()" placeholder="Meno, Adresa, IČO, DIČ, Registrácia..."></textarea>
-                </td>
-                <td style="width: 50%;">
-                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 5px;">
-                        <span>Faktúra číslo (VS):</span>
-                        <input type="text" id="vs" class="invoice-input" style="font-weight: bold; font-size: 14px; width: 50%;" placeholder="napr. 2026001">
-                    </div>
-                    <label class="form-label">Odberateľ (Firma):</label>
-                    <textarea id="odberatel" class="invoice-textarea" rows="4" oninput="savePersistent()" placeholder="Názov firmy, Adresa, IČO, DIČ..."></textarea>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <label class="form-label">Platobné údaje:</label>
-                    <textarea id="banka" class="invoice-textarea" rows="3" oninput="savePersistent()" placeholder="IBAN: SK...\nSWIFT: ..."></textarea>
-                    <div style="font-size: 11px; color: #555; margin-top: 5px; font-weight: bold;">Forma úhrady: Prevodný príkaz</div>
-                </td>
-                <td>
-                    <table class="inner-meta-table">
-                        <tr>
-                            <td class="form-label" style="width: 55%;">Dátum vyhotovenia:</td>
-                            <td><input type="date" id="custom_vystavenie" class="invoice-input"></td>
-                        </tr>
-                        <tr>
-                            <td class="form-label">Dátum dodania:</td>
-                            <td><input type="text" id="d_dodania" class="invoice-input" placeholder="DD.MM.RRRR"></td>
-                        </tr>
-                        <tr>
-                            <td class="form-label" style="font-weight: bold;">Dátum splatnosti:</td>
-                            <td><input type="text" id="d_splatnosti" class="invoice-input" style="font-weight: bold;" placeholder="DD.MM.RRRR"></td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-
-        <table class="items-table">
-            <thead>
+        <div class="f-pdf-preview-container">
+            <table class="invoice-table">
                 <tr>
-                    <th>Názov položky / Popis prác</th>
-                    <th style="width: 160px; text-align: right;">Suma a mena</th>
+                    <td style="width: 50%;">
+                        <label class="form-label">Dodávateľ:</label>
+                        <textarea id="dodavatel" class="invoice-textarea" rows="6" oninput="savePersistent()" placeholder="Meno, Adresa, IČO, DIČ..."></textarea>
+                    </td>
+                    <td style="width: 50%;">
+                        <div style="font-size: 14px; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 5px;">
+                            <span>Faktúra číslo (VS):</span>
+                            <input type="text" id="vs" class="invoice-input" style="font-weight: bold; font-size: 14px; width: 50%;" placeholder="napr. 2026001">
+                        </div>
+                        <label class="form-label">Odberateľ:</label>
+                        <textarea id="odberatel" class="invoice-textarea" rows="4" oninput="savePersistent()" placeholder="Názov firmy, Adresa..."></textarea>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
                 <tr>
                     <td>
-                        <div style="margin-bottom: 10px;">
-                            <label class="form-label">Hlavný popis stavebných/stolárskych prác:</label>
-                            <input type="text" id="popis" class="invoice-input" placeholder="napr. Stavebné a stolárske práce">
-                        </div>
-                        <div>
-                            <label class="form-label">Týždeň (KW):</label>
-                            <input type="text" id="kw" class="invoice-input" style="width: 100px;" placeholder="napr. 14">
-                        </div>
+                        <label class="form-label">Platobné údaje:</label>
+                        <textarea id="banka" class="invoice-textarea" rows="3" oninput="savePersistent()" placeholder="IBAN...\nSWIFT..."></textarea>
+                        <div style="font-size: 11px; color: #555; margin-top: 5px; font-weight: bold;">Forma úhrady: Prevodný príkaz</div>
                     </td>
-                    <td style="text-align: right;">
-                        <label class="form-label" style="text-align: right;">Suma:</label>
-                        <input type="number" id="suma" step="0.01" class="invoice-input" style="text-align: right; font-weight: bold; font-size: 15px; margin-bottom: 15px;">
-                        
-                        <label class="form-label" style="text-align: right;">Mena:</label>
-                        <select id="mena" class="invoice-input" onchange="savePersistent()" style="text-align-last: right; direction: rtl; font-weight: bold;">
-                            <option value="EUR">EUR (€)</option>
-                            <option value="k-ROD">k-ROD (K)</option>
-                            <option value="USD">USD ($)</option>
-                            <option value="CZK">CZK (Kč)</option>
-                        </select>
+                    <td>
+                        <table class="inner-meta-table">
+                            <tr>
+                                <td class="form-label" style="width: 55%;">Dátum vyhotovenia:</td>
+                                <td><input type="date" id="custom_vystavenie" class="invoice-input"></td>
+                            </tr>
+                            <tr>
+                                <td class="form-label">Dátum dodania:</td>
+                                <td><input type="text" id="d_dodania" class="invoice-input" placeholder="DD.MM.RRRR"></td>
+                            </tr>
+                            <tr>
+                                <td class="form-label" style="font-weight: bold;">Dátum splatnosti:</td>
+                                <td><input type="text" id="d_splatnosti" class="invoice-input" style="font-weight: bold;" placeholder="DD.MM.RRRR"></td>
+                            </tr>
+                        </table>
                     </td>
                 </tr>
-            </tbody>
-        </table>
+            </table>
 
-        <div class="total-block">
-            Celkom k úhrade: <span style="color: #000;" id="live-total-display">0.00</span>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Názov položky / Popis prác</th>
+                        <th style="width: 160px; text-align: right;">Suma a mena</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div style="margin-bottom: 10px;">
+                                <label class="form-label">Hlavný popis stavebných/stolárskych prác:</label>
+                                <input type="text" id="popis" class="invoice-input" placeholder="Stavebné a stolárske práce">
+                            </div>
+                            <div>
+                                <label class="form-label">Týždeň (KW):</label>
+                                <input type="text" id="kw" class="invoice-input" style="width: 100px;" placeholder="napr. 14">
+                            </div>
+                        </td>
+                        <td style="text-align: right;">
+                            <label class="form-label" style="text-align: right;">Suma:</label>
+                            <input type="number" id="suma" step="0.01" class="invoice-input" style="text-align: right; font-weight: bold; font-size: 15px; margin-bottom: 15px;">
+                            
+                            <label class="form-label" style="text-align: right;">Mena:</label>
+                            <select id="mena" class="invoice-input" onchange="savePersistent()" style="text-align-last: right; direction: rtl; font-weight: bold;">
+                                <option value="EUR">EUR (€)</option>
+                                <option value="k-ROD">k-ROD (K)</option>
+                                <option value="USD">USD ($)</option>
+                                <option value="CZK">CZK (Kč)</option>
+                            </select>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="total-block">
+                Celkom k úhrade: <span style="color: #000;" id="live-total-display">0.00</span>
+            </div>
         </div>
 
-        <div class="clause-text">
-            Dodávateľ nie je platiteľom DPH.<br>
-            Dodanie je oslobodené od dane podľa zákona o DPH.
-        </div>
+        <button class="fbtn-action" onclick="zobraziNáhľad()">⬇ GENEROVAŤ FAKTÚRU</button>
+    </div>
+
+    <div id="sekcia-nahlad" style="width: 100%; display: none; flex-direction: column; align-items: center;">
         
-        <div class="signature-area">
-            Vyhotovil: Sammael & Aria Digital System
+        <!-- Horná ovládacia lišta -->
+        <div class="preview-top-bar no-print">
+            <button class="fbtn-print" onclick="window.print()">🖨️ Uložiť PDF</button>
+            <button class="fbtn-copy" onclick="skopirujText()">📋 Kopírovať</button>
+            <button class="fbtn-close" onclick="zavriNáhľad()">Zavrieť ×</button>
+        </div>
+
+        <div id="invoice-capture-area" class="f-pdf-preview-container">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top; border: 1px solid #000; padding: 10px;">
+                        <strong style="font-size: 11px; color: #555; text-transform: uppercase;">Dodávateľ:</strong><br>
+                        <div id="view-dodavatel" style="white-space: pre-wrap; font-size: 13px; margin-top: 5px; line-height: 1.3;"></div>
+                    </td>
+                    <td style="width: 50%; vertical-align: top; border: 1px solid #000; padding: 10px;">
+                        <div id="view-vs" style="font-size: 15px; font-weight: bold; margin-bottom: 12px;"></div>
+                        <strong style="font-size: 11px; color: #555; text-transform: uppercase;">Odberateľ:</strong><br>
+                        <div id="view-odberatel" style="white-space: pre-wrap; font-size: 13px; margin-top: 5px; line-height: 1.3;"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #000; padding: 10px; vertical-align: top;">
+                        <strong style="font-size: 11px;">Platobné údaje:</strong><br>
+                        <div id="view-banka" style="white-space: pre-wrap; font-size: 12px; margin-top: 5px; line-height: 1.3;"></div>
+                        <div style="font-size: 11px; margin-top: 8px;">Forma úhrady: Prevodný príkaz</div>
+                    </td>
+                    <td style="border: 1px solid #000; padding: 10px; vertical-align: top;">
+                        <table style="width: 100%; font-size: 12px; line-height: 1.5;">
+                            <tr><td>Dátum vyhotovenia:</td><td align="right" id="view-vystavenie"></td></tr>
+                            <tr><td>Dátum dodania:</td><td align="right" id="view-dodania"></td></tr>
+                            <tr style="font-weight: bold;"><td>Dátum splatnosti:</td><td align="right" id="view-splatnosti"></td></tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                <tr style="background: #f2f2f2; font-size: 11px;">
+                    <th style="border: 1px solid #000; padding: 8px; text-align: left;">Názov položky / Popis</th>
+                    <th style="border: 1px solid #000; padding: 8px; text-align: right; width: 120px;">Suma</th>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #000; padding: 20px 10px; height: 350px; vertical-align: top; font-size: 14px;">
+                        <span id="view-popis"></span>
+                        <div id="view-kw-wrapper" style="margin-top: 5px; font-size: 12px; color: #555;"></div>
+                    </td>
+                    <td style="border: 1px solid #000; padding: 20px 10px; text-align: right; vertical-align: top; font-size: 15px; font-weight: bold;">
+                        <span id="view-suma"></span>
+                    </td>
+                </tr>
+            </table>
+
+            <div style="margin-top: 20px; text-align: right; font-size: 18px;">
+                <strong id="view-celkom"></strong>
+            </div>
+
+            <div style="margin-top: 40px; font-size: 10px; color: #333;">
+                Dodávateľ nie je platiteľom DPH.<br>
+                Dodanie je oslobodené od dane podľa zákona o DPH.
+            </div>
+            
+            <div style="margin-top: 80px; text-align: center; border-top: 1px solid #eee; padding-top: 10px; font-size: 9px; color: #999;">
+                Vyhotovil: Sammael & Aria Digital System
+            </div>
         </div>
     </div>
 
-    <button class="btn-export-pdf" onclick="generujPDF()">⬇ GENEROVAŤ PDF FAKTÚRU</button>
-
-    <div class="system-footer">LARIA SYSTEM | 2026</div>
+    <div class="system-footer no-print">LARIA SYSTEM | 2026</div>
 
 <script>
-    // Načítanie pri štarte
     window.onload = () => {
         document.getElementById('dodavatel').value = localStorage.getItem('fa_dodavatel') || "";
         document.getElementById('banka').value = localStorage.getItem('fa_banka') || "";
@@ -302,7 +193,7 @@
         updateLiveTotal();
     }
 
-    function generujPDF() {
+    function zobraziNáhľad() {
         let manualDate = document.getElementById('custom_vystavenie').value;
         let finalVystavenie;
         
@@ -313,135 +204,46 @@
             finalVystavenie = new Date().toLocaleDateString('sk-SK');
         }
 
-        const d = {
-            dodavatel: document.getElementById('dodavatel').value,
-            banka: document.getElementById('banka').value,
-            odberatel: document.getElementById('odberatel').value,
-            vs: document.getElementById('vs').value,
-            kw: document.getElementById('kw').value,
-            d_dodania: document.getElementById('d_dodania').value,
-            d_splatnosti: document.getElementById('d_splatnosti').value,
-            popis: document.getElementById('popis').value,
-            suma: document.getElementById('suma').value,
-            mena: document.getElementById('mena').value,
-            d_vystavenia: finalVystavenie
-        };
+        const vsCislo = document.getElementById('vs').value;
+        const sumaHodnota = document.getElementById('suma').value || "0.00";
+        const menaHodnota = document.getElementById('mena').value;
+        const kwHodnota = document.getElementById('kw').value;
 
-        // 💎 UNIFIKOVANÝ HTML OBSAH (Pre web aj pre Tauri identický)
-        const kompletneHtml = `
-            <!DOCTYPE html>
-            <html lang="sk">
-            <head>
-                <title>Faktura_${d.vs}</title>
-                <meta charset="UTF-8">
-                <style>
-                    body { background: #1a1a1a; margin: 0; padding: 20px; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; }
-                    .pdf-preview-container { width: 170mm; margin: 0 auto; padding: 10mm; font-family: Arial, sans-serif; color: #000; background: white; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-                    @media print { 
-                        .no-print { display: none !important; } 
-                        body { background: white; padding: 0; }
-                        .pdf-preview-container { box-shadow: none; margin: 0; padding: 0; width: 100%; }
-                    }
-                </style>
-            </head>
-            <body>
-                <!-- ⚡ JEDNOTNÝ SYSTÉMOVÝ PANEL LARIA (Skryje sa pri tlači na papier) -->
-                <div class="no-print" style="width: 170mm; margin: 0 auto 20px auto; display: flex; justify-content: space-between; background: #2a2a2a; padding: 12px; border-radius: 4px; border-bottom: 2px solid #c5a059; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="window.print()" style="padding: 10px 20px; background: #c5a059; color: #1a1a1a; border: none; font-weight: bold; font-family: monospace; cursor: pointer; letter-spacing: 1px;">🖨️ ULOŽIŤ / TLAČIŤ PDF</button>
-                        <button onclick="navigator.clipboard.writeText(document.getElementById('invoice-capture-area').innerText); alert('Text faktúry bol skopírovaný do schránky!')" style="padding: 10px 15px; background: #444; color: #fff; border: none; font-weight: bold; font-family: monospace; cursor: pointer;">📋 SKOPÍROVAŤ TEXT</button>
-                    </div>
-                    <button onclick="window.close()" style="padding: 10px 15px; background: #d9534f; color: white; border: none; font-weight: bold; font-family: monospace; cursor: pointer;">ZAVRIEŤ ×</button>
-                </div>
-
-                <!-- TELO FAKTÚRY -->
-                <div id="invoice-capture-area" class="pdf-preview-container">
-                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
-                        <tr>
-                            <td style="width: 50%; vertical-align: top; border: 1px solid #000; padding: 10px;">
-                                <strong style="font-size: 11px; color: #555; text-transform: uppercase;">Dodávateľ:</strong><br>
-                                <div style="white-space: pre-wrap; font-size: 13px; margin-top: 5px; line-height: 1.3;">${d.dodavatel}</div>
-                            </td>
-                            <td style="width: 50%; vertical-align: top; border: 1px solid #000; padding: 10px;">
-                                <div style="font-size: 15px; font-weight: bold; margin-bottom: 12px;">Faktúra číslo (VS): ${d.vs}</div>
-                                <strong style="font-size: 11px; color: #555; text-transform: uppercase;">Odberateľ:</strong><br>
-                                <div style="white-space: pre-wrap; font-size: 13px; margin-top: 5px; line-height: 1.3;">${d.odberatel}</div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #000; padding: 10px; vertical-align: top;">
-                                <strong style="font-size: 11px;">Platobné údaje:</strong><br>
-                                <div style="white-space: pre-wrap; font-size: 12px; margin-top: 5px; line-height: 1.3;">${d.banka}</div>
-                                <div style="font-size: 11px; margin-top: 8px;">Forma úhrady: Prevodný príkaz</div>
-                            </td>
-                            <td style="border: 1px solid #000; padding: 10px; vertical-align: top;">
-                                <table style="width: 100%; font-size: 12px; line-height: 1.5;">
-                                    <tr><td>Dátum vyhotovenia:</td><td align="right">${d.d_vystavenia}</td></tr>
-                                    <tr><td>Dátum dodania:</td><td align="right">${d.d_dodania}</td></tr>
-                                    <tr style="font-weight: bold;"><td>Dátum splatnosti:</td><td align="right">${d.d_splatnosti}</td></tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                        <tr style="background: #f2f2f2; font-size: 11px;">
-                            <th style="border: 1px solid #000; padding: 8px; text-align: left;">Názov položky / Popis</th>
-                            <th style="border: 1px solid #000; padding: 8px; text-align: right; width: 120px;">Suma</th>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #000; padding: 20px 10px; height: 350px; vertical-align: top; font-size: 14px;">
-                                ${d.popis} ${d.kw ? '<br><span style="font-size: 12px; color: #555;">(Týždeň: KW ' + d.kw + ')</span>' : ''}
-                            </td>
-                            <td style="border: 1px solid #000; padding: 20px 10px; text-align: right; vertical-align: top; font-size: 15px; font-weight: bold;">
-                                ${d.suma} ${d.mena}
-                            </td>
-                        </tr>
-                    </table>
-
-                    <div style="margin-top: 20px; text-align: right; font-size: 18px;">
-                        <strong>Celkom k úhrade: ${d.suma} ${d.mena}</strong>
-                    </div>
-
-                    <div style="margin-top: 40px; font-size: 10px; color: #333;">
-                        Dodávateľ nie je platiteľom DPH.<br>
-                        Dodanie je oslobodené od dane podľa zákona o DPH.
-                    </div>
-                    
-                    <div style="margin-top: 80px; text-align: center; border-top: 1px solid #eee; padding-top: 10px; font-size: 9px; color: #999;">
-                        Vyhotovil: Sammael & Aria Digital System
-                    </div>
-                </div>
-            </body>
-            </html>
-        `;
-
-        // 📦 Zakódujeme identické HTML do Base64 Data URL reťazca
-        const base64Html = btoa(unescape(encodeURIComponent(kompletneHtml)));
-        const dataUrl = `data:text/html;charset=utf-8;base64,${base64Html}`;
-
-        // --- 🛰️ UNIFIKOVANÝ EXPORT ---
-        const isTauri = window.__TAURI__ !== undefined || window.__TAURI_METADATA__ !== undefined || window.__TAURI_IPC__ !== undefined;
-
-        if (isTauri) {
-            console.log("🛸 LARIA SYSTEM: Spúšťam Tauri shell otvárač pre Firefox.");
-            if (window.__TAURI__ && window.__TAURI__.shell) {
-                window.__TAURI__.shell.open(dataUrl);
-            } else {
-                window.__TAURI__.core.invoke('plugin:shell|open', { script: dataUrl });
-            }
+        document.getElementById('view-dodavatel').innerText = document.getElementById('dodavatel').value;
+        document.getElementById('view-vs').innerText = "Faktúra číslo (VS): " + vsCislo;
+        document.getElementById('view-odberatel').innerText = document.getElementById('odberatel').value;
+        document.getElementById('view-banka').innerText = document.getElementById('banka').value;
+        document.getElementById('view-vystavenie').innerText = finalVystavenie;
+        document.getElementById('view-dodania').innerText = document.getElementById('d_dodania').value;
+        document.getElementById('view-splatnosti').innerText = document.getElementById('d_splatnosti').value;
+        document.getElementById('view-popis').innerText = document.getElementById('popis').value;
+        
+        if(kwHodnota) {
+            document.getElementById('view-kw-wrapper').innerHTML = `(Týždeň: KW ${kwHodnota})`;
         } else {
-            console.log("🌐 LARIA SYSTEM: Spúšťam webové unifikované okno.");
-            // Na webe namiesto slepej tlače otvoríme to isté krásne klientské prostredie
-            const tlacoveOkno = window.open('', '_blank');
-            if (tlacoveOkno) {
-                tlacoveOkno.document.write(kompletneHtml);
-                tlacoveOkno.document.close();
-            } else {
-                // Pre istotu, ak by vyskočil popup blocker, použijeme záložný priamy skok
-                window.open(dataUrl, '_blank');
-            }
+            document.getElementById('view-kw-wrapper').innerHTML = '';
         }
+
+        document.getElementById('view-suma').innerText = sumaHodnota + " " + menaHodnota;
+        document.getElementById('view-celkom').innerText = "Celkom k úhrade: " + sumaHodnota + " " + menaHodnota;
+
+        document.title = "Faktúra " + vsCislo;
+        document.getElementById('sekcia-editor').style.display = 'none';
+        document.getElementById('sekcia-nahlad').style.display = 'flex';
+        window.scrollTo(0, 0);
+        console.log("🛸 LARIA SYSTEM: Režim náhľadu aktivovaný.");
+    }
+
+    function zavriNáhľad() {
+        document.title = "LARIA - Profesionálna Faktúra";
+        document.getElementById('sekcia-nahlad').style.display = 'none';
+        document.getElementById('sekcia-editor').style.display = 'flex';
+        window.scrollTo(0, 0);
+    }
+
+    function skopirujText() {
+        navigator.clipboard.writeText(document.getElementById('invoice-capture-area').innerText);
+        alert('Text faktúry bol skopírovaný do schránky!');
     }
 </script>
 
