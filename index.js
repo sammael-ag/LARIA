@@ -448,20 +448,25 @@ const MasterWrapper = () => {
             {isTauriWindow ? (
               <App triggerWebRefresh={triggerWebRefresh} />
             ) : (
-              /* 🪐 VYČISTENÝ PROMO PANEL (Naviazaný na tvoj master stylesheet) */
-              <div className="aria-liquid-container" style={{ padding: '30px 20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              /* 🪐 FINÁLNE UPRAVENÝ PROMO PANEL (Biliardový filc s dymovým závojom bez pulzovania) */
+              <div 
+                className="aria-liquid-container" 
+                style={{ 
+                  padding: '30px 20px', 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  background: 'linear-gradient(rgba(20, 20, 20, 0.75), rgba(20, 20, 20, 0.75)), #022002',
+                  animation: 'none'
+                }}
+              >
                 
-                {/* Elegantný tenký Art Deco nadpis z tvojho CSS */}
-                <div className="modal-title" style={{ marginBottom: '20px', marginTop: '40px' }}>
+                {/* Elegantný tenký Art Deco nadpis - vypnuté vynútené veľké písmená */}
+                <div className="modal-title" style={{ marginBottom: '40px', marginTop: '40px', textTransform: 'none' }}>
                   CrystalCore
                 </div>
 
-                {/* Štýlová deliaca linka z ateliéru */}
-                <div className="section-divider">
-                  <span className="section-divider-text">NODE SYSTEM</span>
-                </div>
-
-                {/* Popisný text využívajúci tvoje nastavenia písma a riadkovania */}
+                {/* Popisný text voľne dýchajúci bez Node System linky */}
                 <div className="card-description-text" style={{ textAlign: 'center', padding: '0 10px', marginBottom: '40px', fontSize: '13px', lineHeight: '22px' }}>
                   Pre plnú synchronizáciu so sieťami, Gopher protokolom a prístup k hardvérovým uzlom spustite lokálny systém.
                 </div>
