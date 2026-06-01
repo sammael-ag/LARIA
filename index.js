@@ -4,6 +4,7 @@
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE
  * FIX: Opravený fatálny crash contextu oddelením inicializácie providerov od MasterWrapperu.
  * ENHANCEMENT: Implementovaný nepriestrelný multisenzor na detekciu Tauri okna v dev prostredí.
+ * UPDATE 2026: Kompletné prelinkovanie statických textov na lokalizačný JSON (Dynamic URL/TABs).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -38,18 +39,13 @@ const MasterWrapper = () => {
   const [soloActiveId, setSoloActiveId] = useState(null);
   const [currentView, setCurrentView] = useState('domov');
 
-  // --- 🪐 UNIVERZÁLNY SENZOR PRE DETEKCIU TAURI OKNA (Namiesto starého useEffectu) ---
+  // --- 🪐 UNIVERZÁLNY SENZOR PRE DETEKCIU TAURI OKNA ---
   const [isTauriWindow, setIsTauriWindow] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // 1. Kontrola cez globálne objekty a metadáta Tauri
       const hasTauriObject = window.__TAURI__ !== undefined || window.__TAURI_METADATA__ !== undefined;
-      
-      // 2. Kontrola cez User Agent okna (Tauri na Linuxe beží pod WebKitom a nesie podpis tauri)
       const hasTauriUserAgent = navigator.userAgent.includes('tauri') || navigator.userAgent.includes('Tauri');
-
-      // 3. Poistka pre IPC (inter-process communication) mechanizmus, ktorý Tauri vstrekuje
       const hasTauriIPC = window.__TAURI_IPC__ !== undefined;
 
       if (hasTauriObject || hasTauriUserAgent || hasTauriIPC) {
@@ -67,6 +63,58 @@ const MasterWrapper = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // --- 🔮 NOVÝ EFFECT PRE DYNAMICKÉ URL A TAB NAZVY VIAZANÝ NA JSON ---
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let tabTitle = "LARIA";
+    let urlSlug = "";
+
+    switch (currentView) {
+      case 'domov':
+        tabTitle = txt.tab_vizitkar || "Vizitkár";
+        urlSlug = txt.url_vizitkar || "vizitkar";
+        break;
+      case 'co-je-laria':
+        tabTitle = txt.tab_faq || "Čo je LARIA";
+        urlSlug = txt.url_faq || "co-je-laria";
+        break;
+      case 'fakturant':
+        tabTitle = txt.tab_fakturant || "Fakturant";
+        urlSlug = txt.url_fakturant || "fakturant";
+        break;
+      case 'free-vs-full':
+        tabTitle = txt.tab_free_vs_full || "Free vs Full";
+        urlSlug = txt.url_free_vs_full || "free-vs-full";
+        break;
+      case 'donate':
+        tabTitle = txt.tab_donate || "Donate";
+        urlSlug = txt.url_donate || "donate";
+        break;
+      case 'aria-panel-view':
+        tabTitle = txt.tab_domov || "Domov";
+        urlSlug = txt.url_domov || "domov";
+        break;
+      default:
+        tabTitle = "LARIA";
+        urlSlug = currentView;
+    }
+
+    document.title = tabTitle;
+
+    const currentParams = new URLSearchParams(window.location.search);
+    const activeId = currentParams.get('id');
+    
+    let newUrl = `/LARIA/${urlSlug}`;
+    if (activeId) {
+      newUrl += `?id=${activeId}`;
+    }
+
+    if (window.location.pathname !== `/LARIA/${urlSlug}`) {
+      window.history.pushState({}, '', newUrl);
+    }
+  }, [currentView, txt]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -109,7 +157,7 @@ const MasterWrapper = () => {
 
       const currentId = targetId || new URLSearchParams(window.location.search).get('id');
       
-      if (currentId) {
+      if (currentId && currentId !== 'RESET') {
         const soloItem = cleanedData.find(i => i.fing === currentId || i.krypt === currentId);
         if (soloItem) {
           setFilteredData([soloItem]);
@@ -160,14 +208,18 @@ const MasterWrapper = () => {
 
   const triggerWebRefresh = (targetId = null) => {
     if (targetId === 'RESET') {
-      window.history.pushState({}, '', window.location.pathname);
+      const currentParams = new URLSearchParams(window.location.search);
+      currentParams.delete('id');
+      const cleanUrl = window.location.pathname;
+      window.history.pushState({}, '', cleanUrl);
+      
       setWebRefreshKey(prev => prev + 1);
       setSoloActiveId(null);
       fetchData('RESET');
       return;
     }
     if (targetId) {
-      window.history.pushState({}, '', `?id=${targetId}`);
+      window.history.pushState({}, '', `${window.location.pathname}?id=${targetId}`);
       setSoloActiveId(targetId);
       fetchData(targetId);
     } else {
@@ -246,6 +298,12 @@ const MasterWrapper = () => {
     console.log("📥 LARIA CORE: Používateľ klikol na tlačidlo stiahnutia Crystal Core z webu.");
   };
 
+  const getIframeSrc = (file) => {
+    if (typeof window === 'undefined') return file;
+    const origin = window.location.origin;
+    return `${origin}/${file}`;
+  };
+
   return (
     <div className="master-container bg-dashboard" style={{ overflow: 'hidden' }}>
       
@@ -278,19 +336,19 @@ const MasterWrapper = () => {
               {txt.menu_home || "Domov"}
             </button>
             <button className={`btn-menu ${currentView === 'co-je-laria' ? 'active' : ''}`} onClick={() => { setCurrentView('co-je-laria'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              {txt.menu_faq || "Čo je LARIA"}
+              {txt.menu_faq || "LARIA FAQ"}
             </button>
             <button className={`btn-menu ${currentView === 'domov' ? 'active' : ''}`} onClick={() => { setCurrentView('domov'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              {txt.menu_cards || "Vizitky"}
+              {txt.menu_cards || "Vizitkár"}
             </button>
             <button className={`btn-menu ${currentView === 'fakturant' ? 'active' : ''}`} onClick={() => { setCurrentView('fakturant'); if(isMobile) setIsLeftPanelOpen(false); }}>
               {txt.menu_fakturant || "Fakturant"}
             </button>
             <button className={`btn-menu ${currentView === 'free-vs-full' ? 'active' : ''}`} onClick={() => { setCurrentView('free-vs-full'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              {txt.menu_free_vs_full || "Free vs Full"}
+              {txt.menu_free_vs_full || "FREE vs. FULL"}
             </button>
             <button className={`btn-menu ${currentView === 'donate' ? 'active' : ''}`} onClick={() => { setCurrentView('donate'); if(isMobile) setIsLeftPanelOpen(false); }}>
-              {txt.menu_donate || "Donate"}
+              {txt.menu_donate || "Dotovať"}
             </button>
           </div>
         </div>
@@ -318,30 +376,30 @@ const MasterWrapper = () => {
             <>
               <div className="filter-container" style={{ padding: '0 15px', width: '100%', boxSizing: 'border-box' }}>
                 <select className="terminal-input" value={category} onChange={(e) => setCategory(e.target.value)}>
-                  <option value="vsetko">{txt.cat_all || "Všetko"}</option>
-                  <option value="obziva">{txt.cat_food || "Obživa"}</option>
-                  <option value="remesla">{txt.cat_crafts || "Remeslá"}</option>
-                  <option value="sluzby">{txt.cat_services || "Služby"}</option>
+                  <option value="vsetko">{txt.cat_all || "Všetky kategórie"}</option>
+                  <option value="obziva">{txt.cat_food || "Obživa a poživatiny"}</option>
+                  <option value="remesla">{txt.cat_crafts || "Remeslá a materiál"}</option>
+                  <option value="sluzby">{txt.cat_services || "Odborné cookies"}</option>
                   <option value="vzdelavanie">{txt.cat_education || "Vzdelávanie"}</option>
                   <option value="knihy">{txt.cat_books || "Knihy"}</option>
                   <option value="zdravie">{txt.cat_health || "Zdravie"}</option>
                   <option value="oblecenie">{txt.cat_clothes || "Oblečenie"}</option>
-                  <option value="auto">{txt.cat_automoto || "Auto-Moto"}</option>
+                  <option value="auto">{txt.cat_automoto || "Auto-moto"}</option>
                   <option value="volno">{txt.cat_leisure || "Voľný čas"}</option>
                   <option value="elektro">{txt.cat_electronics || "Elektro"}</option>
-                  <option value="rodina">{txt.cat_family || "Rodina"}</option>
+                  <option value="rodina">{txt.cat_family || "Deti a rodina"}</option>
                   <option value="ubytovanie">{txt.cat_accommodation || "Ubytovanie"}</option>
                   <option value="zahrada">{txt.cat_garden || "Záhrada"}</option>
                   <option value="nabytok">{txt.cat_furniture || "Nábytok"}</option>
                   <option value="kultura">{txt.cat_culture || "Kultúra"}</option>
-                  <option value="osobne">{txt.cat_personal || "Osobné"}</option>
+                  <option value="osobne">{txt.cat_personal || "Osobné služby"}</option>
                   <option value="tvorba">{txt.cat_creation || "Tvorba"}</option>
                   <option value="ine">{txt.cat_other || "Iné"}</option>
                 </select>
                 <input
                   type="text"
                   className="terminal-input"
-                  placeholder={txt.search_placeholder || "Hľadať..."}
+                  placeholder={txt.search_placeholder || "🔍 Hľadať..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -383,15 +441,15 @@ const MasterWrapper = () => {
                           </div>
                           <div className="card-right-actions" style={{ margin: 0, width: '50%', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                             <button onClick={(e) => { e.stopPropagation(); smartAdd(item); }} className="btn-core-app" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
-                              {txt.btn_to_app || "Do appky"}
+                              {txt.btn_to_app || "DO APPKY"}
                             </button>
                             {item.gal && (
                               <button onClick={(e) => { e.stopPropagation(); window.open(item.gal, '_blank', 'noopener,noreferrer'); }} className="btn-core-gallery" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
-                                {txt.btn_gallery || "Galéria"}
+                                {txt.btn_gallery || "GALÉRIA"}
                               </button>
                             )}
                             <button onClick={(e) => { e.stopPropagation(); copyShareLink(item.fing); }} className="btn-core-share" style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
-                              {txt.btn_link || "Odkaz"}
+                              {txt.btn_link || "LINK"}
                             </button>
                           </div>
                         </div>
@@ -409,10 +467,10 @@ const MasterWrapper = () => {
           )}
 
           {currentView === 'co-je-laria' && (
-            <iframe src="./co-je-laria.html" style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} title="Čo je Laria" />
+            <iframe src={getIframeSrc("co-je-laria.html")} style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} title={txt.menu_faq || "Čo je LARIA"} />
           )}
           {currentView === 'fakturant' && (
-            <iframe src="./fakturant.html" style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} title="Fakturant" />
+            <iframe src={getIframeSrc("fakturant.html")} style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} title={txt.menu_fakturant || "Fakturant"} />
           )}
           {currentView === 'free-vs-full' && <div style={{ padding: '0 15px' }}><FreeVsFull /></div>}
           {currentView === 'donate' && <div style={{ padding: '0 15px' }}><Donate /></div>}
@@ -423,7 +481,7 @@ const MasterWrapper = () => {
             </div>
           )}
 
-          {isMobile && <button onClick={() => setIsAppOpen(true)} className="trigger">{txt.btn_terminal || "Terminál"}</button>}
+          {isMobile && <button onClick={() => setIsAppOpen(true)} className="trigger">{txt.btn_terminal || "TERMINAL"}</button>}
         </main>
       </div>
 
@@ -442,13 +500,12 @@ const MasterWrapper = () => {
             zIndex: 1
           }}
         >
-          {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">{txt.btn_web || "Web"}</button>}
+          {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">{txt.btn_web || "WEB"}</button>}
           <div className="app-container" style={{ height: '100%' }}>
             
             {isTauriWindow ? (
               <App triggerWebRefresh={triggerWebRefresh} />
             ) : (
-              /* 🪐 FINÁLNE UPRAVENÝ PROMO PANEL (Biliardový filc s dymovým závojom bez pulzovania) */
               <div 
                 className="aria-liquid-container" 
                 style={{ 
@@ -460,37 +517,29 @@ const MasterWrapper = () => {
                   animation: 'none'
                 }}
               >
-                
-                {/* Elegantný tenký Art Deco nadpis - vypnuté vynútené veľké písmená */}
                 <div className="modal-title" style={{ marginBottom: '40px', marginTop: '40px', textTransform: 'none' }}>
                   CrystalCore
                 </div>
 
-                {/* Popisný text voľne dýchajúci bez Node System linky */}
                 <div className="card-description-text" style={{ textAlign: 'center', padding: '0 10px', marginBottom: '40px', fontSize: '13px', lineHeight: '22px' }}>
                   Pre plnú synchronizáciu so sieťami, Gopher protokolom a prístup k hardvérovým uzlom spustite lokálny systém.
                 </div>
 
-                {/* Flexibilná výplň, ktorá drží akciu pevne na spodku */}
                 <div style={{ flexGrow: 1 }}></div>
 
-                {/* Hlavné sťahovacie tlačidlo - plne naviazané na BRONZE_GLOW efekty */}
                 <div style={{ width: '100%', maxWidth: '320px', alignSelf: 'center', marginBottom: '30px' }}>
                   <button className="primary-btn" onClick={handleDownloadClick}>
                     <span className="primary-btn-text">{txt.btn_download || "Stiahnuť Crystal Core"}</span>
                   </button>
                 </div>
 
-                {/* Tichý systémový podpis na úplnom spodku panela */}
                 <div style={{ textAlign: 'center', opacity: 0.3, marginTop: 'auto', marginBottom: '10px' }}>
                   <span className="text-terminal" style={{ fontSize: '9px', letterSpacing: '1px' }}>
                     SYSTEM_READY // BYTES_ALIGNED // 2026
                   </span>
                 </div>
-
               </div>
             )}
-
           </div>
         </div>
       )}
@@ -498,7 +547,6 @@ const MasterWrapper = () => {
   );
 };
 
-// --- 🪐 NOVÝ KOREŇOVÝ WRAFFER PRE BEZPEČNÝ ŠTART MATRIXU ---
 const LariaCoreApp = () => {
   return (
     <KryptoProvider>
@@ -509,7 +557,6 @@ const LariaCoreApp = () => {
   );
 };
 
-// --- RENDER JADRA ---
 const container = document.getElementById('root');
 if (container) {
   createRoot(container).render(

@@ -2,42 +2,27 @@
 <html lang="sk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LARIA</title>
     
-    <link rel="stylesheet" href="styles.css">
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="apple-touch-icon" href="logo192.png">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/logo192.png">
     
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:* ws://localhost:* https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:* ws://localhost:* https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:* ws://localhost:* https: data: 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://script.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' http://localhost:* ws://localhost:* https:;">
 </head>
 <body class="bg-dashboard">
 
     <div id="root">
-        <div class="initial-loader">
-            <h1 style="color: #c5a059; font-family: sans-serif; text-align: center; margin-top: 20%;">Načítavam svetlo...</h1>
-            <p style="color: #b19cd9; text-align: center; font-family: monospace;">[ SYNCHRONIZUZEM MATRIX ]</p>
+        <div class="initial-loader" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; padding: 20px;">
+            <h1 style="color: #c5a059; font-family: sans-serif; text-align: center; margin-bottom: 10px;">Načítavam svetlo...</h1>
+            <p style="color: #b19cd9; text-align: center; font-family: monospace;">[ SYNCHRONIZUJEM MATRIX ]</p>
         </div>
-    </div>
-
-    <!-- Tlačidlo na vstup do systému, ktoré priamo spustí náš test -->
-    <div style="text-align: center; margin-top: 20px;">
-        <button onclick="spustitSvetlo()" class="irc-button" style="padding: 15px 30px; background: #c5a059; color: #000; border: 1px solid #b19cd9; font-weight: bold; cursor: pointer;">
-            VSTÚPIŤ DO SYSTÉMU (DZIG)
-        </button>
     </div>
 
     <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" id="backToTop" class="irc-button" style="position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; display: none; background: #b19cd9; color: #000; border: none; border-radius: 50%; cursor: pointer; z-index: 99;">↑</button>
 
-    <!-- Načítanie hlavného JS súboru relatívne k sub-priečinku -->
-    <script src="index.js" type="module"></script>
+    <script src="/index.js" type="module"></script>
 
-    <!-- Núdzový inline skript pre test, či vôbec žijeme -->
-    <script>
-        function spustitSvetlo() {
-            alert("Svetlo aktivované! Ak toto vidíš, HTML komunikuje s prehliadačom.");
-            console.log("Manuálny dzig úspešný!");
-        }
-    </script>
 </body>
 </html>
