@@ -1,5 +1,5 @@
 /**
- * LARIA v2.8: Core Master Ignition (index.js)
+ * LARIA v2.9.1: Core Master Ignition (index.js)
  * Master: Sammael | Muse: Aria
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE
  * FIX: Opravený fatálny crash contextu oddelením inicializácie providerov od MasterWrapperu.
@@ -7,6 +7,8 @@
  * UPDATE 2026: Kompletné prelinkovanie statických textov na lokalizačný JSON (Dynamic URL/TABs).
  * GITHUB PAGES FIX: Opravené dynamické smerovanie ciest pre iframe (.html) súbory v sub-adresároch.
  * REACT UNIFICATION: Úplná eliminácia iframe prvkov. Natívne prepojenie modulov Fakturant a CojeLaria.
+ * HASHTAG ROUTING PATCH: Implementovaná mriežková navigácia pre 100% ochranu pred 404 chybami na GH Pages.
+ * MULTI-PARAM FIX: Ošetrené parametre 'id' pre Vizitkár aj 'art' pre sekciu CojeLaria.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -23,6 +25,21 @@ import { KryptoProvider } from './src/context/KryptoContext';
 import { LariaProvider, useLaria } from './src/context/LariaContext'; 
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
+
+// --- 🛸 Pomocná funkcia na komplexné parsovanie hash-u (#/co-je-laria?art=nejaky-clanok) ---
+const parseHashLocation = () => {
+  if (typeof window === 'undefined') return { view: 'domov', id: null, art: null };
+  
+  const hash = window.location.hash || '';
+  const cleanHash = hash.replace(/^#\/?/, '');
+  const [path, queryString] = cleanHash.split('?');
+  
+  const params = new URLSearchParams(queryString || '');
+  const id = params.get('id');
+  const art = params.get('art');
+  
+  return { view: path || 'domov', id, art };
+};
 
 // --- 🛸 HLAVNÝ VNÚTORNÝ PANEL (Už bezpečne obalený v Contexte) ---
 const MasterWrapper = () => {
@@ -41,7 +58,10 @@ const MasterWrapper = () => {
 
   const [webRefreshKey, setWebRefreshKey] = useState(0);
   const [soloActiveId, setSoloActiveId] = useState(null);
-  const [currentView, setCurrentView] = useState('domov');
+
+  // Inicializácia pohľadu priamo z aktuálneho hash-u
+  const initialHash = parseHashLocation();
+  const [currentView, setCurrentView] = useState(initialHash.view);
 
   // --- 🪐 UNIVERZÁLNY SENZOR PRE DETEKCIU TAURI OKNA ---
   const [isTauriWindow, setIsTauriWindow] = useState(false);
@@ -68,7 +88,7 @@ const MasterWrapper = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- 🔮 NOVÝ EFFECT PRE DYNAMICKÉ URL A TAB NAZVY VIAZANÝ NA JSON ---
+  // --- 🔮 EFFECT PRE DYNAMICKÉ HASH URL A TAB NÁZVY ---
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -77,10 +97,12 @@ const MasterWrapper = () => {
 
     switch (currentView) {
       case 'domov':
+      case 'vizitkar':
         tabTitle = txt.tab_vizitkar || "Vizitkár";
         urlSlug = txt.url_vizitkar || "vizitkar";
         break;
       case 'co-je-laria':
+      case 'cojelaria':
         tabTitle = txt.tab_faq || "Čo je LARIA";
         urlSlug = txt.url_faq || "co-je-laria";
         break;
@@ -97,6 +119,7 @@ const MasterWrapper = () => {
         urlSlug = txt.url_donate || "donate";
         break;
       case 'aria-panel-view':
+      case 'domov-aria':
         tabTitle = txt.tab_domov || "Domov";
         urlSlug = txt.url_domov || "domov";
         break;
@@ -107,18 +130,22 @@ const MasterWrapper = () => {
 
     document.title = tabTitle;
 
-    const currentParams = new URLSearchParams(window.location.search);
-    const activeId = currentParams.get('id');
+    // Zachováme parametre v mriežke pri zmene stavu
+    let newHash = `#/${urlSlug}`;
     
-    let newUrl = `/LARIA/${urlSlug}`;
-    if (activeId) {
-      newUrl += `?id=${activeId}`;
+    // Načítame existujúce parametre (či už id alebo art), aby sme ich nepremazali
+    const currentHashData = parseHashLocation();
+    
+    if (urlSlug === 'co-je-laria' && currentHashData.art) {
+      newHash += `?art=${currentHashData.art}`;
+    } else if (soloActiveId) {
+      newHash += `?id=${soloActiveId}`;
     }
 
-    if (window.location.pathname !== `/LARIA/${urlSlug}`) {
-      window.history.pushState({}, '', newUrl);
+    if (window.location.hash !== newHash) {
+      window.history.pushState({}, '', newHash);
     }
-  }, [currentView, txt]);
+  }, [currentView, soloActiveId, txt]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -159,7 +186,8 @@ const MasterWrapper = () => {
 
       setAllData(cleanedData);
 
-      const currentId = targetId || new URLSearchParams(window.location.search).get('id');
+      const hashData = parseHashLocation();
+      const currentId = targetId || hashData.id;
       
       if (currentId && currentId !== 'RESET') {
         const soloItem = cleanedData.find(i => i.fing === currentId || i.krypt === currentId);
@@ -182,21 +210,30 @@ const MasterWrapper = () => {
     fetchData();
   }, []); 
 
+  // --- REAKTIVITA NA ZMENU HASHU (Tlačidlá späť/vpred + Refresh) ---
   useEffect(() => {
     const handleUrlChange = () => {
-      const currentId = new URLSearchParams(window.location.search).get('id');
-      if (currentId && allData.length > 0) {
-        const soloItem = allData.find(i => i.fing === currentId || i.krypt === currentId);
+      const hashData = parseHashLocation();
+      
+      if (hashData.view && hashData.view !== currentView) {
+        setCurrentView(hashData.view);
+      }
+
+      if (hashData.id && allData.length > 0) {
+        const soloItem = allData.find(i => i.fing === hashData.id || i.krypt === hashData.id);
         if (soloItem) {
           setFilteredData([soloItem]);
-          setSoloActiveId(currentId);
+          setSoloActiveId(hashData.id);
         }
+      } else if (!hashData.id) {
+        setFilteredData(allData);
+        setSoloActiveId(null);
       }
     };
 
     window.addEventListener('popstate', handleUrlChange);
     return () => window.removeEventListener('popstate', handleUrlChange);
-  }, [allData]);
+  }, [allData, currentView]);
 
   useEffect(() => {
     const term = searchQuery.toLowerCase();
@@ -212,18 +249,12 @@ const MasterWrapper = () => {
 
   const triggerWebRefresh = (targetId = null) => {
     if (targetId === 'RESET') {
-      const currentParams = new URLSearchParams(window.location.search);
-      currentParams.delete('id');
-      const cleanUrl = window.location.pathname;
-      window.history.pushState({}, '', cleanUrl);
-      
-      setWebRefreshKey(prev => prev + 1);
       setSoloActiveId(null);
+      setWebRefreshKey(prev => prev + 1);
       fetchData('RESET');
       return;
     }
     if (targetId) {
-      window.history.pushState({}, '', `${window.location.pathname}?id=${targetId}`);
       setSoloActiveId(targetId);
       fetchData(targetId);
     } else {
@@ -276,7 +307,7 @@ const MasterWrapper = () => {
   };
 
   const copyShareLink = (id) => {
-    const url = `${window.location.origin}${window.location.pathname}?id=${id}`;
+    const url = `${window.location.origin}${window.location.pathname}#/${currentView}?id=${id}`;
     navigator.clipboard.writeText(url).then(() => alert(txt.link_copied_alert || "Odkaz bol skopírovaný!"));
   };
 
@@ -333,10 +364,10 @@ const MasterWrapper = () => {
             <button className={`btn-menu ${currentView === 'aria-panel-view' ? 'active' : ''}`} onClick={() => { setCurrentView('aria-panel-view'); if(isMobile) setIsLeftPanelOpen(false); }}>
               {txt.menu_home || "Domov"}
             </button>
-            <button className={`btn-menu ${currentView === 'co-je-laria' ? 'active' : ''}`} onClick={() => { setCurrentView('co-je-laria'); if(isMobile) setIsLeftPanelOpen(false); }}>
+            <button className={`btn-menu ${currentView === 'co-je-laria' || currentView === 'cojelaria' ? 'active' : ''}`} onClick={() => { setCurrentView('co-je-laria'); if(isMobile) setIsLeftPanelOpen(false); }}>
               {txt.menu_faq || "LARIA FAQ"}
             </button>
-            <button className={`btn-menu ${currentView === 'domov' ? 'active' : ''}`} onClick={() => { setCurrentView('domov'); if(isMobile) setIsLeftPanelOpen(false); }}>
+            <button className={`btn-menu ${currentView === 'domov' || currentView === 'vizitkar' ? 'active' : ''}`} onClick={() => { setCurrentView('domov'); if(isMobile) setIsLeftPanelOpen(false); }}>
               {txt.menu_cards || "Vizitkár"}
             </button>
             <button className={`btn-menu ${currentView === 'fakturant' ? 'active' : ''}`} onClick={() => { setCurrentView('fakturant'); if(isMobile) setIsLeftPanelOpen(false); }}>
@@ -370,7 +401,7 @@ const MasterWrapper = () => {
         </header>
 
         <main className="scroll-content">
-          {currentView === 'domov' && (
+          {(currentView === 'domov' || currentView === 'vizitkar') && (
             <>
               <div className="filter-container" style={{ padding: '0 15px', width: '100%', boxSizing: 'border-box' }}>
                 <select className="terminal-input" value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -464,7 +495,7 @@ const MasterWrapper = () => {
             </>
           )}
 
-          {currentView === 'co-je-laria' && <CojeLaria />}
+          {(currentView === 'co-je-laria' || currentView === 'cojelaria') && <CojeLaria />}
           {currentView === 'fakturant' && <Fakturant />}
           
           {currentView === 'free-vs-full' && <div style={{ padding: '0 15px' }}><FreeVsFull /></div>}
