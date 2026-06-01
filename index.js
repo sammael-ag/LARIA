@@ -26,19 +26,44 @@ import { LariaProvider, useLaria } from './src/context/LariaContext';
 
 const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
 
-// --- 🛸 Pomocná funkcia na komplexné parsovanie hash-u (#/co-je-laria?art=nejaky-clanok) ---
+// --- 🛸 Pomocná funkcia na komplexné parsovanie hash-u a čistenie anomálií URL ---
 const parseHashLocation = () => {
   if (typeof window === 'undefined') return { view: 'domov', id: null, art: null };
   
+  const fullUrl = window.location.href;
+  let detectedView = 'domov';
+  let id = null;
+  let art = null;
+
+  // 1. Skontrolujeme klasické parametre pred mriežkou (anomália z obrázku)
+  if (window.location.search) {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('id')) id = searchParams.get('id');
+    if (searchParams.get('art')) art = searchParams.get('art');
+  }
+
+  // 2. Skontrolujeme čistú mriežku za #
   const hash = window.location.hash || '';
   const cleanHash = hash.replace(/^#\/?/, '');
   const [path, queryString] = cleanHash.split('?');
   
-  const params = new URLSearchParams(queryString || '');
-  const id = params.get('id');
-  const art = params.get('art');
-  
-  return { view: path || 'domov', id, art };
+  if (path) {
+    detectedView = path;
+  }
+
+  // Ak sa našli parametre v mriežke, majú prioritu
+  if (queryString) {
+    const hashParams = new URLSearchParams(queryString);
+    if (hashParams.get('id')) id = hashParams.get('id');
+    if (hashParams.get('art')) art = hashParams.get('art');
+  }
+
+  // 3. Špeciálne ošetrenie: Ak prišiel parameter 'art', systém VIE, že chceme ísť do sekcie CojeLaria!
+  if (art && (detectedView === 'domov' || detectedView === 'vizitkar')) {
+    detectedView = 'co-je-laria';
+  }
+
+  return { view: detectedView, id, art };
 };
 
 // --- 🛸 HLAVNÝ VNÚTORNÝ PANEL (Už bezpečne obalený v Contexte) ---
@@ -88,14 +113,24 @@ const MasterWrapper = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- 🔮 EFFECT PRE DYNAMICKÉ HASH URL A TAB NÁZVY ---
+  // --- 🔮 EFFECT PRE DYNAMICKÉ HASH URL A TAB NÁZVY (FIX: Anomália s mriežkou) ---
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     let tabTitle = "LARIA";
     let urlSlug = "";
 
-    switch (currentView) {
+    // Načítame aktuálne parsované dáta, aby sme vedeli, či máme 'art'
+    const currentHashData = parseHashLocation();
+    let currentArt = currentHashData.art;
+
+    // Prísna kontrola: Ak máme parameter 'art', vnútený pohľad MUSÍ byť co-je-laria
+    let targetView = currentView;
+    if (currentArt && (targetView === 'domov' || targetView === 'vizitkar')) {
+      targetView = 'co-je-laria';
+    }
+
+    switch (targetView) {
       case 'domov':
       case 'vizitkar':
         tabTitle = txt.tab_vizitkar || "Vizitkár";
@@ -125,25 +160,32 @@ const MasterWrapper = () => {
         break;
       default:
         tabTitle = "LARIA";
-        urlSlug = currentView;
+        urlSlug = targetView;
     }
 
     document.title = tabTitle;
 
-    // Zachováme parametre v mriežke pri zmene stavu
+    // Skladáme NOVÚ, dokonale čistú URL za domovskú zložku /LARIA/
     let newHash = `#/${urlSlug}`;
     
-    // Načítame existujúce parametre (či už id alebo art), aby sme ich nepremazali
-    const currentHashData = parseHashLocation();
-    
-    if (urlSlug === 'co-je-laria' && currentHashData.art) {
-      newHash += `?art=${currentHashData.art}`;
-    } else if (soloActiveId) {
+    if (urlSlug === 'co-je-laria' && currentArt) {
+      newHash += `?art=${currentArt}`;
+    } else if (soloActiveId && (urlSlug === 'domov' || urlSlug === 'vizitkar')) {
       newHash += `?id=${soloActiveId}`;
     }
 
-    if (window.location.hash !== newHash) {
-      window.history.pushState({}, '', newHash);
+    // VYČISTENIE ANOMÁLIE: Zostavíme absolútnu čistú cestu bez "?art=..." pred mriežkou
+    const cleanPath = window.location.origin + window.location.pathname;
+    const finalTargetUrl = cleanPath + newHash;
+
+    // Ak sa adresa nezhoduje, prepíšeme ju celú na čistú verziu
+    if (window.location.href !== finalTargetUrl) {
+      window.history.pushState({}, '', finalTargetUrl);
+    }
+
+    // Ak sa stalo, že sme vnútorne zmenili view kvôli parametru 'art', zosynchronizujeme stav
+    if (targetView !== currentView) {
+      setCurrentView(targetView);
     }
   }, [currentView, soloActiveId, txt]);
 
