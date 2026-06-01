@@ -92,7 +92,12 @@ const Fakturant = () => {
       {/* ==================== 📝 SEKCE EDITOR ==================== */}
       {viewMode === 'editor' && (
         <div id="sekcia-editor" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <h3 className="f-title">Fakturant</h3>
+          {/* HLAVNÝ NADPIS + PODNADPIS */}
+            <div className="info-core-header">        
+                <h2 className="info-core-title">
+                Fakturant
+                </h2>
+            </div>
 
           <div className="f-pdf-preview-container">
             <table className="invoice-table">
