@@ -16,6 +16,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Expo 51 a React 18 milujú Node v18/v20
+          cache: 'npm'       # Automaticky cachuje node_modules, aby build trval pár sekúnd
+
+      - name: Install dependencies
+        run: |
+          npm install --legacy-peer-deps
+          # --legacy-peer-deps používame kvôli rôznym verziám krypto knižníc a expro balíkov, nech to prejde ako nôž maslom
+
+      - name: Build Web App (Expo + Metro Export)
+        run: npm run build:web
+
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
