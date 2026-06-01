@@ -1,0 +1,347 @@
+/* 🛡️ GLOBÁLNY TEMNÝ DIZAJN SYSTÉMU LARIA - FAKTURANT MODULE */
+.fakturant-wrapper {
+    background-color: transparent; 
+    font-family: var(--font-mono); /* Zjednotené na systémový kyber-akcent */
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.f-title {
+    text-align: center;
+    font-family: var(--font-main); /* Zjednotené s luxusným čistým štýlom Ateliéru */
+    font-size: 1.5em;
+    font-weight: 100;              /* Jemná, vzdušná hrúbka */
+    letter-spacing: 3px;
+    color: var(--accent-color);
+    margin-bottom: 25px;
+    margin-top: 10px;
+}
+
+/* 🏛️ SPOLOČNÝ KONTAJNER PRE PAPIER A4 - ČISTO BIELE POZADIE, ČIERNY TEXT */
+.f-pdf-preview-container {
+    width: 100%;
+    max-width: 800px;
+    background: #ffffff !important; /* Vynútené biele pozadie papiera */
+    color: #000000 !important;      /* Vynútený čierny text na papieri */
+    padding: 40px;
+    box-sizing: border-box;
+    border-radius: 0px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    font-family: Arial, sans-serif; /* Na papieri zostáva čistý úradný font */
+}
+
+/* 📋 DIZAJN PRE VYPLŇOVAČKU (KROK 1) */
+.invoice-table, .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background: #ffffff !important; /* Zaistenie bieleho pozadia tabuliek */
+}
+
+.invoice-table td, .items-table td, .items-table th {
+    border: 1px solid #000000 !important; /* Čisté čierne ohraničenie buniek */
+    color: #000000 !important;            /* Čierny text v bunkách */
+    padding: 12px;
+    vertical-align: top;
+}
+
+.items-table th {
+    background: #f2f2f2 !important;
+    font-size: 11px;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.form-label {
+    display: block;
+    font-size: 11px;
+    color: #222222 !important; /* Tmavý/čierny popis nad inputom */
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+/* ✍️ INPUTY: JEMNÁ SÉPIOVÁ A ČIERNY TEXT */
+.invoice-input, .invoice-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px dashed #777777;
+    background-color: #f4efe2 !important; /* Krásna, teplá jemná sépiová farba na pozadí textu */
+    color: #000000 !important;           /* Čierny text pre písanie */
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    padding: 6px;
+    transition: all 0.2s ease;
+    resize: none;
+}
+
+/* Keď používateľ klikne do políčka (Focus) */
+.invoice-input:focus, .invoice-textarea:focus {
+    background-color: #ffffff !important; /* Pri písaní sa rozsvieti na bielo */
+    border: 1px solid var(--accent-color) !important; /* Zlatý lem pri aktívnom písaní */
+    color: #000000 !important;
+    outline: none;
+}
+
+/* Vyladenie farby placeholderov, aby neboli príliš tmavé na sépiovom pozadí */
+.invoice-input::placeholder, .invoice-textarea::placeholder {
+    color: #777777 !important;
+    opacity: 1;
+}
+
+.inner-meta-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.inner-meta-table td { border: none !important; padding: 4px 0; color: #000000 !important; }
+
+.total-block {
+    margin-top: 20px;
+    text-align: right;
+    font-size: 18px;
+    font-weight: bold;
+    color: #000000 !important;
+}
+
+/* 🚀 BEZPEČNÉ FAKTURANTSKÉ TLAČIDLÁ (PREDPONA fbtn-) */
+.fbtn-action {
+    display: block;
+    width: 100%;
+    max-width: 800px;
+    margin: 25px 0;
+    background: var(--accent-color);
+    color: #1a1a1a;
+    border: none;
+    padding: 15px;
+    font-family: var(--font-mono); /* Použitie zjednoteného tokenu */
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(197, 160, 89, 0.2);
+    text-align: center;
+}
+
+.fbtn-action:hover {
+    background: #d9b673;
+    transform: translateY(-2px);
+}
+
+/* 🛠️ DIZAJN PRE LIŠTU PREHĽADU (KROK 2) */
+.preview-top-bar {
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    background: none;
+    padding: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    box-sizing: border-box;
+}
+
+.fbtn-print, .fbtn-copy, .fbtn-close {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 10px;
+    font-weight: normal;
+    font-family: var(--font-mono); /* Použitie zjednoteného tokenu */
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: background 0.2s ease;
+    border: none;
+}
+
+.fbtn-print { background: var(--accent-color); color: #1a1a1a; }
+.fbtn-print:hover { background: #d9b673; }
+
+.fbtn-copy { background: #444; color: #fff; border: none; }
+.fbtn-copy:hover { background: #555; }
+
+.fbtn-close { background: #d9534f; color: white; border: none; }
+.fbtn-close:hover { background: #c9302c; }
+
+.system-footer {
+    margin-top: 20px;
+    font-size: 11px;
+    color: #555555;
+    letter-spacing: 1px;
+}
+
+/* 🖨️ ŠPECIÁLNE PRAVIDLÁ PRE TLAČ */
+@media print {
+    body { background: white !important; padding: 0 !important; }
+    .master-container > *:not(.web-side) { display: none !important; }
+    .web-side { width: 100% !important; flex: 1 0 100% !important; padding: 0 !important; margin: 0 !important; }
+    .scroll-content { overflow: visible !important; height: auto !important; }
+    .header, .filter-container, .btn-panel-toggle { display: none !important; }
+    .fakturant-wrapper { background: white !important; padding: 0 !important; min-height: auto !important; }
+    .no-print { display: none !important; }
+    .f-pdf-preview-container { box-shadow: none !important; margin: 0 !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
+    .sekcia-nahlad-react { display: flex !important; width: 100% !important; }
+}
+
+/* ==========================================================================
+   LARIA v2.0: KNIŽNICA VEDOMOSTÍ & INFORMAČNÉ JADRO (CojeLaria)
+   ========================================================================== */
+
+.info-core-container {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px 20px 40px 20px;
+    font-family: var(--font-mono); /* Naša zjednotená kyber-báza */
+    color: var(--text-color);
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.info-core-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.info-core-title {
+    font-family: var(--font-main); /* Ateliérový čistý luxusný font */
+    font-size: 1.5em;
+    font-weight: 100;              /* Jemná vzdušná hrúbka */
+    letter-spacing: 4px;
+    color: var(--accent-color);
+    margin: 0 0 15px 0;
+}
+
+.info-core-layout {
+    display: flex; 
+    flex-direction: row; 
+    gap: 40px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+/* Bočný indexovaný obsah */
+.info-core-aside {
+    flex: 0 0 220px;
+    position: sticky;
+    top: 40px;
+    background: rgba(20, 20, 20, 0.4);
+    padding: 15px;
+    border-left: 1px solid rgba(197, 160, 89, 0.3);
+    border-radius: 2px;
+    width: 220px;
+    box-sizing: border-box;
+}
+
+.info-core-aside-title {
+    margin: 0 0 15px 0; 
+    color: var(--accent-color); 
+    font-size: 0.85em; 
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.info-core-nav-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.info-core-nav-item {
+    margin-bottom: 12px;
+}
+
+.info-core-nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    padding: 0;
+    line-height: 1.4;
+    transition: color 0.2s ease;
+}
+
+.info-core-nav-btn:hover {
+    color: var(--accent-color);
+}
+
+/* Články a texty */
+.info-core-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    width: 100%;
+}
+
+.info-core-article {
+    background: #222222;
+    padding: 30px;
+    border-left: 2px solid var(--accent-color);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    border-radius: 2px;
+    scroll-margin-top: 40px;
+}
+
+.info-core-meta {
+    display: flex; 
+    font-size: 12px; 
+    color: #888; 
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+}
+
+.info-core-category {
+    color: var(--accent-color);
+    font-weight: bold;
+    margin-right: 15px;
+}
+
+.info-core-share-btn {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    cursor: pointer;
+    font-size: 11px;
+    margin-left: auto;
+    text-decoration: underline;
+    font-family: var(--font-mono);
+}
+
+.info-core-article-title {
+    font-family: var(--font-main); /* Hladký čistý nadpis článku */
+    font-size: 1.4em; 
+    color: #ffffff; 
+    margin: 0 0 20px 0;
+    font-weight: 300;
+    letter-spacing: 1px;
+}
+
+.info-core-body {
+    font-family: system-ui, -apple-system, sans-serif; /* Hladké, čisté čítanie pre Aria vedomosti */
+    line-height: 1.6; 
+    color: #cccccc;
+    font-size: 14px;
+}
+
+/* 📱 Responzivita pre mobilné zobrazenie */
+@media (max-width: 768px) {
+    .info-core-layout {
+        flex-direction: column;
+    }
+    .info-core-aside {
+        width: 100%;
+        position: static;
+    }
+}

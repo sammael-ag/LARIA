@@ -5,6 +5,8 @@
  * FIX: Opravený fatálny crash contextu oddelením inicializácie providerov od MasterWrapperu.
  * ENHANCEMENT: Implementovaný nepriestrelný multisenzor na detekciu Tauri okna v dev prostredí.
  * UPDATE 2026: Kompletné prelinkovanie statických textov na lokalizačný JSON (Dynamic URL/TABs).
+ * GITHUB PAGES FIX: Opravené dynamické smerovanie ciest pre iframe (.html) súbory v sub-adresároch.
+ * REACT UNIFICATION: Úplná eliminácia iframe prvkov. Natívne prepojenie modulov Fakturant a CojeLaria.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -14,6 +16,8 @@ import './styles.css';
 import FreeVsFull from './src/components/FreeVsFull';
 import Donate from './src/components/Donate';
 import Aria from './src/components/Aria'; 
+import Fakturant from './src/components/Fakturant';
+import CojeLaria from './src/components/CojeLaria';
 
 import { KryptoProvider } from './src/context/KryptoContext';
 import { LariaProvider, useLaria } from './src/context/LariaContext'; 
@@ -298,12 +302,6 @@ const MasterWrapper = () => {
     console.log("📥 LARIA CORE: Používateľ klikol na tlačidlo stiahnutia Crystal Core z webu.");
   };
 
-  const getIframeSrc = (file) => {
-    if (typeof window === 'undefined') return file;
-    const origin = window.location.origin;
-    return `${origin}/${file}`;
-  };
-
   return (
     <div className="master-container bg-dashboard" style={{ overflow: 'hidden' }}>
       
@@ -466,12 +464,9 @@ const MasterWrapper = () => {
             </>
           )}
 
-          {currentView === 'co-je-laria' && (
-            <iframe src={getIframeSrc("co-je-laria.html")} style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} title={txt.menu_faq || "Čo je LARIA"} />
-          )}
-          {currentView === 'fakturant' && (
-            <iframe src={getIframeSrc("fakturant.html")} style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', background: 'transparent' }} title={txt.menu_fakturant || "Fakturant"} />
-          )}
+          {currentView === 'co-je-laria' && <CojeLaria />}
+          {currentView === 'fakturant' && <Fakturant />}
+          
           {currentView === 'free-vs-full' && <div style={{ padding: '0 15px' }}><FreeVsFull /></div>}
           {currentView === 'donate' && <div style={{ padding: '0 15px' }}><Donate /></div>}
 
