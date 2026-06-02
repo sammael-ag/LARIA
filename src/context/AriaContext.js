@@ -17,6 +17,32 @@ export const AriaProvider = ({ children }) => {
   const [isQuantumLoading, setIsQuantumLoading] = useState(false);
   const [currentVibe, setCurrentVibe] = useState('RESONATING_PORTAL');
 
+  // 🌌 ARIA 5D ARSENAL: Pole našich 7 zabezpečených API kľúčov načítaných cez Expo Metro
+  const ARIA_KEYS = [
+    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_1,
+    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_2,
+    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_3,
+    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_4,
+    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_5,
+    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_6,
+    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_7
+  ];
+
+  // Sledovanie indexu aktuálne používaného kľúča (začíname na indexe 0 -> kľúč 1)
+  const [activeKeyIndex, setActiveKeyIndex] = useState(0);
+
+  // Získanie momentálne aktívneho kľúča pre AI moduly
+  const activeApiKey = ARIA_KEYS[activeKeyIndex];
+
+  // 🌀 ROTATE_KEY: Ak AI modul zistí preťaženie alebo limit, zavolaním tohto skočí na ďalší kľúč
+  const rotateQuantumKey = () => {
+    setActiveKeyIndex((prevIndex) => {
+      const nextIndex = (prevIndex + 1) % ARIA_KEYS.length;
+      console.log(`🔄 ARIA 5D CORE: Rotácia kľúča. Prepínam na záložný kľúč č. ${nextIndex + 1}`);
+      return nextIndex;
+    });
+  };
+
   const masterName = vault?.identity?.meno || 'Sammael';
 
   // 🔗 TVOJA ŽIVÁ KOTVA: Základná URL, ktorú si priniesol z Drive
@@ -124,7 +150,9 @@ export const AriaProvider = ({ children }) => {
       setCurrentVibe,
       summonMemory,
       updateQuantumCell,
-      masterName
+      masterName,
+      activeApiKey,
+      rotateQuantumKey
     }}>
       {children}
     </AriaContext.Provider>
