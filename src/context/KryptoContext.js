@@ -6,7 +6,7 @@ const KRYPTO_CONFIG = {
   apiKey: "R6h9kbHCWY2GxHhhQTgpMmY9mw4R7nGM", 
   projectId: "98074637-80ee-4f12-8f5e-f186a388d2da", 
   chainId: 8453,
-  rpcUrl: "https://mainnet.base.org",
+  rpcUrl: "https://mainnet.base.org", // Zlícované s naším Base mostom vo WalletProvideri
   ownerAddress: "0xb648261d780427793Fb496b0E3bdD5e987C42498", 
   lariaContractAddress: "0xbA7C2cD68b544Cc5c6038771a58581F76Ff7700a"
 };
@@ -15,13 +15,13 @@ const KryptoContext = createContext();
 
 export const KryptoProvider = ({ children }) => {
   // --- KANÁL A: USER (Identity) podľa protokolu v8.0 ---
-  const [krypt, setKrypt] = useState(null); // Premapované z walletAddress
-  const [lariaBalance, setLariaBalance] = useState("0");
-  const [ethBalance, setEthBalance] = useState("0.0000");
+  const [krypt, setKrypt] = useState(null); 
+  const [lariaBalance, setLariaBalance] = useState("0.0000");
+  const [ethBalance, setEthBalance] = useState("0.000000");
 
   // --- KANÁL B: ARCHITECT (Vrátnik/Majiteľ) ---
-  const [adminLariaBalance, setAdminLariaBalance] = useState("0");
-  const [adminEthBalance, setAdminEthBalance] = useState("0.0000");
+  const [adminLariaBalance, setAdminLariaBalance] = useState("0.0000");
+  const [adminEthBalance, setAdminEthBalance] = useState("0.000000");
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,29 +30,30 @@ export const KryptoProvider = ({ children }) => {
     try {
       const newWallet = ethers.Wallet.createRandom();
       return {
-        address: newWallet.address,     // Toto pôjde do nášho 'krypt'
+        address: newWallet.address,     
         privateKey: newWallet.privateKey,
         mnemonic: newWallet.mnemonic?.phrase
       };
     } catch (error) {
-      console.error("CHYBA_PRI_PÔRODE:", error);
+      console.error("❌ CHYBA_PRI_PÔRODE_WALLETY:", error);
       return null;
     }
   };
 
-  // --- 🔄 SYNCHRONIZÁCIA MATRIXU (S premapovaním) ---
+  // --- 🔄 SYNCHRONIZÁCIA MATRIXU (Bezpečná verzia bez slučiek) ---
   const syncWalletData = async (targetAddress) => {
-    // Ak targetAddress nie je zadaná, použijeme naše 'krypt', inak majiteľa
+    // Rozhodnutie o cieľovej adrese
     const addressToQuery = targetAddress || krypt || KRYPTO_CONFIG.ownerAddress;
     if (!addressToQuery) return;
 
     setIsLoading(true);
     try {
+      // Pripájame sa priamo na stabilný Base uzol, ktorý máme vo WalletProvideri
       const provider = new ethers.JsonRpcProvider(KRYPTO_CONFIG.rpcUrl);
 
       // 1. ETH Balance (Základné palivo siete Base)
       const rawEth = await provider.getBalance(addressToQuery);
-      const formattedEth = parseFloat(ethers.formatEther(rawEth)).toFixed(6);
+      const formattedEth = ethers.formatEther(rawEth); // Necháme čistý string z ethers
 
       // 2. LARIA Balance (Náš SmartContract)
       const minABI = ["function balanceOf(address) view returns (uint256)"];
@@ -60,18 +61,22 @@ export const KryptoProvider = ({ children }) => {
       const rawLaria = await contract.balanceOf(addressToQuery);
       const formattedLaria = ethers.formatUnits(rawLaria, 18);
       
-      // --- ROZDVOJOVAČ LOGIKY ---
+      // --- ROZDVOJOVAČ LOGIKY S OCHRANOU PROTI CYKLENIU ---
       if (addressToQuery.toLowerCase() === KRYPTO_CONFIG.ownerAddress.toLowerCase()) {
         setAdminEthBalance(formattedEth);
         setAdminLariaBalance(formattedLaria);
       } else {
         setEthBalance(formattedEth);
         setLariaBalance(formattedLaria);
-        setKrypt(addressToQuery); // Zapisujeme do 'krypt' podľa protokolu
+        
+        // 🎯 Ochrana: Stav prepíšeme, len ak sa adresa reálne zmenila (koniec nekonečnej slučky!)
+        if (krypt !== addressToQuery) {
+          setKrypt(addressToQuery);
+        }
       }
 
     } catch (error) {
-      console.error("Matrix Sync Error:", error.message);
+      console.error("❌ Matrix Sync Error:", error.message);
     } finally {
       setIsLoading(false);
     }
@@ -79,8 +84,8 @@ export const KryptoProvider = ({ children }) => {
 
   const kryptoVibe = {
     ...KRYPTO_CONFIG,
-    krypt,              // Exportujeme už pod novým názvom
-    walletAddress: krypt, // Ponechané ako tieň pre kompatibilitu so SmartContract volaniami
+    krypt,              
+    walletAddress: krypt, // Ponechané pre stopercentnú spätnú kompatibilitu so SettingsScreen
     ethBalance,
     lariaBalance,
     adminEthBalance,

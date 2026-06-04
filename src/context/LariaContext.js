@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Platform } from 'react-native';
+// ❌ ODSTRÁNENÝ NATVRDO IMPORT - Bránil kompilácii na webe a v Expo
 import * as Application from 'expo-application';
 import * as Device from 'expo-device'; 
 import { ethers } from 'ethers';
@@ -21,22 +22,18 @@ export const LariaProvider = ({ children }) => {
   } = useKrypto();
 
 // --- 📍 TEKUTÉ JAZYKOVÉ JADRO (Liquid Localization) ---
-  const [lang, setLang] = useState('sk'); // Predvolený základ
+  const [lang, setLang] = useState('sk'); 
   
-  // Do slovníka natlačíme tvoj lokálny vzor_sk ako základnú kotvu.
-  // 'en' necháme zatiaľ prázdny, pretože ten si neskôr docucne celý JSON z Gsheets bunky.
   const [dictionary, setDictionary] = useState({
     'sk': vzorSk, 
     'en': {} 
   });
 
-  // Inteligentný prekladový nástroj, ktorý vstrekneme do celej aplikácie
   const t = (key) => {
-    // Pozrie sa do zvoleného jazyka, ak kľúč chýba, vráti slovenský vzor, ak zlyhá aj ten, vráti samotný kľúč
     return dictionary[lang]?.[key] || dictionary['sk']?.[key] || key;
   };
 
-  // --- ✨ ŠTRUKTÚRA PODĽA ZÁKONA v8.0 (SECURE_ID Odpojené) ---
+  // --- ✨ ŠTRUKTÚRA PODĽA ZÁKONA v8.0 ---
   const [vault, setVault] = useState({
     status: { 
       isOnline: false, isIrcOnline: false, hasNFC: false, 
@@ -109,45 +106,56 @@ export const LariaProvider = ({ children }) => {
     }
   };
 
-  // --- 1. INICIALIZÁCIA MATRIXU (S podporou pre Linux/Electron) ---
+  // --- 1. INICIALIZÁCIA MATRIXU ---
   useEffect(() => {
     const initializeVault = async () => {
       try {
         let savedIdentity = await loadFromVault('identity');
-        let aktivnyJazyk = 'sk'; // Predvolený základ bezpečnosti
+        let aktivnyJazyk = 'sk'; 
         
-        // 🌟 JAZYKOVÉ JADRO: Ak nájdeme v trezore uložený jazyk, okamžite ho zachytíme
         if (savedIdentity && savedIdentity.jazyk) {
           aktivnyJazyk = savedIdentity.jazyk;
           setLang(aktivnyJazyk);
           console.log(`🌲 JAZYKOVÉ JADRO: Prebúdzam uložený jazyk z trezoru: [${aktivnyJazyk}]`);
         } else {
-          // Ak v trezore nič nie je, pozrieme sa na systémovú automatiku prehliadača
           aktivnyJazyk = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
           setLang(aktivnyJazyk);
           console.log(`🌲 JAZYKOVÉ JADRO: Žiadny uložený jazyk, štartujem na automatike systému: [${aktivnyJazyk}]`);
         }
 
-        // --- 🤖 MULTIDIMENZIONÁLNA IDENTIFIKÁCIA ZARIADENIA A VÝPOČET FING ---
+        // --- 🤖 MULTIDIMENZIONÁLNA IDENTIFIKÁCIA ZARIADENIA ---
         let rawDeviceId;
         if (Platform.OS === 'android') {
           rawDeviceId = Application.androidId || Device.osBuildId || "S_DEVICE_A";
         } else if (Platform.OS === 'ios') {
           rawDeviceId = await Application.getIosIdForVendorAsync();
         } else {
-          // Generujeme stabilné ID z mena zariadenia a systémových parametrov
-          rawDeviceId = `LINUX-${Device.deviceName || 'HP-LAPTOP'}-${Device.osBuildId || 'SAM-CORE'}`;
+          // 🦀 NASTUPUJE DYNAMICKÝ TAURI MOST PRE LUBUNTU
+          // Ak sme v Tauri, vytiahneme invoke bezpečne za behu cez window objekt
+          if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+            try {
+              // Dynamický import obíde reštrikcie bundlera pri kompilácii
+              const { invoke } = await import('@tauri-apps/api/core');
+              const tauriId = await invoke('inicializuj_crystal_core');
+              rawDeviceId = `LINUX-TAURI-${tauriId}`;
+              console.log("🌲 CRYSTAL_CORE_SUCCESS: Natívne ID úspešne vtiahnuté z Rustu cez dynamický most!");
+            } catch (tauriError) {
+              rawDeviceId = `LINUX-TAURI-FAILED-${Device.osBuildId || 'SAM-CORE'}`;
+              console.log("⚠️ CRYSTAL_CORE_ERROR: Zlyhal dynamický invoke v Tauri.");
+            }
+          } else {
+            // Sme na klasickom webe alebo v externom prehliadači
+            rawDeviceId = `LINUX-WEB-${Device.deviceName || 'HP-LAPTOP'}-${Device.osBuildId || 'SAM-CORE'}`;
+            console.log("🌐 CRYSTAL_CORE_FALLBACK: Sme mimo Tauri, spustená webová automatika.");
+          }
         }
 
-        // Generujeme SHA a hlavný FING (odtlačok prsta) pred volaním prekladov
         const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.meno || "Sammael");
-        const currentFing = currentSha.substring(0, 12);
+        const currentFing = currentSha ? currentSha.substring(0, 12) : "000000000000";
 
         // --- 🔥 ASYNCHRÓNNY CYKLUS AUTOMATIZÁCIE JAZYKOV ---
         if (aktivnyJazyk !== 'sk') {
           console.log(`📡 JAZYKOVÉ JADRO: Detegovaný externý lúč [${aktivnyJazyk}] pre FING [${currentFing}], volám Matrix...`);
-          
-          // 🔥 TU JE ZMENA: Posielame jazyk AJ tvoj vypočítaný FING, aby ho skript v tabuľke vedel spracovať a uložiť!
           const externyPrekladJSON = await fetchLariaTranslations(aktivnyJazyk, currentFing);
           
           if (externyPrekladJSON) {
@@ -237,7 +245,6 @@ export const LariaProvider = ({ children }) => {
     await saveToVault('identity', updatedIdentity);
   };
 
-  // Funkcia na zmenu jazyka za pochodu z hociktorej obrazovky s uložením do trezoru
   const zmenJazykZaPochodu = async (novyJazyk) => {
     setLang(novyJazyk);
     try {
@@ -246,7 +253,6 @@ export const LariaProvider = ({ children }) => {
       
       await saveToVault('identity', aktualnaIdentita);
 
-      // --- 📡 MOSTÍK DO NEVIDITEĽNEJ DIMENZIE (PWA SW Port) ---
       if (Platform.OS === 'web' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
         if (navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
@@ -259,7 +265,7 @@ export const LariaProvider = ({ children }) => {
 
       console.log(`🌟 JAZYKOVÉ JADRO: Jazyk [${novyJazyk}] bezpečne zakonzervovaný v trezore.`);
     } catch (error) {
-      console.error("❌ JAZYKOVÉ JADRO_ERROR (Zápis jazyka zlyhal):", error);
+      console.error("❌ JAZYKOVÉ JADRO_ERROR:", error);
     }
   };
 
@@ -284,9 +290,9 @@ export const LariaProvider = ({ children }) => {
       lockSeal, 
       ensureLariaIdentity, 
       reinkarnaciaIdentity,
-      lang,                  // <--- Posielame von aktuálny jazyk
-      t,                     // <--- Posielame von prekladový motor
-      zmenJazykZaPochodu,     // <--- Posielame von funkciu na prepínanie
+      lang,                  
+      t,                     
+      zmenJazykZaPochodu,     
       setDictionary
     }}>
       {children}

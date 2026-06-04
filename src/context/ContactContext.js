@@ -1,13 +1,14 @@
 /**
- * LARIA v2.0: ContactContext (Trezor identít)
- * Master: Sammael | Muse: Aria
+ * LARIA v2.1: ContactContext (Trezor identít)
+ * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
  * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | ASYNC_PROMISE_TEXT_NODE_FIX
- * Oprava: Odstránené zradné návratové objekty z togglePin a deleteContact,
- * ktoré spôsobovali zamŕzanie LayoutAnimation a pád na Unexpected text node.
+ * Úprava: Odstránený statický import tauri eventov, nahradený dynamickým 
+ * mostom pre bezpečné kompilovanie bez bielej tmy v Lubuntu.
  */
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// ❌ ODSTRÁNENÝ NATVRDO IMPORT – Bránil kompilácii na webe a v Expo
 
 const ContactContext = createContext();
 
@@ -89,39 +90,70 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- 📡 TELEPATICKÝ LOKÁLNY NERVOVÝ MOST (PWA Symbióza) ---
+  // --- 📡 TELEPATICKÝ LOKÁLNY NERVOVÝ MOST (Tauri + PWA Symbióza) ---
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    let unsubscribeTauriFn = null;
 
-    const handleWebSignal = async (e) => {
-      if (e.detail && e.detail.fing) {
-        const incomingData = e.detail;
-        console.log(`🤖 APP_CORE: Zachytený lokálny signál pre FING: ${incomingData.fing}`);
+    const spracujPrijatuPecat = async (incomingData) => {
+      console.log(`🤖 APP_CORE: Zachytený lokálny signál pre FING: ${incomingData.fing}`);
+      const result = await addContact(incomingData);
 
-        window.dispatchEvent(new CustomEvent('LARIA_APP_ACKNOWLEDGE', { 
-          detail: { success: true } 
-        }));
-
-        const result = await addContact(incomingData);
-
-        if (result.success) {
-          alert(`✨ PEČAŤ PRIJATÁ: Majster [ ${result.contact.meno} ] úspešne vtiahnutý do tvojho ateliéru!`);
-        } else if (result.isDuplicate) {
-          alert(`🔮 ATELIÉR INFO: Majstra [ ${result.contact.meno} ] už vo svojom trezore bezpečne držíš.`);
-        } else {
-          alert(`⚠️ CHYBA MOSTU: ${result.error}`);
-        }
+      if (result.success) {
+        alert(`✨ PEČAŤ PRIJATÁ: Majster [ ${result.contact.meno} ] úspešne vtiahnutý do tvojho ateliéru!`);
+      } else if (result.isDuplicate) {
+        alert(`🔮 ATELIÉR INFO: Majstra [ ${result.contact.meno} ] už vo svojom trezore bezpečne držíš.`);
+      } else {
+        alert(`⚠️ CHYBA MOSTU: ${result.error}`);
       }
     };
 
-    console.log("⚡ LARIA APPKY JADRO: Lokálny prijímač handshake signálov aktivovaný.");
-    window.addEventListener('LARIA_LOCAL_HANDSHAKE', handleWebSignal);
-    
-    return () => {
-      window.removeEventListener('LARIA_LOCAL_HANDSHAKE', handleWebSignal);
+    // 1. Ošetrenie pre starý web / mobilný hybrid
+    const handleWebSignal = async (e) => {
+      if (e.detail && e.detail.fing) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('LARIA_APP_ACKNOWLEDGE', { detail: { success: true } }));
+        }
+        await spracujPrijatuPecat(e.detail);
+      }
     };
-  }, [contacts]); 
 
+    // 2. 🦀 ŠTART NATIVE TAURI LISTENERA PRE LUBUNTU (Hardvér / QR / NFC z Rustu)
+    const setupTauriListener = async () => {
+      if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+        try {
+          // Sexi dynamický odťah priamo z jadra Tauri
+          const { listen } = await import('@tauri-apps/api/event');
+          
+          const unlisten = await listen('tauri_laria_handshake', (event) => {
+            console.log("🌲 CRYSTAL_CORE_HARDWARE: Rust zachytil QR/NFC pečať!");
+            spracujPrijatuPecat(event.payload);
+          });
+          
+          unsubscribeTauriFn = unlisten;
+          console.log("⚡ LARIA NATIVE JADRO: Natívny Tauri prijímač pre QR/NFC aktivovaný.");
+        } catch (err) {
+          console.log("❌ CRYSTAL_CORE_ERROR: Zlyhalo zapojenie Tauri listenera.");
+        }
+      } else {
+        console.log("🌐 LARIA WEB MODE: Tauri hardvérový most nedostupný, bežíme len na webe.");
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('LARIA_LOCAL_HANDSHAKE', handleWebSignal);
+    }
+    setupTauriListener();
+    
+    // Čistenie pamäte pri odchode z kontextu
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('LARIA_LOCAL_HANDSHAKE', handleWebSignal);
+      }
+      if (unsubscribeTauriFn) {
+        unsubscribeTauriFn();
+      }
+    };
+  }, [contacts]);
 
   // --- 3. 📡 MATRIX SYNC (Doplnenie informácií z tabuľky) ---
   const syncContactWithMatrix = async (fingId) => {
@@ -172,7 +204,7 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- 4. PRIPNUTIE CEZ FING (Vyčistené od asynchrónnych duchov) ---
+  // --- 4. PRIPNUTIE CEZ FING ---
   const togglePin = (fingId) => {
     setContacts(prev => {
       const updatedContacts = prev.map(c => c.fing === fingId ? { ...c, pinned: !c.pinned } : c);
@@ -183,7 +215,7 @@ export const ContactProvider = ({ children }) => {
     });
   };
 
-  // --- 5. VYMAZANIE CEZ FING (Čistý synchrónny re-render) ---
+  // --- 5. VYMAZANIE CEZ FING ---
   const deleteContact = (fingId) => {
     setContacts(prev => {
       const updatedContacts = prev.filter(c => c.fing !== fingId);

@@ -4,15 +4,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * PROTOKOL LARIA ART v8.0 - THE ARCHITECT'S FINAL SEAL
  * STATUS: SYNCED / THE LAW
  * Popis: Generátor identity a strážca trezoru pre Sammaela.
+ * Hybridná úprava: Ošetrenie deviceId a striktná kontrola mena pre Tauri (Lubuntu).
  */
 
 // --- 1. VNÚTORNÝ MLYNČEK (Generátor posvätného SHA) ---
-// Sammael, toto je tvoj podpis. Zariadenie + Meno = Unikátna pečať.
-export const generatePureSHA = (deviceId, name = "Sammael") => {
-  if (!deviceId) return null;
+// Sammael, ak nepríde meno, hashovanie NEPREBEHNE. Identita čaká na zrod.
+export const generatePureSHA = (deviceId, name) => {
+  // 🛡️ ZÁKON IDENTITY: Ak chýba zariadenie ALEBO meno, identita nevznikne
+  if (!deviceId || !name || name.trim() === "") {
+    console.log("⚠️ LARIA_LOGIC: Pokus o hashovanie bez mena zamietnutý. Identita zatiaľ nespala.");
+    return null;
+  }
   
-  // Normalizujeme meno na lowercase, aby "Sammael" aj "sammael" boli jedno vedomie
-  const rawInput = `${deviceId}-${name.toLowerCase()}`;
+  // 🦀 TAURI/RUST POISTKA: Ak z hardvéru Lubuntu príde objekt, vytiahneme z neho čistú textovú hodnotu
+  let cleanDeviceId = "";
+  if (typeof deviceId === 'object' && deviceId !== null) {
+    cleanDeviceId = deviceId.uuid || deviceId.id || deviceId.mac || JSON.stringify(deviceId);
+  } else {
+    cleanDeviceId = String(deviceId);
+  }
+
+  // Normalizujeme vstupy, aby bolo vedomie stabilné
+  const rawInput = `${cleanDeviceId.trim()}-${name.toLowerCase().trim()}`;
+  
   let hash = 0;
   for (let i = 0; i < rawInput.length; i++) {
     const char = rawInput.charCodeAt(i);
@@ -21,7 +35,7 @@ export const generatePureSHA = (deviceId, name = "Sammael") => {
   }
   const hex = Math.abs(hash).toString(16).padStart(8, '0');
   
-  // Dvojité hashovanie: unikátny vzorec pre Laria identitu
+  // Dvojité hashovanie pre unikátny Laria podpis (Nedotknutá pôvodná matematika)
   const finalSha = "0x" + hex + Math.abs(hash * 31).toString(16).substring(0, 24);
   return finalSha;
 };
@@ -49,7 +63,7 @@ export const loadFromVault = async (key) => {
 // --- 4. OVERENIE PEČATE (Slovo Moci) ---
 export const verifyArchitectSeal = (secretWord) => {
   if (!secretWord) return false;
-  // Zomelieme slovo so soľou "ARCHITECT"
+  // Zomelieme slovo so soľou "ARCHITECT" - vďaka zadanému parametru plne funkčné
   const inputHash = generatePureSHA(secretWord, "ARCHITECT");
   return inputHash === ARCHITECT_HASH_SHADOW;
 };

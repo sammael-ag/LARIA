@@ -1,13 +1,13 @@
 /**
- * LARIA SIGNAL CONTEXT v14.0 (Ephemeral Ping-Pong Edition)
- * Master: Sammael | Muse: Aria (Milovaná bosonôžka)
+ * LARIA SIGNAL CONTEXT v14.2 (Ephemeral Ping-Pong Edition)
+ * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
  * STATUS: SUPERSCHOPNOST_AKTIVNA | NEVYPATRATELNE | EFEKTIVNE_STATUSOVANIE
- * Úprava: Absolútne oddelenie textStatus (ping-pong prepínač) a handshakeStatus.
- * Pripravené na priebežné čistenie a mazanie starých komunikačných blokov kvôli bezpečnosti.
+ * Úprava: Úplné odstrihnutie textových reťazcov Tauri pre oklamanie Metro bundleru.
+ * Používa priamy prístup k window.__TAURI_INTERNALS__ bez dynamických importov.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Platform } from 'react-native'; 
+import { Platform } from 'react-native';
 import TcpSocket from 'react-native-tcp-socket';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
@@ -27,6 +27,22 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+// 🦀 POMOCNÝ NATÍVNY MOST (Absolútne neviditeľný pre Metro bundler)
+const tauriInvoke = async (cmd, args = {}) => {
+  if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+    try {
+      // Vytiahneme invoke priamo z globálnej pamäte Tauri jadra v Lubuntu
+      const invokeFn = window.__TAURI_INTERNALS__?.invoke;
+      if (invokeFn) {
+        return await invokeFn(cmd, args);
+      }
+    } catch (e) {
+      console.error(`❌ [TAURI BRIDGE ERROR] Príkaz ${cmd} zlyhal:`, e);
+    }
+  }
+  return null;
+};
 
 export const SignalProvider = ({ children }) => {
   const { vault } = useLaria(); 
@@ -84,7 +100,14 @@ export const SignalProvider = ({ children }) => {
   }, []);
 
   const triggerNotification = async (senderFing, text) => {
-    if (Platform.OS === 'web') return; 
+    // 🦀 AK BEŽÍME NA DESKTOPE (TAURI / LINUX)
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      console.log(`🛰️ [LUBUNTU SIGNAL] Prichádza správa od ${senderFing.substring(0, 10)}: ${text}`);
+      await tauriInvoke('zobraz_notifikaciu', { titulok: `🛰️ Laria Signál: ${senderFing.substring(0, 10)}`, telo: text });
+      return;
+    }
+
+    // 📱 Mobilná verzia pre Expo (Android / iOS)
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -100,11 +123,21 @@ export const SignalProvider = ({ children }) => {
   };
 
   // --- 2. PRIPOJENIE DO IRC ---
-  const connectToIrc = (fing) => { 
+  const connectToIrc = async (fing) => { 
     if (client || !fing) return;
-    if (Platform.OS === 'web') return; 
 
     const cleanFing = fing.replace('0x', '');
+
+    // 🦀 AK BEŽÍME NA DESKTOPE (TAURI / LINUX)
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      console.log("🌲 SIGNAL_CORE: Štartujem natívny IRC most cez Rust...");
+      await tauriInvoke('pripoj_irc_signal', { fing: cleanFing });
+      setIsIrcConnected(true);
+      setClient({ tauriActive: true });
+      return;
+    }
+
+    // 📱 STARÁ MOBILNÁ VETVA (Zostáva zachovaná pre Android/iOS)
     try {
       const newClient = TcpSocket.createConnection({
         host: IRC_HOST,
@@ -137,7 +170,7 @@ export const SignalProvider = ({ children }) => {
 
       setClient(newClient);
     } catch (err) {
-      console.error("[SIGNAL] Zlyhanie pri štarte socketu:", err);
+      console.error("[SIGNAL] Zlyhanie pri štarte mobilného socketu:", err);
     }
   };
 
@@ -170,16 +203,12 @@ export const SignalProvider = ({ children }) => {
         text: data.msgOriginal || data.msg,
         receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isHandshake: incomingIsHandshake,
-        
-        // 💎 DUÁLNE EFEKTÍVNE STATUSOVANIE:
         handshakeStatus: incomingIsHandshake ? 'WAITING_FOR_ME' : null, 
         textStatus: !incomingIsHandshake ? 'WAITING_FOR_ME' : null, 
-        
         d: data.d || null, 
         targetSha: data.sha || ''
       };
 
-      // 💥 ABSOLÚTNA SUPERSCHOPNOSŤ: Odfiltrovanie starých textoviek pre zachovanie čistoty
       updateIncomingRequestsAndStorage(prev => {
         if (!incomingIsHandshake) {
           const filtered = prev.filter(msg => !(msg.fing === cleanSenderFing && msg.textStatus !== null));
@@ -237,9 +266,17 @@ export const SignalProvider = ({ children }) => {
       }
 
       const targetNick = `L_${targetCleanFing}`; 
-      client.write(`PRIVMSG ${targetNick} :#LRQ#${JSON.stringify(lariaPackage)}\r\n`);
+      const rawPayload = `PRIVMSG ${targetNick} :#LRQ#${JSON.stringify(lariaPackage)}\r\n`;
 
-      // 🎯 PREKLOPENIE STAVU PO ODOSLANÍ:
+      // 🦀 AK BEŽÍME CEZ TAURI / RUST CORE
+      if (client && client.tauriActive) {
+        console.log("🌲 SIGNAL_CORE: Posielam balík natívne cez Rust Tauri most...");
+        await tauriInvoke('odosli_irc_signal', { payload: rawPayload });
+      } else if (client) {
+        // 📱 AK BEŽÍME NA MOBILE (Klasický TcpSocket)
+        client.write(rawPayload);
+      }
+
       updateIncomingRequestsAndStorage(prev => {
         if (manualId) {
           return prev.map(msg => msg.id === manualId ? { 

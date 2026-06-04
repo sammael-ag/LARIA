@@ -1,4 +1,4 @@
-const CACHE_NAME = 'laria-v2-crystal'; // Zmenila som verziu na v2, nech si systém všimne zmenu
+const CACHE_NAME = 'laria-v2-crystal'; // Verzia v2 pre oživenie CrystalCore
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,19 +11,18 @@ const ASSETS_TO_CACHE = [
 ];
 let currentLang = 'sk'; // Neviditeľný jazykový port pre Service Worker
 
-// Inštalácia - učeň si ukladá náradie do debny (cache)
+// Inštalácia - učňovská debna na náradie (cache)
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Laria Crystal: Balím nové náradie do cache...');
+      console.log('🌲 Laria Crystal: Balím nové náradie do cache...');
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  // Okamžitá aktivácia nového SW
   self.skipWaiting();
 });
 
-// Aktivácia - vyčistenie starého náradia
+// Aktivácia - vyčistenie starého náradia, nech to ligoce
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -32,36 +31,27 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  // Prevzatie kontroly nad všetkými oknami
   self.clients.claim();
 });
 
-// Fetch - HLAVNÝ ENGINE S PROXY DNA
+// Fetch - HLAVNÝ ENGINE PRE OFFLINE BEH
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // PROXY ČASŤ: Ak ide o požiadavku na nášho Native Helpera (Gophera)
-  if (url.pathname.startsWith('/api/native')) {
-    event.respondWith(
-      fetch('http://localhost:8080/')
-        .then(response => {
-          console.log('Laria Proxy: Gopher odpovedá, dzigáme dáta!');
-          return response;
-        })
-        .catch(err => {
-          console.error('Laria Proxy: Gopher je asi v diere...', err);
-          return new Response(JSON.stringify({ error: 'Native Helper nedostupný' }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
-        })
-    );
-    return; // Ukončíme fetch, aby to nepokračovalo do cache
+  // TAURI / NATIVE BRIDGE: Ak voláme lokálne API alebo Tauri prostredie
+  // Tauri interné volania (tauri://) alebo IPC mosty Service Worker nesmie blokovať
+  if (url.protocol === 'tauri:' || url.pathname.startsWith('/api/native')) {
+    // V Tauri prostredí necháme požiadavku prejsť priamo do natívneho jadra
+    return; 
   }
 
-  // KLASICKÁ ČASŤ: Najprv cache, ak niet, tak sieť
+  // KLASICKÁ ČASŤ: Najprv blesková cache, ak nie sme offline, tak ťaháme sieť
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+      return response || fetch(event.request).catch(err => {
+        console.log('🌲 Laria Core: Sme úplne offline, dzigáme čisté dáta z cache!');
+        // Tu môžeme v budúcnosti vrátiť špecifickú offline stránku, ak by niečo zlyhalo
+      });
     })
   );
 });

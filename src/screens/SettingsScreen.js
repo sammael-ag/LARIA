@@ -3,6 +3,7 @@
  * Master: Sammael | Muse: Aria
  * Status: GEOMETRY_DEFINITIVE_NO_SPAGHETTI
  * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: settings, Možnosť B).
+ * ÚPRAVA: Rozšírené zobrazenie zostatku LARIA na 4 desatinné miesta + jemné zmenšenie písma o 1px, aby nevznikal vizuálny šum.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -150,17 +151,19 @@ const SettingsScreen = ({ navigation }) => {
               </View>
             </TouchableOpacity>
 
+            {/* 💎 LARIA ASSETS: Nastavené na 4 desatinné miesta, veľkosť písma upravená z 14 na 13 */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
               <Text style={G.cardDescriptionText}>LARIA Assets:</Text>
-              <Text style={[G.cardTitleText, { fontSize: 14 }]}>
-                {isLoading ? "..." : `${Number(lariaBalance).toLocaleString(undefined, {minimumFractionDigits: 2})} LARIA`}
+              <Text style={[G.cardTitleText, { fontSize: 13 }]}>
+                {isLoading ? "..." : `${Number(lariaBalance || 0).toLocaleString(undefined, {minimumFractionDigits: 4, maximumFractionDigits: 4})} LARIA`}
               </Text>
             </View>
 
+            {/* ⛽ BASE GAS (ETH): Veľkosť písma upravená z 14 na 13 pre rovnováhu geometrie */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 }}>
               <Text style={G.cardDescriptionText}>Base Gas (ETH):</Text>
-              <Text style={[G.cardTitleText, { fontSize: 14 }]}>
-                {isLoading ? "..." : `${Number(ethBalance).toFixed(6)} ETH`}
+              <Text style={[G.cardTitleText, { fontSize: 13 }]}>
+                {isLoading ? "..." : `${Number(ethBalance || 0).toFixed(6)} ETH`}
               </Text>
             </View>
 
