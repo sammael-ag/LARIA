@@ -1,6 +1,8 @@
 {
+  "id": "/?utm_source=pwa",
   "short_name": "LARIA",
-  "name": "LARIA: Tekuté rozhranie",
+  "name": "LARIA Crystal Core",
+  "description": "Next-gen communication and digital artifact interface.",
   "icons": [
     {
       "src": "favicon.png",
@@ -10,16 +12,20 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "theme_color": "#1a1a1a",
   "background_color": "#1a1a1a"
 }

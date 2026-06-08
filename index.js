@@ -9,6 +9,7 @@
  * REACT UNIFICATION: Úplná eliminácia iframe prvkov. Natívne prepojenie modulov Fakturant a CojeLaria.
  * HASHTAG ROUTING PATCH: Implementovaná mriežková navigácia pre 100% ochranu pred 404 chybami na GH Pages.
  * MULTI-PARAM FIX: Ošetrené parametre 'id' pre Vizitkár aj 'art' pre sekciu CojeLaria.
+ * PWA INTEGRATION: Oživenie inštalačného tlačidla pre bezbalíčkovú distribúciu Crystal Core.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -91,6 +92,10 @@ const MasterWrapper = () => {
   // --- 🪐 UNIVERZÁLNY SENZOR PRE DETEKCIU TAURI OKNA ---
   const [isTauriWindow, setIsTauriWindow] = useState(false);
 
+  // --- ⚡ PWA DETEKTOR INŠTALÁCIE ---
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hasTauriObject = window.__TAURI__ !== undefined || window.__TAURI_METADATA__ !== undefined;
@@ -105,6 +110,37 @@ const MasterWrapper = () => {
         setIsTauriWindow(false);
       }
     }
+  }, []);
+
+  // Sledovanie PWA inštalačného eventu
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleBeforeInstallPrompt = (e) => {
+      // Zabránime predvolenej lište prehliadača, aby sme si tlačidlo riadili sami
+      e.preventDefault();
+      console.log("🌲 LARIA PWA: Zachytený inštalačný prompt. Aktivujem zlaté tlačidlo!");
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      console.log("🌲 LARIA PWA: Aplikácia bola úspešne nainštalovaná na plochu.");
+      setIsAlreadyInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Kontrola, či už appka beží ako nainštalovaná samostatne (standalone)
+    if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
+      setIsAlreadyInstalled(true);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
   }, []);
 
   useEffect(() => {
@@ -371,8 +407,29 @@ const MasterWrapper = () => {
     return '0 0 25%';
   };
 
-  const handleDownloadClick = () => {
-    console.log("📥 LARIA CORE: Používateľ klikol na tlačidlo stiahnutia Crystal Core z webu.");
+  // --- 🔥 AKCIA PRE INTERAKTÍVNE PWA TLAČIDLO ---
+  const handleDownloadClick = async () => {
+    console.log("📥 LARIA CORE: Používateľ spustil inštalačnú sekvenciu Crystal Core.");
+    
+    if (isAlreadyInstalled) {
+      alert("🌲 Crystal Core už beží ako plnohodnotný systém na tomto zariadení.");
+      return;
+    }
+
+    if (!deferredPrompt) {
+      alert("🌲 Systém je pripravený. Ak nevidíte okno inštalácie, kliknite na ikonu [+] alebo 'Inštalovať' priamo v paneli prehliadača.");
+      return;
+    }
+
+    // Spustíme magické inštalačné okno
+    deferredPrompt.prompt();
+
+    // Počkáme na verdikt majstra za klávesnicou
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`🌲 Crystal Core Inštalácia: Výsledok voľby -> [${outcome}]`);
+
+    // Upraceme prompt, udalosť sa dá použiť iba raz
+    setDeferredPrompt(null);
   };
 
   return (
@@ -597,7 +654,12 @@ const MasterWrapper = () => {
 
                 <div style={{ width: '100%', maxWidth: '320px', alignSelf: 'center', marginBottom: '30px' }}>
                   <button className="primary-btn" onClick={handleDownloadClick}>
-                    <span className="primary-btn-text">{txt.btn_download || "Stiahnuť Crystal Core"}</span>
+                    <span className="primary-btn-text">
+                      {isAlreadyInstalled 
+                        ? "Systém aktívny" 
+                        : (deferredPrompt ? (txt.btn_download || "Stiahnuť Crystal Core") : "Inštalovať Crystal Core")
+                      }
+                    </span>
                   </button>
                 </div>
 

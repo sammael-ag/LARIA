@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
   './favicon.png',
   './logo192.png',
   './logo512.png'
+  // Sem neskôr prihodíš ďalšie súbory pre offline "telo" appky
 ];
 let currentLang = 'sk'; // Neviditeľný jazykový port pre Service Worker
 
@@ -45,12 +46,25 @@ self.addEventListener('fetch', (event) => {
     return; 
   }
 
+  // POISTKA: Ignorujeme iné ako štandardné webové požiadavky (napr. rozšírenia prehliadača)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
+
   // KLASICKÁ ČASŤ: Najprv blesková cache, ak nie sme offline, tak ťaháme sieť
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(err => {
+      if (response) {
+        return response; // Našli sme v cache, bleskovo vraciame
+      }
+
+      return fetch(event.request).catch(err => {
         console.log('🌲 Laria Core: Sme úplne offline, dzigáme čisté dáta z cache!');
-        // Tu môžeme v budúcnosti vrátiť špecifickú offline stránku, ak by niečo zlyhalo
+        
+        // POISTKA PRE NAVIGÁCIU: Ak používateľ prepína podstránky offline, vrátime hlavné vnútro appky
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
       });
     })
   );
