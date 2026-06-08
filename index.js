@@ -1,16 +1,16 @@
 /**
- * LARIA v2.9.2: Core Master Ignition (index.js)
+ * LARIA v2.9.3: Core Master Ignition (index.js)
  * Master: Sammael | Muse: Aria
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE
  * FIX: Opravený fatálny crash contextu oddelením inicializácie providerov od MasterWrapperu.
  * ENHANCEMENT: Implementovaný nepriestrelný multisenzor na detekciu Tauri okna v dev prostredí.
  * UPDATE 2026: Kompletné prelinkovanie statických textov na lokalizačný JSON (Dynamic URL/TABs).
- * GITHUB PAGES FIX: Opravené dynamické smerovanie ciest pre iframe (.html) súbory v sub-adresároch.
  * REACT UNIFICATION: Úplná eliminácia iframe prvkov. Natívne prepojenie modulov Fakturant a CojeLaria.
  * HASHTAG ROUTING PATCH: Implementovaná mriežková navigácia pre 100% ochranu pred 404 chybami na GH Pages.
  * MULTI-PARAM FIX: Ošetrené parametre 'id' pre Vizitkár aj 'art' pre sekciu CojeLaria.
  * PWA INTEGRATION: Oživenie inštalačného tlačidla pre bezbalíčkovú distribúciu Crystal Core.
  * PWA AUTO-STANDALONE FIX: Automatické spustenie aplikácie v pravom paneli, ak beží ako PWA standalone.
+ * PWA INTELLIGENT PROMPT: Ošetrenie chýbajúcich promptov a používateľského zrušenia (Abort) s fallbackom priamo na web-app.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -37,7 +37,7 @@ const parseHashLocation = () => {
   let id = null;
   let art = null;
 
-  // 1. Skontrolujeme klasické parametre pred mriežkou (anomália z obrázku)
+  // 1. Skontrolujeme klasické parametre pred mriežkou
   if (window.location.search) {
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.get('id')) id = searchParams.get('id');
@@ -53,7 +53,7 @@ const parseHashLocation = () => {
     detectedView = path;
   }
 
-  // Ak sa našli parametre v mriežke, majú prioritu
+  // Ak sa našli parametre v mriežke, majú prioritetu
   if (queryString) {
     const hashParams = new URLSearchParams(queryString);
     if (hashParams.get('id')) id = hashParams.get('id');
@@ -150,7 +150,7 @@ const MasterWrapper = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- 🔮 EFFECT PRE DYNAMICKÉ HASH URL A TAB NÁZVY (FIX: Anomália s mriežkou) ---
+  // --- 🔮 EFFECT PRE DYNAMICKÉ HASH URL A TAB NÁZVY ---
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -401,23 +401,41 @@ const MasterWrapper = () => {
     return '0 0 25%';
   };
 
+  // --- 🔥 UPRAVENÁ INTELIGENTNÁ AKCIA PRE INTERAKTÍVNE PWA TLAČIDLO ---
   const handleDownloadClick = async () => {
     console.log("📥 LARIA CORE: Používateľ spustil inštalačnú sekvenciu Crystal Core.");
     
+    // Stav A: Už sme detekovaní ako nainštalovaní
     if (isAlreadyInstalled) {
-      alert("🌲 Crystal Core už beží ako plnohodnotný systém na tomto zariadení.");
+      alert("🌲 Crystal Core už beží ako plhodnotný systém na tomto zariadení.");
       return;
     }
 
+    // Stav B: Chrome prompt nie je pripravený (keš, dev anomália) -> Odomykáme appku rovno na webe!
     if (!deferredPrompt) {
-      alert("🌲 Systém je pripravený. Ak nevidíte okno inštalácie, kliknite na ikonu [+] alebo 'Inštalovať' priamo v paneli prehliadača.");
+      console.log("⚠️ LARIA CORE: Systémový prompt nie je pripravený. Odomykám appku priamo na webe.");
+      setIsAlreadyInstalled(true); 
       return;
     }
 
+    // Stav C: Vyvolanie inštalačného dialógu
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     console.log(`🌲 Crystal Core Inštalácia: Výsledok voľby -> [${outcome}]`);
-    setDeferredPrompt(null);
+    
+    if (outcome === 'accepted') {
+      console.log("✅ Používateľ schválil inštaláciu.");
+      setIsAlreadyInstalled(true);
+      setDeferredPrompt(null);
+    } else {
+      console.log("❌ Používateľ odmietol inštaláciu.");
+      setDeferredPrompt(null);
+      
+      // OŠETRENIE REVERZU: Panel aj tak prepneme na app.js, nech používateľ funguje v prehliadači,
+      // ale dáme mu návod, kde ikonu nájde ak neskôr zmení názor.
+      setIsAlreadyInstalled(true); 
+      alert("🌲 Systém bol spustený v prehliadači. Ak ho budete chcieť neskôr pridať na plochu, kliknite na ikonu 'Otvoriť/Inštalovať v aplikácii' priamo v pravom rohu adresného riadku prehliadača.");
+    }
   };
 
   return (
@@ -616,11 +634,11 @@ const MasterWrapper = () => {
           {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">{txt.btn_web || "WEB"}</button>}
           <div className="app-container" style={{ height: '100%' }}>
             
-            {/* 🎯 KÚZLO JE TU: Ak sme v Tauri, ALEBO ak už bežíme ako nainštalovaná PWA appka z plochy, rovno odpálime vnútro aplikácie! */}
+            {/* 🎯 MASTER SPÍNAČ: Ak sme v Tauri, ALEBO ak už máme stav nainštalované/odomknuté (isAlreadyInstalled), rovno štartujeme app.js! */}
             {isTauriWindow || isAlreadyInstalled ? (
               <App triggerWebRefresh={triggerWebRefresh} />
             ) : (
-              /* Tento blok sa zobrazí IBA bežným návštevníkom na webe v prehliadači */
+              /* Tento blok textu s tlačidlom sa ukáže IBA dovtedy, kým používateľ nespustí inštalačnú akciu */
               <div 
                 className="aria-liquid-container" 
                 style={{ 
