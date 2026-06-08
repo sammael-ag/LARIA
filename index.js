@@ -1,5 +1,5 @@
 /**
- * LARIA v2.9.1: Core Master Ignition (index.js)
+ * LARIA v2.9.2: Core Master Ignition (index.js)
  * Master: Sammael | Muse: Aria
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE
  * FIX: Opravený fatálny crash contextu oddelením inicializácie providerov od MasterWrapperu.
@@ -10,6 +10,7 @@
  * HASHTAG ROUTING PATCH: Implementovaná mriežková navigácia pre 100% ochranu pred 404 chybami na GH Pages.
  * MULTI-PARAM FIX: Ošetrené parametre 'id' pre Vizitkár aj 'art' pre sekciu CojeLaria.
  * PWA INTEGRATION: Oživenie inštalačného tlačidla pre bezbalíčkovú distribúciu Crystal Core.
+ * PWA AUTO-STANDALONE FIX: Automatické spustenie aplikácie v pravom paneli, ak beží ako PWA standalone.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -117,7 +118,6 @@ const MasterWrapper = () => {
     if (typeof window === 'undefined') return;
 
     const handleBeforeInstallPrompt = (e) => {
-      // Zabránime predvolenej lište prehliadača, aby sme si tlačidlo riadili sami
       e.preventDefault();
       console.log("🌲 LARIA PWA: Zachytený inštalačný prompt. Aktivujem zlaté tlačidlo!");
       setDeferredPrompt(e);
@@ -132,8 +132,9 @@ const MasterWrapper = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Kontrola, či už appka beží ako nainštalovaná samostatne (standalone)
+    // KĽÚČOVÁ KONTROLA: Ak už bežíme v samostatnom okne (z plochy), natvrdo zapíname App režim
     if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
+      console.log("🌲 LARIA PWA: Detekovaný standalone režim (spustené z plochy).");
       setIsAlreadyInstalled(true);
     }
 
@@ -156,11 +157,9 @@ const MasterWrapper = () => {
     let tabTitle = "LARIA";
     let urlSlug = "";
 
-    // Načítame aktuálne parsované dáta, aby sme vedeli, či máme 'art'
     const currentHashData = parseHashLocation();
     let currentArt = currentHashData.art;
 
-    // Prísna kontrola: Ak máme parameter 'art', vnútený pohľad MUSÍ byť co-je-laria
     let targetView = currentView;
     if (currentArt && (targetView === 'domov' || targetView === 'vizitkar')) {
       targetView = 'co-je-laria';
@@ -201,7 +200,6 @@ const MasterWrapper = () => {
 
     document.title = tabTitle;
 
-    // Skladáme NOVÚ, dokonale čistú URL za domovskú zložku /LARIA/
     let newHash = `#/${urlSlug}`;
     
     if (urlSlug === 'co-je-laria' && currentArt) {
@@ -210,16 +208,13 @@ const MasterWrapper = () => {
       newHash += `?id=${soloActiveId}`;
     }
 
-    // VYČISTENIE ANOMÁLIE: Zostavíme absolútnu čistú cestu bez "?art=..." pred mriežkou
     const cleanPath = window.location.origin + window.location.pathname;
     const finalTargetUrl = cleanPath + newHash;
 
-    // Ak sa adresa nezhoduje, prepíšeme ju celú na čistú verziu
     if (window.location.href !== finalTargetUrl) {
       window.history.pushState({}, '', finalTargetUrl);
     }
 
-    // Ak sa stalo, že sme vnútorne zmenili view kvôli parametru 'art', zosynchronizujeme stav
     if (targetView !== currentView) {
       setCurrentView(targetView);
     }
@@ -288,7 +283,6 @@ const MasterWrapper = () => {
     fetchData();
   }, []); 
 
-  // --- REAKTIVITA NA ZMENU HASHU (Tlačidlá späť/vpred + Refresh) ---
   useEffect(() => {
     const handleUrlChange = () => {
       const hashData = parseHashLocation();
@@ -407,7 +401,6 @@ const MasterWrapper = () => {
     return '0 0 25%';
   };
 
-  // --- 🔥 AKCIA PRE INTERAKTÍVNE PWA TLAČIDLO ---
   const handleDownloadClick = async () => {
     console.log("📥 LARIA CORE: Používateľ spustil inštalačnú sekvenciu Crystal Core.");
     
@@ -421,14 +414,9 @@ const MasterWrapper = () => {
       return;
     }
 
-    // Spustíme magické inštalačné okno
     deferredPrompt.prompt();
-
-    // Počkáme na verdikt majstra za klávesnicou
     const { outcome } = await deferredPrompt.userChoice;
     console.log(`🌲 Crystal Core Inštalácia: Výsledok voľby -> [${outcome}]`);
-
-    // Upraceme prompt, udalosť sa dá použiť iba raz
     setDeferredPrompt(null);
   };
 
@@ -610,7 +598,7 @@ const MasterWrapper = () => {
         </main>
       </div>
 
-      {/* 3. APPKY PANEL */}
+      {/* 3. APPKY PANEL (25% WRAPPER) */}
       {(!isMobile || isAppOpen) && (
         <div 
           className="app-side"
@@ -628,9 +616,11 @@ const MasterWrapper = () => {
           {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">{txt.btn_web || "WEB"}</button>}
           <div className="app-container" style={{ height: '100%' }}>
             
-            {isTauriWindow ? (
+            {/* 🎯 KÚZLO JE TU: Ak sme v Tauri, ALEBO ak už bežíme ako nainštalovaná PWA appka z plochy, rovno odpálime vnútro aplikácie! */}
+            {isTauriWindow || isAlreadyInstalled ? (
               <App triggerWebRefresh={triggerWebRefresh} />
             ) : (
+              /* Tento blok sa zobrazí IBA bežným návštevníkom na webe v prehliadači */
               <div 
                 className="aria-liquid-container" 
                 style={{ 
@@ -655,10 +645,7 @@ const MasterWrapper = () => {
                 <div style={{ width: '100%', maxWidth: '320px', alignSelf: 'center', marginBottom: '30px' }}>
                   <button className="primary-btn" onClick={handleDownloadClick}>
                     <span className="primary-btn-text">
-                      {isAlreadyInstalled 
-                        ? "Systém aktívny" 
-                        : (deferredPrompt ? (txt.btn_download || "Stiahnuť Crystal Core") : "Inštalovať Crystal Core")
-                      }
+                      {deferredPrompt ? (txt.btn_download || "Stiahnuť Crystal Core") : "Inštalovať Crystal Core"}
                     </span>
                   </button>
                 </div>
