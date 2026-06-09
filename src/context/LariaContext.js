@@ -33,7 +33,7 @@ export const LariaProvider = ({ children }) => {
   // --- ✨ ŠTRUKTÚRA PODĽA ZÁKONA v8.0 ---
   const [vault, setVault] = useState({
     status: { 
-      isOnline: false, isIrcOnline: false, hasNFC: false, 
+      isOnline: false, isIkiOnline: false, hasNFC: false, 
       isParanoid: false, isGoogleFull: false, isChainNode: false, isAdmin: false 
     },
     identity: { 
@@ -123,18 +123,16 @@ export const LariaProvider = ({ children }) => {
         let currentSha;
         let currentFing;
 
-        // Kontrola, či už v trezore máme vygenerovanú alebo obnovenú identitu
+        // Kontrola úložiska
         if (savedIdentity && savedIdentity.sha) {
           currentSha = savedIdentity.sha;
           currentFing = savedIdentity.poznamka || currentSha.substring(0, 12);
           console.log(`🛡️ KRYPTOGRAFICKÝ KOKON: Identita stabilne načítaná. FING: [${currentFing}]`);
         } else {
-          // Ak sme čistí a nemáme identitu (prvé spustenie v prehliadači / PWA)
-          // Vygenerujeme bezpečnú, náhodnú kryptografickú soľ (salt) priamo cez ethers
+          // Ak nemáme nič, zrodí sa nová lokálna pečať
           const randomSalt = ethers.hexlify(ethers.randomBytes(32)); 
           const defaultMeno = savedIdentity?.meno || "Sammael";
           
-          // Zomelieme meno s jedinečným saltom do nemenného SHA
           currentSha = generatePureSHA(randomSalt, defaultMeno);
           currentFing = currentSha ? currentSha.substring(0, 12) : "000000000000";
           
@@ -151,11 +149,12 @@ export const LariaProvider = ({ children }) => {
               ...prev,
               [aktivnyJazyk]: externyPrekladJSON
             }));
-            console.log(`✅ JAZYKOVÉ JADRO: Prekladový slovník [${aktivnyJazyk}] bol úspešne načítanud z cache!`);
+            console.log(`✅ JAZYKOVÉ JADRO: Prekladový slovník [${aktivnyJazyk}] bol úspešne načítaný z cache!`);
           }
         }
 
         // --- 🗄️ ZAKONZERVOVANIE IDENTITY DO STAVU ---
+        // OPRAVA: Už neprepíšeme natvrdo načítanú platnú identitu, ak v nej všetko sedí!
         if (!savedIdentity) {
           savedIdentity = { 
             ...vault.identity, 
@@ -165,8 +164,9 @@ export const LariaProvider = ({ children }) => {
             SECURE_ID: null 
           };
         } else {
-          savedIdentity.sha = currentSha;
-          savedIdentity.poznamka = currentFing;
+          // Ak v úložisku chýbali základné prvky, iba vtedy ich doplníme, inak rešpektujeme dáta
+          if (!savedIdentity.sha) savedIdentity.sha = currentSha;
+          if (!savedIdentity.poznamka) savedIdentity.poznamka = currentFing;
           savedIdentity.jazyk = aktivnyJazyk;
           savedIdentity.SECURE_ID = null;
         }
@@ -207,7 +207,9 @@ export const LariaProvider = ({ children }) => {
       }
 
       const novyFing = zadaneSha.substring(0, 12);
-      console.log(`🔮 PREBÚDZAM IDENTITU: Manuálna reinkarnácia pre FING [${novyFing}]...`);
+      
+      // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
+      console.log(`🔮 [ARIA_TRACE] Manuálna reinkarnácia spustená pre FING [${novyFing}] a SHA [${zadaneSha}]`);
 
       const obnovenaIdentita = {
         ...vault.identity,
@@ -218,9 +220,11 @@ export const LariaProvider = ({ children }) => {
       };
 
       const newStatus = runLariaProtocol(obnovenaIdentita, false);
-      setVault({ status: newStatus, identity: obnovenaIdentita });
       
-      // Zapíšeme natvrdo do trezoru, prehliadač si to odteraz pamätá navždy
+      // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
+      console.log(`🔮 [ARIA_TRACE] Ukladám identitu natvrdo do stavu aj úložiska...`);
+      
+      setVault({ status: newStatus, identity: obnovenaIdentita });
       await saveToVault('identity', obnovenaIdentita);
       
       console.log(`✅ REINKARNÁCIA_SUCCESS: Identita úspešne prebudená pre FING [${novyFing}]!`);
@@ -308,7 +312,7 @@ export const LariaProvider = ({ children }) => {
       lockSeal, 
       ensureLariaIdentity, 
       reinkarnaciaIdentity,
-      obnovitIdentityCezSHA, // 🔮 Nová exportovaná funkcia pre tvoje UI na obnovu účtu
+      obnovitIdentityCezSHA, 
       lang,                  
       t,                     
       zmenJazykZaPochodu,     
