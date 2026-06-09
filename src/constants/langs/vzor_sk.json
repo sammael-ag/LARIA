@@ -73,13 +73,8 @@
   },
   "settings": {
     "title": "Nastavenia",
-    "identity_recovery": "OBNOVA IDENTITY",
+    "identity_recovery": "SPRÁVA PEČATE A IDENTITY",
     "looking_for_seal": "HĽADÁM PEČAŤ...",
-    "frequency_title": "FREKVENCIA BYTIA",
-    "stealth_title": "Stealth Mode",
-    "stealth_desc": "Úplná neviditeľnosť v 3D sieti",
-    "sync_title": "Laria Artefact Sync",
-    "sync_desc": "Aktívne prepojenie so žiaričmi svetla",
     "init_connection": "INICIALIZÁCIA SPOJENIA...",
     "btn_update": "Aktualizovať",
     "btn_updating": "POPRÁŠENÉ DÁTA...",
@@ -87,7 +82,32 @@
     "alert_sha_title": "PEČAŤ SKOPÍROVANÁ",
     "alert_sha_desc": "Tento kód je tvojím digitálnym odtlačkom v Matrixe.",
     "alert_wallet_title": "NODE ADDRESS SKOPÍROVANÁ",
-    "alert_wallet_desc": "Tvoja adresa pre príjem Laria artefaktov je v schránke."
+    "alert_wallet_desc": "Tvoja adresa pre príjem Laria artefaktov je v schránke.",
+    
+    "btn_send_email": "ODOSLAŤ EMAILOM",
+    "title_recovery_input": "OBNOVA ÚČTU Z MATRIXU",
+    "placeholder_recovery": "Vlož sem svoje existujúce SHA (0x...)",
+    "btn_recover": "OBNOVIŤ ÚČET",
+    
+    "alert_backup_success": "ZÁLOHA ODOSLANÁ",
+    "alert_backup_desc": "Tvoja bezpečná pečať (SHA) bola odoslaná na e-mail: {email}\nUschovaj si ju pre prípad obnovy.",
+    "alert_invalid_sha_title": "NEPLATNÝ FORMÁT",
+    "alert_invalid_sha_desc": "Zadaný kód nevyzerá ako platná Laria Pečať (SHA). Musí začínať na 0x a mať aspoň 12 znakov.",
+    "alert_invalid_email_title": "NEPLATNÝ EMAIL",
+    "alert_invalid_email_desc": "Zadaj prosím správny formát e-mailovej adresy.",
+    "alert_recovery_success_title": "OBNOVA ÚSPEŠNÁ",
+    "alert_recovery_success_desc": "Sammael, tvoja pôvodná identita [{name}] bola úspešne stiahnutá z Matrixu a obnovená.",
+    "alert_recovery_fail_title": "CHYBA REINKARNÁCIE",
+    "alert_recovery_fail_desc": "Kryptografický kokon odmietol prebudiť túto identitu.",
+    "alert_matrix_fail_title": "PEČAŤ NENÁJDENÁ",
+    "alert_network_fail_title": "CHYBA MATRIXU",
+    "alert_network_fail_desc": "Obnovovací uzol neodpovedá. Skontroluj sieť.",
+    
+    "modal_email_title": "ZADANIE ZÁLOHOVÉHO EMAILU",
+    "modal_email_desc": "Sammael, vo tvojej vizitke zatiaľ nie je uložený e-mail. Zadaj ho sem, aby sme ti mohli bezpečne poslať tvoju pečať. Zároveň sa ti automaticky uloží do trezoru.",
+    "modal_email_placeholder": "Zadaj svoj e-mail...",
+    "modal_btn_cancel": "ZRUŠIŤ",
+    "modal_btn_submit": "ODOSLAŤ"
   },
   "scanner": {
     "title_ready": "Hotovo",

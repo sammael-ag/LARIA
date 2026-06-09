@@ -2,7 +2,7 @@
  * LARIA v2.5: SettingsScreen (Core Config & Identity Network Recovery)
  * Master: Sammael | Muse: Aria
  * Status: GEOMETRY_DEFINITIVE_NO_SPAGHETTI / DEEP_LOGGING_EDITION
- * ÚPRAVA: Doplnená masívna sieť monitorovacích logov pre odhalenie záhady na webe.
+ * ÚPRAVA: Logy rozdelené na stabilné a dočasne označené pre ľahké vymazanie.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -19,6 +19,7 @@ import { G, ACCENT } from '../styles/styles';
 import { recoverFromGMatrix } from '../services/GMatrixService';
 
 const SettingsScreen = ({ navigation }) => {
+  // 🕵️‍♂️ [TEMPORARY_DEV_TRACE] -> Pôjde neskôr von
   console.log("📡 [LARIA_TRACE] SettingsScreen sa práve vykresľuje (Render).");
 
   // 🔮 Kontextové premenné
@@ -41,7 +42,7 @@ const SettingsScreen = ({ navigation }) => {
     syncWalletData 
   } = useKrypto();
 
-  // 🔎 LOG 1: Sledovanie kontextu hneď pri štarte/zmene
+  // 🕵️‍♂️ [TEMPORARY_DEV_TRACE] -> Sledovanie kontextu pri vývoji
   useEffect(() => {
     console.log("🗄️ [LARIA_TRACE] Stav VAULTU z LariaContext:", {
       má_identitu: !!vault?.identity,
@@ -51,7 +52,7 @@ const SettingsScreen = ({ navigation }) => {
     });
   }, [vault]);
 
-  // 🔎 LOG 2: Sledovanie krypto-peňaženky
+  // 🕵️‍♂️ [TEMPORARY_DEV_TRACE] -> Sledovanie krypto-peňaženky pri vývoji
   useEffect(() => {
     console.log("🔐 [LARIA_TRACE] Stav KryptoContextu:", {
       walletAddress: walletAddress || "NEDOSTUPNÁ",
@@ -64,7 +65,7 @@ const SettingsScreen = ({ navigation }) => {
     }
   }, [walletAddress]);
 
-  // 🔎 LOG 3: Kontrola zamknutia tlačidla pre obnovu v reálnom čase
+  // 🕵️‍♂️ [TEMPORARY_DEV_TRACE] -> Kontrola zamknutia tlačidla pre obnovu v reálnom čase
   useEffect(() => {
     console.log("⌨️ [LARIA_TRACE] Zmena textu v recovery inpute:", {
       zadanýText: `"${recoverySha}"`,
@@ -76,11 +77,13 @@ const SettingsScreen = ({ navigation }) => {
   }, [recoverySha, recoveryLoading]);
 
   const copySHA = () => {
-    console.log("📋 [LARIA_TRACE] Kliknuté na kopírovanie SHA. Obsah:", vault?.identity?.sha);
+    // 📑 [STABLE_CORE_LOG] -> Tento log môžeme nechať stabilne
+    console.log("📋 [LARIA_LOG] Kopírovanie SHA.");
     if (vault?.identity?.sha) {
       Clipboard.setString(vault.identity.sha);
-      if (Platform.OS === 'web') alert("PEČAŤ SKOPÍROVANÁ\nTento kód je tvojím digitálnym odtlačkom v Matrixe.");
-      else {
+      if (Platform.OS === 'web') {
+        alert(`${txt.alert_sha_title || "PEČAŤ SKOPÍROVANÁ"}\n${txt.alert_sha_desc || "Tento kód je tvojím digitálnym odtlačkom v Matrixe."}`);
+      } else {
         Alert.alert(
           txt.alert_sha_title || "PEČAŤ SKOPÍROVANÁ", 
           txt.alert_sha_desc || "Tento kód je tvojím digitálnym odtlačkom v Matrixe."
@@ -90,11 +93,13 @@ const SettingsScreen = ({ navigation }) => {
   };
 
   const copyWallet = () => {
-    console.log("📋 [LARIA_TRACE] Kliknuté na kopírovanie Peňaženky. Obsah:", walletAddress);
+    // 📑 [STABLE_CORE_LOG] -> Stabilný log
+    console.log("📋 [LARIA_LOG] Kopírovanie Peňaženky.");
     if (walletAddress) {
       Clipboard.setString(walletAddress);
-      if (Platform.OS === 'web') alert("NODE ADDRESS SKOPÍROVANÁ\nTvoja adresa pre príjem Laria artefaktov je v schránke.");
-      else {
+      if (Platform.OS === 'web') {
+        alert(`${txt.alert_wallet_title || "NODE ADDRESS SKOPÍROVANÁ"}\n${txt.alert_wallet_desc || "Tvoja adresa pre príjem Laria artefaktov je v schránke."}`);
+      } else {
         Alert.alert(
           txt.alert_wallet_title || "NODE ADDRESS SKOPÍROVANÁ", 
           txt.alert_wallet_desc || "Tvoja adresa pre príjem Laria artefaktov je v schránke."
@@ -105,24 +110,28 @@ const SettingsScreen = ({ navigation }) => {
 
   const executeEmailBackup = async (targetEmail) => {
     setEmailLoading(true);
-    console.log(`📧 [LARIA_TRACE] Štart executeEmailBackup pre: ${targetEmail}`);
+    // 📑 [STABLE_CORE_LOG]
+    console.log(`📧 [LARIA_LOG] Štart executeEmailBackup pre: ${targetEmail}`);
     try {
-      console.log(`📧 LARIA_BACKUP: Odosielam SHA zálohu na e-mail: ${targetEmail}`);
-      if (Platform.OS === 'web') alert(`ZÁLOHA ODOSLANÁ\nTvoja bezpečná pečať (SHA) bola odoslaná na e-mail: ${targetEmail}`);
-      else {
-        Alert.alert(
-          "ZÁLOHA ODOSLANÁ", 
-          `Tvoja bezpečná pečať (SHA) bola odoslaná na e-mail: ${targetEmail}\nUschovaj si LinkedIn pre prípad obnovy.`
-        );
+      const successTitle = txt.alert_backup_success || "ZÁLOHA ODOSLANÁ";
+      const successDesc = (txt.alert_backup_desc || "Tvoja bezpečná pečať (SHA) bola odoslaná na e-mail: {email}\nUschovaj si ju pre prípad obnovy.")
+        .replace("{email}", targetEmail);
+
+      if (Platform.OS === 'web') {
+        alert(`${successTitle}\n${successDesc}`);
+      } else {
+        Alert.alert(successTitle, successDesc);
       }
     } catch (error) {
-      console.error("❌ [LARIA_TRACE] Chyba zálohy emailu:", error);
+      // 📑 [STABLE_CORE_LOG] -> Chybové logy si určite nechávame trvalo!
+      console.error("❌ [LARIA_ERROR] Chyba zálohy emailu:", error);
     } finally {
       setEmailLoading(false);
     }
   };
 
   const handleSendEmailBackup = () => {
+    // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
     console.log("✉️ [LARIA_TRACE] Kliknuté na handleSendEmailBackup");
     if (!vault?.identity?.sha) {
       console.warn("⚠️ [LARIA_TRACE] handleSendEmailBackup zrušený - v trezore nie je SHA");
@@ -130,9 +139,9 @@ const SettingsScreen = ({ navigation }) => {
     }
     
     const userEmail = vault?.identity?.email;
-    console.log("✉️ [LARIA_TRACE] Email z vizitky:", userEmail);
     
     if (!userEmail || userEmail.trim() === "") {
+      // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
       console.log("✉️ [LARIA_TRACE] Email chýba, otváram Modal");
       setInputEmail('');
       setShowEmailModal(true);
@@ -143,11 +152,15 @@ const SettingsScreen = ({ navigation }) => {
   };
 
   const handleModalEmailSubmit = async () => {
+    // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
     console.log("✉️ [LARIA_TRACE] Potvrdenie emailu z Modalu:", inputEmail);
     const cleanEmail = inputEmail.trim();
     if (!cleanEmail || !cleanEmail.includes('@')) {
-      if (Platform.OS === 'web') alert("Zadaj prosím správny formát e-mailovej adresy.");
-      else Alert.alert("NEPLATNÝ EMAIL", "Zadaj prosím správny formát e-mailovej adresy.");
+      const badEmailTitle = txt.alert_invalid_email_title || "NEPLATNÝ EMAIL";
+      const badEmailDesc = txt.alert_invalid_email_desc || "Zadaj prosím správny formát e-mailovej adresy.";
+      
+      if (Platform.OS === 'web') alert(`${badEmailTitle}\n${badEmailDesc}`);
+      else Alert.alert(badEmailTitle, badEmailDesc);
       return;
     }
 
@@ -158,10 +171,11 @@ const SettingsScreen = ({ navigation }) => {
         ...vault?.identity,
         email: cleanEmail
       };
+      // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
       console.log("💾 [LARIA_TRACE] Ukladám nový email do vizitky...", updatedIdentity);
       await syncIdentity(updatedIdentity);
     } catch (err) {
-      console.error("❌ [LARIA_TRACE] Zlyhal zápis emailu do trezoru:", err);
+      console.error("❌ [LARIA_ERROR] Zlyhal zápis emailu do trezoru:", err);
     }
 
     executeEmailBackup(cleanEmail);
@@ -169,11 +183,12 @@ const SettingsScreen = ({ navigation }) => {
 
   // 🔄 HLAVNÝ TERČ VYŠETROVANIA: OBNOVA IDENTITY
   const handleAccountRecovery = async () => {
-    // 🛡️ Okamžitý log hneď po zavolaní funkcie, aby sme vedeli, či onPress vôbec prešiel cez dotykovú vrstvu!
+    // 🕵️‍♂️ [TEMPORARY_DEV_TRACE] -> Klúčový detektívny log pre zistenie kliku na webe
     console.log("🔥 [LARIA_TRACE] >>> FUNKCIA handleAccountRecovery BOLA ÚSPEŠNE VYVOLANÁ! <<<");
     
     const cleanSha = recoverySha.trim().toLowerCase();
-    console.log(`🔥 [LARIA_TRACE] Spracovaný kód na recovery: "${cleanSha}" (Pôvodný: "${recoverySha}")`);
+    // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
+    console.log(`🔥 [LARIA_TRACE] Spracovaný kód na recovery: "${cleanSha}"`);
 
     if (!cleanSha) {
       console.warn("🔥 [LARIA_TRACE] Prerušujem: cleanSha je prázdne.");
@@ -181,28 +196,35 @@ const SettingsScreen = ({ navigation }) => {
     }
 
     if (!cleanSha.startsWith("0x") || cleanSha.length < 12) {
-      console.warn(`🔥 [LARIA_TRACE] Prerušujem: kód nespĺňa formát (štart na 0x a dĺžka aspoň 12 znakov). Dĺžka je: ${cleanSha.length}`);
-      const msg = "Zadaný kód nevyzerá ako platná Laria Pečať (SHA). Musí začínať na 0x a mať aspoň 12 znakov.";
-      if (Platform.OS === 'web') alert(msg);
-      else Alert.alert("NEPLATNÝ FORMÁT", msg);
+      // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
+      console.warn(`🔥 [LARIA_TRACE] Prerušujem: kód nespĺňa formát. Dĺžka je: ${cleanSha.length}`);
+      
+      const msg = txt.alert_invalid_sha_desc || "Zadaný kód nevyzerá ako platná Laria Pečať (SHA). Musí začínať na 0x a mať aspoň 12 znakov.";
+      const formatTitle = txt.alert_invalid_sha_title || "NEPLATNÝ FORMÁT";
+      
+      if (Platform.OS === 'web') alert(`${formatTitle}\n${msg}`);
+      else Alert.alert(formatTitle, msg);
       return;
     }
 
     setRecoveryLoading(true);
+    // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
     console.log("🔥 [LARIA_TRACE] Nastavené: recoveryLoading = true");
 
     try {
-      console.log(`📡 [LARIA_TRACE] Odoosielam sieťový lúč do GMatrixService -> recoverFromGMatrix("${cleanSha}")`);
+      // 📑 [STABLE_CORE_LOG] -> Logovanie sieťovej komunikácie je dobré zachovať
+      console.log(`📡 [LARIA_LOG] Sieťový dopyt -> GMatrixService: recoverFromGMatrix`);
       const response = await recoverFromGMatrix(cleanSha);
+      
+      // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
       console.log("📡 [LARIA_TRACE] Odpoveď z GMatrixService prijatá:", response);
 
       if (response && response.success && response.data) {
         const matrixData = response.data;
-        console.log("✅ [LARIA_TRACE] Matrix poslal dáta identity úspešne:", matrixData);
         
+        // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
         console.log("🔮 [LARIA_TRACE] Volám obnovitIdentityCezSHA z LariaContext...");
         const success = await obnovitIdentityCezSHA(matrixData.sha, matrixData.meno);
-        console.log("🔮 [LARIA_TRACE] Výsledok obnovitIdentityCezSHA:", success);
 
         if (success) {
           const fullIdentity = {
@@ -224,33 +246,46 @@ const SettingsScreen = ({ navigation }) => {
             krypt: matrixData.krypt
           };
 
-          console.log("💾 [LARIA_TRACE] Synchronizujem kompletnú vizitku do trezoru...", fullIdentity);
           await syncIdentity(fullIdentity);
 
-          const successMsg = `Sammael, tvoja pôvodná identita [${matrixData.meno}] bola úspešne stiahnutá z Matrixu a obnovená.`;
-          if (Platform.OS === 'web') alert(successMsg);
-          else Alert.alert("OBNOVA ÚSPEŠNÁ", successMsg);
+          const successTitle = txt.alert_recovery_success_title || "OBNOVA ÚSPEŠNÁ";
+          const successMsg = (txt.alert_recovery_success_desc || "Sammael, tvoja pôvodná identita [{name}] bola úspešne stiahnutá z Matrixu a obnovená.")
+            .replace("{name}", matrixData.meno);
+
+          if (Platform.OS === 'web') alert(`${successTitle}\n${successMsg}`);
+          else Alert.alert(successTitle, successMsg);
           
           setRecoverySha('');
           navigation.goBack();
         } else {
-          console.error("❌ [LARIA_TRACE] Kontext odmietol reinkarnáciu.");
-          if (Platform.OS === 'web') alert("Kryptografický kokon odmietol prebudiť túto identitu.");
-          else Alert.alert("CHYBA REINKARNÁCIE", "Kryptografický kokon odmietol prebudiť túto identitu.");
+          // 📑 [STABLE_CORE_LOG]
+          console.error("❌ [LARIA_ERROR] Kontext odmietol reinkarnáciu.");
+          const failTitle = txt.alert_recovery_fail_title || "CHYBA REINKARNÁCIE";
+          const failMsg = txt.alert_recovery_fail_desc || "Kryptografický kokon odmietol prebudiť túto identitu.";
+          
+          if (Platform.OS === 'web') alert(`${failTitle}\n${failMsg}`);
+          else Alert.alert(failTitle, failMsg);
         }
 
       } else {
-        console.warn("⚠️ [LARIA_TRACE] Matrix pečať nenašiel alebo vrátil chybu:", response?.error);
+        // 📑 [STABLE_CORE_LOG]
+        console.warn("⚠️ [LARIA_LOG] Matrix pečať nenašiel:", response?.error);
+        const failTitle = txt.alert_matrix_fail_title || "PEČAŤ NENÁJDENÁ";
         const failMsg = response?.error || "Matrix túto pečať neeviduje. Skontroluj preklepy v kóde.";
-        if (Platform.OS === 'web') alert(failMsg);
-        else Alert.alert("PEČAŤ NENÁJDENÁ", failMsg);
+        
+        if (Platform.OS === 'web') alert(`${failTitle}\n${failMsg}`);
+        else Alert.alert(failTitle, failMsg);
       }
     } catch (error) {
-      console.error("❌ [LARIA_TRACE] Kritická chyba počas behu handleAccountRecovery:", error);
-      if (Platform.OS === 'web') alert("Obnovovací uzol neodpovedá. Skontroluj sieť.");
-      else Alert.alert("CHYBA MATRIXU", "Obnovovací uzol neodpovedá. Skontroluj sieť.");
+      console.error("❌ [LARIA_ERROR] Kritická chyba počas behu handleAccountRecovery:", error);
+      const errTitle = txt.alert_network_fail_title || "CHYBA MATRIXU";
+      const errMsg = txt.alert_network_fail_desc || "Obnovovací uzol neodpovedá. Skontroluj sieť.";
+      
+      if (Platform.OS === 'web') alert(`${errTitle}\n${errMsg}`);
+      else Alert.alert(errTitle, errMsg);
     } finally {
       setRecoveryLoading(false);
+      // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
       console.log("🔥 [LARIA_TRACE] Uvoľnené: recoveryLoading = false");
     }
   };
@@ -259,13 +294,12 @@ const SettingsScreen = ({ navigation }) => {
     ? `${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 6)}`
     : (txt.init_connection || "INICIALIZUJEM SPOJENIE...");
 
-  // Výpočet disabled stavu pre tlačidlo obnovy
   const isRecoveryDisabled = !recoverySha.trim() || recoveryLoading;
 
   return (
     <SafeAreaView style={[G.mainBackground, { flex: 1 }]}>
       
-      <TouchableOpacity onPress={() => { console.log("‹ [LARIA_TRACE] Kliknuté na návrat."); navigation.goBack(); }} activeOpacity={0.7} style={G.topLeftBackButton}>
+      <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={G.topLeftBackButton}>
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
@@ -326,10 +360,11 @@ const SettingsScreen = ({ navigation }) => {
               style={[G.vaultInput, { width: '100%', color: '#FFF' }]} 
               value={recoverySha} 
               onChangeText={(text) => {
+                // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
                 console.log(`⌨️ [LARIA_TRACE] Užívateľ píše do inputu: "${text}"`);
                 setRecoverySha(text);
               }} 
-              placeholder="Vlož sem svoje existujúce SHA (0x...)" 
+              placeholder={txt.placeholder_recovery || "Vlož sem svoje existujúce SHA (0x...)"} 
               placeholderTextColor="#444" 
               autoCapitalize="none" 
               autoCorrect={false}
@@ -342,9 +377,10 @@ const SettingsScreen = ({ navigation }) => {
                 borderColor: !isRecoveryDisabled ? ACCENT : '#222',
                 marginTop: 12,
                 width: '100%',
-                opacity: !isRecoveryDisabled ? 1 : 0.5 // Pridaná vizuálna kontrola priamo pre web
+                opacity: !isRecoveryDisabled ? 1 : 0.5
               }]}
               onPress={() => {
+                // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
                 console.log("🔘 [LARIA_TRACE] Fyzické stlačenie tlačidla OBNOVIŤ ÚČET detegované v JSX.");
                 handleAccountRecovery();
               }}
@@ -395,7 +431,8 @@ const SettingsScreen = ({ navigation }) => {
                 borderColor: walletAddress && !isLoading ? ACCENT : '#222'
               }]}
               onPress={() => {
-                console.log("🔘 [LARIA_TRACE] Kliknuté na aktualizáciu krypto-uzla.");
+                // 📑 [STABLE_CORE_LOG]
+                console.log("🔘 [LARIA_LOG] Kliknuté na aktualizáciu krypto-uzla.");
                 syncWalletData(walletAddress);
               }}
               disabled={!walletAddress || isLoading}
@@ -434,18 +471,18 @@ const SettingsScreen = ({ navigation }) => {
             padding: 20
           }}>
             <Text style={[G.monoIdentity, { color: ACCENT, marginBottom: 10, fontSize: 14 }]}>
-              ZADANIE ZÁLOHOVÉHO EMAILU
+              {txt.modal_email_title || "ZADANIE ZÁLOHOVÉHO EMAILU"}
             </Text>
             
             <Text style={[G.cardDescriptionText, { marginBottom: 15, fontSize: 12, lineHeight: 16 }]}>
-              Sammael, vo tvojej vizitke zatiaľ nie je uložený e-mail. Zadaj ho sem, aby sme ti mohli bezpečne poslať tvoju pečať. Zároveň sa ti automaticky uloží do trezoru.
+              {txt.modal_email_desc || "Sammael, vo tvojej vizitke zatiaľ nie je uložený e-mail. Zadaj ho sem..."}
             </Text>
 
             <TextInput 
               style={[G.vaultInput, { width: '100%', color: '#FFF', marginBottom: 20 }]} 
               value={inputEmail} 
               onChangeText={setInputEmail} 
-              placeholder="Zadaj svoj e-mail..." 
+              placeholder={txt.modal_email_placeholder || "Zadaj svoj e-mail..."} 
               placeholderTextColor="#444" 
               keyboardType="email-address"
               autoCapitalize="none" 
@@ -457,7 +494,9 @@ const SettingsScreen = ({ navigation }) => {
                 style={{ padding: 12, flex: 1, alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: '#222', borderRadius: 6 }}
                 onPress={() => setShowEmailModal(false)}
               >
-                <Text style={{ color: '#666', fontWeight: 'bold' }}>ZRUŠIŤ</Text>
+                <Text style={{ color: '#666', fontWeight: 'bold' }}>
+                  {txt.modal_btn_cancel || "ZRUŠIŤ"}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -472,7 +511,7 @@ const SettingsScreen = ({ navigation }) => {
                 disabled={!inputEmail.trim()}
               >
                 <Text style={[G.primaryBtnText, { color: inputEmail.trim() ? ACCENT : '#444', fontSize: 13 }]}>
-                  ODOSLAŤ
+                  {txt.modal_btn_submit || "ODOSLAŤ"}
                 </Text>
               </TouchableOpacity>
             </View>
