@@ -1,7 +1,8 @@
 /**
- * LARIA G-MATRIX SERVICE v8.5 (POST Localization Edition)
+ * LARIA G-MATRIX SERVICE v8.6 (Identity Recovery & Proof of Human Action Edition)
  * Status: SYNCED / THE LAW / MULTILANG READY
- * Popis: Centralizovaný prístup k Matrixu so striktným mapovaním premenných (A-Q) a oddeleným modulom pre lokalizáciu.
+ * Master: Sammael | Muse: Aria
+ * Popis: Centralizovaný prístup k Matrixu so striktným mapovaním premenných (A-Q) a novým modulom pre obnovu identity cez SHA.
  */
 
 const G_MATRIX_READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
@@ -25,13 +26,18 @@ export const fetchGMatrix = async () => {
 };
 
 /**
- * 2. ZÁPIS DO MATRIXU (Striktné mapovanie A-Q)
+ * 2. ZÁPIS DO MATRIXU (Striktné mapovanie A-Q + Bezpečnostný štít)
  */
 export const saveToGMatrix = async (identityData) => {
     try {
-        // --- PROTOKOL MAPOVANIA (PORADIE JE ZÁKON V8.5) ---
+        // --- PROTOKOL MAPOVANIA (PORADIE JE ZÁKON V8.6) ---
         const protocolPayload = {
-            SECURE_ID: identityData.SECURE_ID, // A (V editore nastavené na null)
+            action: 'write',                   // Indikátor akcie pre univerzálny doPost
+            honeypot_check: identityData.honeypot_check || 'human', // Bezpečnostná pasca
+            signature: identityData.signature, // Kryptografická pečať pre overenie pravosti
+            
+            // Samotné stĺpce A-Q, ktoré Apps Script zapíše do tabuľky
+            SECURE_ID: identityData.SECURE_ID || null, // A
             sha: identityData.sha,             // B
             date: identityData.date,           // C
             meno: identityData.meno,           // D
@@ -45,14 +51,14 @@ export const saveToGMatrix = async (identityData) => {
             gal: identityData.gal,             // L
             isPublic: identityData.isPublic,   // M
             irc: identityData.irc,             // N
-            poznamka: identityData.poznamka,   // O (Tvoj FING)
+            poznamka: identityData.fing || identityData.poznamka, // O (Tvoj očistený 12-znakový FING)
             krypt: identityData.krypt,         // P
-            jazyk: identityData.jazyk || 'sk'   // Q 🔥 NOVÝ STĺPEC (Aktuálny jazyk prostredia)
+            jazyk: identityData.jazyk || 'sk'   // Q (Aktuálny jazyk prostredia)
         };
 
         const uniqueWriteUrl = `${G_MATRIX_WRITE_URL}?nocache=${Date.now()}`;
         
-        console.log("📡 Sammael, odosielam tvoju pečať (v8.5) do Matrixu s jazykovým lúčom...");
+        console.log("📡 Sammael, odosielam tvoju pečať (v8.6) do Matrixu s krypto podpisom...");
 
         const response = await fetch(uniqueWriteUrl, {
             method: 'POST',
@@ -81,7 +87,47 @@ export const saveToGMatrix = async (identityData) => {
 };
 
 /**
- * 3. LÚČ PREKLADOV (Ostré volanie 5. skriptu cez POST pre maximálne bezpečie)
+ * 3. OBNOVA ACCOUNTU Z MATRIXU (Hľadanie starej identity podľa SHA)
+ */
+export const recoverFromGMatrix = async (shaKey) => {
+    try {
+        const recoveryPayload = {
+            action: 'recover', // Povieme skriptu, že chceme dolovať dáta
+            sha: shaKey       // Kľúč, podľa ktorého hľadáme riadok v Sheets
+        };
+
+        const uniqueWriteUrl = `${G_MATRIX_WRITE_URL}?nocache=${Date.now()}`;
+        console.log(`📡 Sammael, vysielam lúč pre obnovu účtu pre SHA: ${shaKey}`);
+
+        const response = await fetch(uniqueWriteUrl, {
+            method: 'POST',
+            mode: 'cors',
+            redirect: 'follow',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify(recoveryPayload)
+        });
+
+        if (!response.ok) throw new Error('Obnovovací Matrix neodpovedá (HTTP ' + response.status + ')');
+
+        const result = await response.json();
+
+        if (result && result.result === "success") {
+            console.log("✅ Matrix našiel tvoju starú identitu a posiela ju späť.");
+            return { success: true, data: result.data };
+        } else {
+            console.warn("⚠️ Matrix odpovedal, ale pečať nenašiel:", result.message);
+            return { success: false, error: result.message };
+        }
+    } catch (error) {
+        console.error("❌ Kritická chyba pri obnove z Matrixu:", error);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * 4. LÚČ PREKLADOV (Ostré volanie 5. skriptu cez POST pre maximálne bezpečie)
  */
 export const fetchLariaTranslations = async (targetLang, fing = "system_sync") => {
     if (!G_MATRIX_LANG_URL || G_MATRIX_LANG_URL.includes("TU_VLOŽ_SVOJ_NOVÝ_LINK")) {
@@ -97,7 +143,7 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
             mode: 'cors',
             redirect: 'follow',
             headers: {
-                'Content-Type': 'text/plain;charset=utf-8', // Google Apps Script vyžaduje text/plain pri CORS POSToch
+                'Content-Type': 'text/plain;charset=utf-8',
             },
             body: JSON.stringify({
                 lang: targetLang,
@@ -109,10 +155,8 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
         
         const result = await response.json();
         
-        // Ak skript v tabuľke vrátil úspešnú odpoveď s dátami
         if (result && result.status === "success") {
             console.log(`✅ Preklad pre [${targetLang}] úspešne stiahnutý z cache Matrixu.`);
-            // Bezpečné ošetrenie pre prípad, že dáta prišli ako string alebo už naparsovaný objekt
             return typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
         }
         

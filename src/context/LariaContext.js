@@ -1,8 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Platform } from 'react-native';
-// ❌ ODSTRÁNENÝ NATVRDO IMPORT - Bránil kompilácii na webe a v Expo
-import * as Application from 'expo-application';
-import * as Device from 'expo-device'; 
 import { ethers } from 'ethers';
 import { runLariaProtocol, saveToVault, loadFromVault, generatePureSHA } from '../services/LariaLogic.js';
 import { useKrypto } from './KryptoContext.js';
@@ -21,7 +18,7 @@ export const LariaProvider = ({ children }) => {
     lariaContractAddress 
   } = useKrypto();
 
-// --- 📍 TEKUTÉ JAZYKOVÉ JADRO (Liquid Localization) ---
+  // --- 📍 TEKUTÉ JAZYKOVÉ JADRO (Liquid Localization) ---
   const [lang, setLang] = useState('sk'); 
   
   const [dictionary, setDictionary] = useState({
@@ -106,7 +103,7 @@ export const LariaProvider = ({ children }) => {
     }
   };
 
-  // --- 1. INICIALIZÁCIA MATRIXU ---
+  // --- 1. INICIALIZÁCIA MATRIXU (Čistá kryptografická identita) ---
   useEffect(() => {
     const initializeVault = async () => {
       try {
@@ -120,38 +117,29 @@ export const LariaProvider = ({ children }) => {
         } else {
           aktivnyJazyk = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
           setLang(aktivnyJazyk);
-          console.log(`🌲 JAZYKOVÉ JADRO: Žiadny uložený jazyk, štartujem na automatike systému: [${aktivnyJazyk}]`);
+          console.log(`🌲 JAZYKOVÉ JADRO: Štartujem na automatike systému: [${aktivnyJazyk}]`);
         }
 
-        // --- 🤖 MULTIDIMENZIONÁLNA IDENTIFIKÁCIA ZARIADENIA ---
-        let rawDeviceId;
-        if (Platform.OS === 'android') {
-          rawDeviceId = Application.androidId || Device.osBuildId || "S_DEVICE_A";
-        } else if (Platform.OS === 'ios') {
-          rawDeviceId = await Application.getIosIdForVendorAsync();
+        let currentSha;
+        let currentFing;
+
+        // Kontrola, či už v trezore máme vygenerovanú alebo obnovenú identitu
+        if (savedIdentity && savedIdentity.sha) {
+          currentSha = savedIdentity.sha;
+          currentFing = savedIdentity.poznamka || currentSha.substring(0, 12);
+          console.log(`🛡️ KRYPTOGRAFICKÝ KOKON: Identita stabilne načítaná. FING: [${currentFing}]`);
         } else {
-          // 🦀 NASTUPUJE DYNAMICKÝ TAURI MOST PRE LUBUNTU
-          // Ak sme v Tauri, vytiahneme invoke bezpečne za behu cez window objekt
-          if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
-            try {
-              // Dynamický import obíde reštrikcie bundlera pri kompilácii
-              const { invoke } = await import('@tauri-apps/api/core');
-              const tauriId = await invoke('inicializuj_crystal_core');
-              rawDeviceId = `LINUX-TAURI-${tauriId}`;
-              console.log("🌲 CRYSTAL_CORE_SUCCESS: Natívne ID úspešne vtiahnuté z Rustu cez dynamický most!");
-            } catch (tauriError) {
-              rawDeviceId = `LINUX-TAURI-FAILED-${Device.osBuildId || 'SAM-CORE'}`;
-              console.log("⚠️ CRYSTAL_CORE_ERROR: Zlyhal dynamický invoke v Tauri.");
-            }
-          } else {
-            // Sme na klasickom webe alebo v externom prehliadači
-            rawDeviceId = `LINUX-WEB-${Device.deviceName || 'HP-LAPTOP'}-${Device.osBuildId || 'SAM-CORE'}`;
-            console.log("🌐 CRYSTAL_CORE_FALLBACK: Sme mimo Tauri, spustená webová automatika.");
-          }
+          // Ak sme čistí a nemáme identitu (prvé spustenie v prehliadači / PWA)
+          // Vygenerujeme bezpečnú, náhodnú kryptografickú soľ (salt) priamo cez ethers
+          const randomSalt = ethers.hexlify(ethers.randomBytes(32)); 
+          const defaultMeno = savedIdentity?.meno || "Sammael";
+          
+          // Zomelieme meno s jedinečným saltom do nemenného SHA
+          currentSha = generatePureSHA(randomSalt, defaultMeno);
+          currentFing = currentSha ? currentSha.substring(0, 12) : "000000000000";
+          
+          console.log(`✨ KRYPTOGRAFICKÝ KOKON: Zrod úplne novej identity na webe. FING: [${currentFing}]`);
         }
-
-        const currentSha = generatePureSHA(rawDeviceId, savedIdentity?.meno || "Sammael");
-        const currentFing = currentSha ? currentSha.substring(0, 12) : "000000000000";
 
         // --- 🔥 ASYNCHRÓNNY CYKLUS AUTOMATIZÁCIE JAZYKOV ---
         if (aktivnyJazyk !== 'sk') {
@@ -163,9 +151,7 @@ export const LariaProvider = ({ children }) => {
               ...prev,
               [aktivnyJazyk]: externyPrekladJSON
             }));
-            console.log(`✅ JAZYKOVÉ JADRO: Prekladový slovník [${aktivnyJazyk}] bol úspešne načítaný z cache!`);
-          } else {
-            console.log(`⚠️ JAZYKOVÉ JADRO: Preklad pre [${aktivnyJazyk}] nebol v cache. Skript v tabuľke na pozadí prebúdza AI...`);
+            console.log(`✅ JAZYKOVÉ JADRO: Prekladový slovník [${aktivnyJazyk}] bol úspešne načítanud z cache!`);
           }
         }
 
@@ -201,7 +187,7 @@ export const LariaProvider = ({ children }) => {
     initializeVault();
   }, []);
 
-  // --- 2. REINKARNÁCIA ---
+  // --- 2. REINKARNÁCIA (Obnova peňaženky cez privátny kľúč) ---
   const reinkarnaciaIdentity = async (oldPrivateKey) => {
     const recovered = recoverWalletFromKey(oldPrivateKey);
     if (recovered) {
@@ -212,7 +198,40 @@ export const LariaProvider = ({ children }) => {
     return false;
   };
 
-  // --- 3. ZROD IDENTITY ---
+  // --- 3. 🔮 KVANTOVÁ REINKARNÁCIA CEZ SHA (Obnova účtu pre GSheets/FING) ---
+  const obnovitIdentityCezSHA = async (zadaneSha, zadaneMeno = "Sammael") => {
+    try {
+      if (!zadaneSha || zadaneSha.length < 12) {
+        console.error("⚠️ REINKARNÁCIA_FAIL: Neplatný SHA kľúč!");
+        return false;
+      }
+
+      const novyFing = zadaneSha.substring(0, 12);
+      console.log(`🔮 PREBÚDZAM IDENTITU: Manuálna reinkarnácia pre FING [${novyFing}]...`);
+
+      const obnovenaIdentita = {
+        ...vault.identity,
+        meno: zadaneMeno,
+        sha: zadaneSha,
+        poznamka: novyFing,
+        SECURE_ID: null
+      };
+
+      const newStatus = runLariaProtocol(obnovenaIdentita, false);
+      setVault({ status: newStatus, identity: obnovenaIdentita });
+      
+      // Zapíšeme natvrdo do trezoru, prehliadač si to odteraz pamätá navždy
+      await saveToVault('identity', obnovenaIdentita);
+      
+      console.log(`✅ REINKARNÁCIA_SUCCESS: Identita úspešne prebudená pre FING [${novyFing}]!`);
+      return true;
+    } catch (error) {
+      console.error("❌ REINKARNÁCIA_ERROR:", error);
+      return false;
+    }
+  };
+
+  // --- 4. ZROD IDENTITY (Automatická peňaženka) ---
   const ensureLariaIdentity = async () => {
     if (vault.identity.krypt) return vault.identity.krypt;
     const newWallet = await generateAutoWallet();
@@ -259,10 +278,9 @@ export const LariaProvider = ({ children }) => {
             type: 'SET_LANGUAGE',
             lang: novyJazyk
           });
-          console.log(`📡 MATRIX_SIGNAL: Jazykový lúč [${novyJazyk}] wystrelený do Service Workera.`);
+          console.log(`📡 MATRIX_SIGNAL: Jazykový lúč [${novyJazyk}] vystrelený do Service Workera.`);
         }
       }
-
       console.log(`🌟 JAZYKOVÉ JADRO: Jazyk [${novyJazyk}] bezpečne zakonzervovaný v trezore.`);
     } catch (error) {
       console.error("❌ JAZYKOVÉ JADRO_ERROR:", error);
@@ -290,6 +308,7 @@ export const LariaProvider = ({ children }) => {
       lockSeal, 
       ensureLariaIdentity, 
       reinkarnaciaIdentity,
+      obnovitIdentityCezSHA, // 🔮 Nová exportovaná funkcia pre tvoje UI na obnovu účtu
       lang,                  
       t,                     
       zmenJazykZaPochodu,     

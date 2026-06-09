@@ -1,8 +1,8 @@
 /**
- * LARIA v2.0: CardEditorScreen (Tesanie identity)
+ * LARIA v2.2: CardEditorScreen (Tesanie identity s Proof of Human Action)
  * Master: Sammael | Muse: Aria
- * Status: IDENTITY_FORGING_READY_DEFINITIVE
- * Oprava: Pridaný chýbajúci useState pre cardData a odstráňená duplicita CATEGORIES.
+ * Status: CRYPTO_FORGING_ACTIVE_DEFINITIVE
+ * Oprava: Pridaná validácia povinných polí (meno, kategória, lokalita) a nastavenie predvoleného vysielania na VEREJNÉ (default=true).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -15,15 +15,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { G, ACCENT } from '../styles/styles'; 
 import { saveToGMatrix } from '../services/GMatrixService'; 
 import { useLaria } from '../context/LariaContext';
+import { signLariaFing } from '../services/LariaLogic'; 
 
 const CardEditorScreen = ({ navigation }) => {
-  // 💎 Jazykový motor LARIE pre Tesanie identity
-  const { t, vault, syncIdentity, ensureLariaIdentity } = useLaria();
+  const { t, vault, syncIdentity, ensureLariaIdentity, generateAndSaveFirstSHA } = useLaria();
   const txt = t('card_editor') || {};
   const alerts = txt.alerts || {};
   const catTxt = txt.categories || {};
 
-  // Dynamické mapovanie kategórií priamo z JSON prekladov
   const TRANSLATED_CATEGORIES = [
     { id: 'obziva', label: catTxt.obziva || 'Obživa a poživatiny' },
     { id: 'remesla', label: catTxt.remesla || 'Remeslá a materiál' },
@@ -45,12 +44,12 @@ const CardEditorScreen = ({ navigation }) => {
     { id: 'ine', label: catTxt.ine || 'Iné' },
   ];
 
-  // 🛠️ OPRAVENÝ ZÁREZ: Inicializácia stavu cardData z LariaContext Vaultu
+  // 🛠️ INICIALIZÁCIA STAVU: Nastavené isPublic na default = true
   const [cardData, setCardData] = useState({
     sha: vault?.identity?.sha || '',
     date: vault?.identity?.date || new Date().toISOString(),
     meno: vault?.identity?.meno || '',
-    kat: vault?.identity?.kat || 'ine',
+    kat: vault?.identity?.kat || '', // Necháme prázdne pre striktnú kontrolu povinného poľa, ak ešte nevybral
     lok: vault?.identity?.lok || '',
     popis: vault?.identity?.popis || '',
     tel: vault?.identity?.tel || '',
@@ -58,7 +57,7 @@ const CardEditorScreen = ({ navigation }) => {
     fb: vault?.identity?.fb || '',
     tg: vault?.identity?.tg || '',
     gal: vault?.identity?.gal || '',
-    isPublic: vault?.identity?.isPublic || false,
+    isPublic: vault?.identity?.isPublic !== undefined ? vault.identity.isPublic : true, // 📢 DEFAULT = TRUE
     irc: vault?.identity?.irc || '',
     poznamka: vault?.identity?.poznamka || '',
     krypt: vault?.identity?.krypt || '',
@@ -66,49 +65,85 @@ const CardEditorScreen = ({ navigation }) => {
     kRod: vault?.identity?.kRod || ''
   });
 
+  const [honeypot, setHoneypot] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
-  // Ak sa dáta vo vaulte zmenia na pozadí, aktualizujeme formulár
   useEffect(() => {
     if (vault?.identity) {
-      setCardData(prev => ({
-        ...prev,
-        ...vault.identity
+      setCardData(prev => ({ 
+        ...prev, 
+        ...vault.identity,
+        // Ak v trezore ešte nie je uložená hodnota isPublic, podržíme default true
+        isPublic: vault.identity.isPublic !== undefined ? vault.identity.isPublic : true 
       }));
     }
   }, [vault?.identity]);
 
   const getCategoryLabel = (id) => {
     const cat = TRANSLATED_CATEGORIES.find(c => c.id === id);
-    return cat ? cat.label : (txt.select_category || 'Vyber kategóriu');
+    return cat ? cat.label : (txt.select_category || 'Vyber kategóriu *');
   };
 
   const handleSave = async () => {
-    if (!cardData.sha) {
-      Alert.alert(alerts.identity_error_title || "CHYBA IDENTITY", alerts.identity_error_desc || "Sammael, chýba tvoja pečať (SHA).");
+    if (honeypot.trim() !== '') {
+      console.log("🤖 LARIA_SECURITY: Bot uviazol v medovom hrnci. Akcia simulovaná.");
+      navigation.goBack();
+      return;
+    }
+
+    // 🛡️ STRIKTNÁ VALIDÁCIA POVINNÝCH POLÍ (Meno, Kategória, Lokalita)
+    if (!cardData.meno || cardData.meno.trim() === "") {
+      Alert.alert("CHYBA VSTUPU", "Sammael, pole MENO / NICK je povinné.");
+      return;
+    }
+    if (!cardData.kat || cardData.kat.trim() === "") {
+      Alert.alert("CHYBA VSTUPU", "Sammael, vyber prosím KATEGÓRIU tvojho pôsobenia.");
+      return;
+    }
+    if (!cardData.lok || cardData.lok.trim() === "") {
+      Alert.alert("CHYBA VSTUPU", "Sammael, pole LOKALITA je povinné pre zobrazenie na mape.");
       return;
     }
 
     setLoading(true);
     try {
-      const currentKrypt = await ensureLariaIdentity();
+      const currentKryptWallet = await ensureLariaIdentity(); 
+      const walletAddress = currentKryptWallet?.address || cardData.krypt;
+      const privateKey = currentKryptWallet?.key;
+
+      let activeSha = cardData.sha;
+
+      if (!activeSha) {
+        console.log("⚙️ LARIA_LOGIC: Prvý zrod identity! Melieme meno do posvätného SHA...");
+        const newIdentity = await generateAndSaveFirstSHA(cardData.meno.trim());
+        if (newIdentity && newIdentity.sha) {
+          activeSha = newIdentity.sha;
+        } else {
+          throw new Error("Nepodarilo sa vygenerovať SHA identitu.");
+        }
+      }
+
+      const fing = activeSha.substring(0, 12);
+      const cryptoSignature = await signLariaFing(privateKey, fing);
+
       const cleanPopis = cardData.popis ? cardData.popis.replace(/[\r\n\t]+/g, " ").trim() : "";
       const cleanTel = cardData.tel ? cardData.tel.toString().replace(/\s/g, '') : '';
 
-      const finalKrypt = currentKrypt || cardData.krypt;
-
       const localData = {
         ...cardData,
+        sha: activeSha,
         popis: cleanPopis,
         tel: cleanTel,
-        krypt: finalKrypt,
+        krypt: walletAddress,
         status: { ...vault?.status, isOnline: cardData.isPublic }
       };
 
       const matrixPayload = {
-        SECURE_ID: null,    
+        honeypot_check: "human", 
         sha: localData.sha, 
+        fing: fing,             
+        signature: cryptoSignature, 
         date: localData.date,
         meno: localData.meno,
         kat: localData.kat,  
@@ -126,7 +161,11 @@ const CardEditorScreen = ({ navigation }) => {
       };
 
       await syncIdentity(localData);
-      const result = await saveToGMatrix(matrixPayload);
+      
+      let result = { success: true };
+      if (cardData.isPublic) {
+        result = await saveToGMatrix(matrixPayload);
+      }
 
       if (result && result.success) {
         Alert.alert(alerts.system_title || "SYSTÉM LARIA", cardData.isPublic ? (alerts.sync_public || "Pečať v Matrixe aktualizovaná.") : (alerts.sync_private || "Uložené v súkromnom trezore."));
@@ -146,19 +185,13 @@ const CardEditorScreen = ({ navigation }) => {
     <SafeAreaView style={G.mainBackground} edges={['top']}>
       <StatusBar barStyle="light-content" />
 
-      {/* ⬅️ Navigačná šípka na pevnej absolútnej pozícii */}
-      <TouchableOpacity 
-        onPress={() => navigation.goBack()} 
-        activeOpacity={0.7}
-        style={G.topLeftBackButton}
-      >
+      <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={G.topLeftBackButton}>
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
       
       <ScrollView contentContainerStyle={G.screenContainer} showsVerticalScrollIndicator={false}>
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center', alignSelf: 'center' }}>
 
-          {/* 🌸 ČISTÁ HLAVIČKA EDITORU */}
           <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
             <Text style={G.atelierTitle}>{txt.title || "Edit vizitky"}</Text>
           </View>
@@ -181,27 +214,33 @@ const CardEditorScreen = ({ navigation }) => {
 
           {/* FORMULÁR */}
           <View style={{ width: '100%', alignItems: 'flex-start' }}>
-            <Text style={[G.monoIdentity, { color: ACCENT, marginBottom: 5 }]}>{txt.label_name || "MENO / NICK"}</Text>
+            
+            {/* 🍯 HONEYPOT COMPONENT */}
+            <View style={{ position: 'absolute', left: -9999, top: -9999, opacity: 0 }}>
+              <TextInput value={honeypot} onChangeText={setHoneypot} placeholder="Leave this empty" tabIndex={-1} />
+            </View>
+
+            <Text style={[G.monoIdentity, { color: ACCENT, marginBottom: 5 }]}>{(txt.label_name || "MENO / NICK") + " *"}</Text>
             <TextInput 
               style={G.vaultInput} 
               value={cardData.meno} 
               onChangeText={(val) => setCardData({...cardData, meno: val})} 
-              placeholder={txt.placeholder_name || "Zadaj meno..."} 
+              placeholder={txt.placeholder_name || "Zadaj meno (povinné)..."} 
               placeholderTextColor="#444" 
             />
 
-            <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>{txt.label_category || "KATEGÓRIA"}</Text>
+            <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>{(txt.label_category || "KATEGÓRIA") + " *"}</Text>
             <TouchableOpacity style={G.vaultInput} onPress={() => setShowPicker(true)} activeOpacity={0.7}>
-              <Text style={{ color: '#FFF' }}>{getCategoryLabel(cardData.kat)}</Text>
+              <Text style={{ color: cardData.kat ? '#FFF' : '#444' }}>{getCategoryLabel(cardData.kat)}</Text>
               <Text style={{ color: '#666', position: 'absolute', right: 15 }}>▼</Text>
             </TouchableOpacity>
 
-            <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>{txt.label_location || "LOKALITA"}</Text>
+            <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>{(txt.label_location || "LOKALITA") + " *"}</Text>
             <TextInput 
               style={G.vaultInput} 
               value={cardData.lok} 
               onChangeText={(val) => setCardData({...cardData, lok: val})} 
-              placeholder={txt.placeholder_location || "Kde pôsobíš..."} 
+              placeholder={txt.placeholder_location || "Kde pôsobíš (povinné)..."} 
               placeholderTextColor="#444" 
             />
 
@@ -249,11 +288,10 @@ const CardEditorScreen = ({ navigation }) => {
             <Text style={[G.monoIdentity, { color: '#666', marginTop: 5, marginBottom: 5 }]}>{txt.label_crypto || "KRYPTO PEŇAŽENKA (HESLO SECURE)"}</Text>
             <TextInput 
               style={G.vaultInput} 
-              value={cardData.krypt} 
-              onChangeText={(val) => setCardData({...cardData, krypt: val})} 
-              placeholder={txt.placeholder_crypto || "Adresa krypto peňaženky..."} 
+              editable={false} 
+              value={cardData.krypt || (vault?.identity?.krypt)} 
+              placeholder={txt.placeholder_crypto || "Adresa krypto peňaženky sa vygeneruje..."} 
               placeholderTextColor="#444" 
-              autoCapitalize="none" 
             />
           </View>
 
@@ -272,15 +310,8 @@ const CardEditorScreen = ({ navigation }) => {
             )}
           </TouchableOpacity>
 
-          {/* ↩️ Spodný návrat */}
-          <TouchableOpacity 
-            style={[G.backToAtelierBtn, { marginTop: 20, marginBottom: 50 }]}
-            onPress={() => navigation.goBack()} 
-            activeOpacity={0.7}
-          >
-            <Text style={G.primaryBtnText}>
-              {txt.btn_back_atelier || "NÁVRAT DO ATELIÉRU"}
-            </Text>
+          <TouchableOpacity style={[G.backToAtelierBtn, { marginTop: 20, marginBottom: 50 }]} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+            <Text style={G.primaryBtnText}>{txt.btn_back_atelier || "NÁVRAT DO ATELIÉRU"}</Text>
           </TouchableOpacity>
 
         </View>

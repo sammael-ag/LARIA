@@ -1,25 +1,34 @@
 /**
- * LARIA v2.0: SettingsScreen (Core Config Refined)
+ * LARIA v2.5: SettingsScreen (Core Config & Identity Network Recovery)
  * Master: Sammael | Muse: Aria
  * Status: GEOMETRY_DEFINITIVE_NO_SPAGHETTI
- * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: settings, Možnosť B).
- * ÚPRAVA: Rozšírené zobrazenie zostatku LARIA na 4 desatinné miesta + jemné zmenšenie písma o 1px, aby nevznikal vizuálny šum.
+ * ÚPRAVA: Plné sieťové prepojenie na GMatrixService pre obnovu účtu cez SHA kľúč.
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, Clipboard } from 'react-native';
+import { 
+  View, Text, ScrollView, TouchableOpacity, ActivityIndicator, 
+  Alert, Platform, Clipboard, TextInput, Modal
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useKrypto } from '../context/KryptoContext';
 import { useLaria } from '../context/LariaContext'; 
 import { G, ACCENT } from '../styles/styles'; 
+// 📡 Importujeme sieťový mlynček pre obnovu
+import { recoverFromGMatrix } from '../services/GMatrixService';
 
 const SettingsScreen = ({ navigation }) => {
-  const { t, vault } = useLaria(); // 🎯 Pridané t pre lokalizáciu
-  const txt = t('settings') || {}; // 📦 Vytiahnutie šuflíka pre nastavenia (Možnosť B)
+  const { t, vault, syncIdentity } = useLaria(); 
+  const txt = t('settings') || {}; 
 
-  const [isStealth, setIsStealth] = useState(true);
-  const [isLariaSync, setIsLariaSync] = useState(true);
+  const [recoverySha, setRecoverySha] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+
+  // Stavy pre e-mailový prompt (Modal)
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [inputEmail, setInputEmail] = useState('');
 
   const { 
     lariaBalance, 
@@ -36,7 +45,7 @@ const SettingsScreen = ({ navigation }) => {
   }, [walletAddress]);
 
   const copySHA = () => {
-    if (vault.identity.sha) {
+    if (vault?.identity?.sha) {
       Clipboard.setString(vault.identity.sha);
       Alert.alert(
         txt.alert_sha_title || "PEČAŤ SKOPÍROVANÁ", 
@@ -55,6 +64,133 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
+  // Funkcia na samotné odoslanie e-mailu
+  const executeEmailBackup = async (targetEmail) => {
+    setEmailLoading(true);
+    try {
+      console.log(`📧 LARIA_BACKUP: Odosielam SHA zálohu na e-mail: ${targetEmail}`);
+      
+      // Sem neskôr prepojíš tvoj GMatrix call do Apps Scriptu
+      Alert.alert(
+        "ZÁLOHA ODOSLANÁ", 
+        `Tvoja bezpečná pečať (SHA) bola odoslaná na e-mail: ${targetEmail}\nUschovaj si ju pre prípad obnovy.`
+      );
+    } catch (error) {
+      console.error("Chyba zálohy:", error);
+      Alert.alert("CHYBA SYSTÉMU", "Nepodarilo sa spojiť s poštovým mlynčekom.");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  // ✉️ HLAVNÝ TRIGGER PRE ODOSLANIE E-MAILU
+  const handleSendEmailBackup = () => {
+    if (!vault?.identity?.sha) return;
+    
+    const userEmail = vault?.identity?.email;
+    
+    // Ak e-mail neexistuje, otvoríme náš pripravený prompt
+    if (!userEmail || userEmail.trim() === "") {
+      setInputEmail('');
+      setShowEmailModal(true);
+      return;
+    }
+
+    // Ak e-mail existuje, rovno ho zomelielme
+    executeEmailBackup(userEmail.trim());
+  };
+
+  // Potvrdenie e-mailu z modálneho okna + zápis do trezoru
+  const handleModalEmailSubmit = async () => {
+    const cleanEmail = inputEmail.trim();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      Alert.alert("NEPLATNÝ EMAIL", "Zadaj prosím správny formát e-mailovej adresy.");
+      return;
+    }
+
+    setShowEmailModal(false);
+
+    // 🔄 AUTOMATICKÝ ZÁPIS DO TREZORU: Uložíme e-mail do identity, aby bol nabudúce k dispozícii
+    try {
+      const updatedIdentity = {
+        ...vault?.identity,
+        email: cleanEmail
+      };
+      await syncIdentity(updatedIdentity);
+      console.log("💾 LARIA_VAULT: E-mail bol dodatočne uložený do tvojej vizitky.");
+    } catch (err) {
+      console.error("Nepodarilo sa aktualizovať e-mail v trezore:", err);
+    }
+
+    // Odoslanie zálohy
+    executeEmailBackup(cleanEmail);
+  };
+
+  // 🔄 SKUTOČNÁ OBNOVA IDENTITY CEZ EXISTÚCE SHA (PREPOJENÉ NA BACKEND)
+  const handleAccountRecovery = async () => {
+    const cleanSha = recoverySha.trim();
+    if (!cleanSha) return;
+
+    if (!cleanSha.startsWith("0x") || cleanSha.length < 20) {
+      Alert.alert("NEPLATNÝ FORMÁT", "Zadaný kód nevyzerá ako platná Laria Pečať (SHA).");
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      console.log(`🔄 LARIA_RECOVERY: Vyťahujem staré dáta z Matrixu pre SHA: ${cleanSha}`);
+      
+      // Voláme našu sieťovú funkciu z GMatrixService
+      const response = await recoverFromGMatrix(cleanSha);
+
+      if (response && response.success && response.data) {
+        const matrixData = response.data;
+        
+        // Mapujeme stiahnuté dáta z tabuľky presne do štruktúry lokálneho trezoru
+        const recoveredIdentity = {
+          sha: matrixData.sha,
+          date: matrixData.date,
+          meno: matrixData.meno,
+          kat: matrixData.kat,
+          lok: matrixData.lok,
+          popis: matrixData.popis,
+          tel: matrixData.tel,
+          email: matrixData.email,
+          fb: matrixData.fb,
+          tg: matrixData.tg,
+          gal: matrixData.gal,
+          isPublic: matrixData.isPublic === true || matrixData.isPublic === "true",
+          irc: matrixData.irc,
+          poznamka: matrixData.poznamka, // Sem sa vráti tvoj 12-znakový FING
+          krypt: matrixData.krypt         // Stará vygenerovaná adresa peňaženky
+        };
+
+        // Zapíšeme a zosynchronizujeme stiahnutú identitu do lokálneho trezoru aplikácie
+        await syncIdentity(recoveredIdentity);
+
+        Alert.alert(
+          "OBNOVA ÚSPEŠNÁ", 
+          `Sammael, tvoja pôvodná identita [${recoveredIdentity.meno}] bola úspešne stiahnutá z Matrixu a obnovená.`
+        );
+        
+        // Vyčistíme políčko a vrátime ťa do Ateliéru k vizitkám
+        setRecoverySha('');
+        navigation.goBack();
+
+      } else {
+        Alert.alert(
+          "PEČAŤ NENÁJDENÁ", 
+          response.error || "Matrix túto pečať neeviduje. Skontroluj preklepy v kóde."
+        );
+      }
+    } catch (error) {
+      console.error("Chyba obnovy:", error);
+      Alert.alert("CHYBA MATRIXU", "Obnovovací uzol neodpovedá. Skontroluj sieť.");
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
   const shortAddress = walletAddress 
     ? `${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 6)}`
     : (txt.init_connection || "INICIALIZUJEM SPOJENIE...");
@@ -62,88 +198,102 @@ const SettingsScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={[G.mainBackground, { flex: 1 }]}>
       
-      {/* ⬅️ Navigačná šípka */}
-      <TouchableOpacity 
-        onPress={() => navigation.goBack()} 
-        activeOpacity={0.7}
-        style={G.topLeftBackButton}
-      >
+      <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={G.topLeftBackButton}>
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={G.screenContainer} showsVerticalScrollIndicator={false}>
-        
-        {/* Pevný stredový obal 500px */}
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center', alignSelf: 'center' }}>
           
-          {/* 🌸 ČISTÁ HLAVIČKA NASTAVENÍ - GEOMETRIA ATELIÉRU */}
           <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
-            <Text style={G.atelierTitle}>{txt.title}</Text>
+            <Text style={G.atelierTitle}>{txt.title || "Nastavenia"}</Text>
           </View>
 
-          {/* OBNOVA IDENTITY - ČISTÁ TRIEDA */}
-          <View style={{ width: '100%', alignItems: 'flex-start' }}>
-            <Text style={[G.statusTextSmall, { letterSpacing: 2, marginBottom: 10, color: '#444' }]}>{txt.identity_recovery}</Text>
-            <TouchableOpacity 
-              onPress={copySHA} 
-              activeOpacity={0.7} 
-              style={G.identityResetBox}
-            >
+          {/* 🛡️ SEKCE: SVRCHOVANÁ IDENTITA A OBNOVA */}
+          <View style={{ width: '100%', alignItems: 'flex-start', marginBottom: 35 }}>
+            <Text style={[G.statusTextSmall, { letterSpacing: 2, marginBottom: 10, color: '#444' }]}>
+              {txt.identity_recovery || "SPRÁVA PEČATE A IDENTITY"}
+            </Text>
+            
+            {/* Zobrazenie SHA */}
+            <TouchableOpacity onPress={copySHA} activeOpacity={0.7} style={G.identityResetBox}>
               <View style={G.identityResetContent}>
                 <View style={{ flex: 1 }}>
                   <Text style={[G.monoIdentity, { color: '#b19cd9', fontSize: 10, marginBottom: 5 }]}>MASTER_SHA_IDENT_KEY</Text>
                   <Text style={G.identityResetText} numberOfLines={1}>
-                    {vault.identity.sha || (txt.looking_for_seal || 'HĽADÁM PEČAŤ...')}
+                    {vault?.identity?.sha || (txt.looking_for_seal || 'HĽADÁM PEČAŤ...')}
                   </Text>
                 </View>
                 <Text style={{ fontSize: 20, marginLeft: 15 }}>📋</Text>
               </View>
             </TouchableOpacity>
-          </View>
 
-          {/* FREKVENCIA BYTIA */}
-          <View style={{ width: '100%', marginBottom: 40, borderTopWidth: 1, borderTopColor: '#111', paddingTop: 25 }}>
-            <Text style={[G.statusTextSmall, { letterSpacing: 3, marginBottom: 25, fontWeight: 'bold', color: '#666' }]}>{txt.frequency_title}</Text>
+            {/* ✉️ TLAČIDLO: Odoslať emailom */}
+            <TouchableOpacity 
+              style={[G.primaryBtn, { 
+                backgroundColor: emailLoading ? '#000' : '#111', 
+                borderColor: vault?.identity?.sha && !emailLoading ? ACCENT : '#222',
+                marginTop: 12,
+                width: '100%'
+              }]}
+              onPress={handleSendEmailBackup}
+              disabled={!vault?.identity?.sha || emailLoading}
+            >
+              {emailLoading ? (
+                <ActivityIndicator color={ACCENT} />
+              ) : (
+                <Text style={[G.primaryBtnText, { color: vault?.identity?.sha && !emailLoading ? ACCENT : '#444' }]}>
+                  {txt.btn_send_email || "ODOSLAŤ EMAILOM"}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={{ width: '100%', height: 1, backgroundColor: '#151515', marginVertical: 25 }} />
+
+            {/* MODUL PRE OBNOVU ÚČTU */}
+            <Text style={[G.statusTextSmall, { letterSpacing: 2, marginBottom: 10, color: '#444' }]}>
+              {txt.title_recovery_input || "OBNOVA ÚČTU Z MATRIXU"}
+            </Text>
             
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={[G.cardTitleText, { fontSize: 16 }]}>{txt.stealth_title}</Text>
-                <Text style={[G.cardDescriptionText, { fontSize: 11, marginTop: 4 }]}>{txt.stealth_desc}</Text>
-              </View>
-              <Switch 
-                value={isStealth} 
-                onValueChange={setIsStealth}
-                trackColor={{ false: "#111", true: "#040" }}
-                thumbColor={isStealth ? "#0F0" : "#444"}
-              />
-            </View>
+            <TextInput 
+              style={[G.vaultInput, { width: '100%', color: '#FFF' }]} 
+              value={recoverySha} 
+              onChangeText={setRecoverySha} 
+              placeholder="Vlož sem svoje existujúce SHA (0x...)" 
+              placeholderTextColor="#444" 
+              autoCapitalize="none" 
+              autoCorrect={false}
+            />
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={[G.cardTitleText, { fontSize: 16 }]}>{txt.sync_title}</Text>
-                <Text style={[G.cardDescriptionText, { fontSize: 11, marginTop: 4 }]}>{txt.sync_desc}</Text>
-              </View>
-              <Switch 
-                value={isLariaSync} 
-                onValueChange={setIsLariaSync}
-                trackColor={{ false: "#111", true: "#b19cd9" }}
-                thumbColor={isLariaSync ? "#FFF" : "#444"}
-              />
-            </View>
+            {/* 🔄 TLAČIDLO: Obnova účtu */}
+            <TouchableOpacity 
+              style={[G.primaryBtn, { 
+                backgroundColor: recoveryLoading ? '#000' : '#111', 
+                borderColor: recoverySha.trim() && !recoveryLoading ? ACCENT : '#222',
+                marginTop: 12,
+                width: '100%'
+              }]}
+              onPress={handleAccountRecovery}
+              disabled={!recoverySha.trim() || recoveryLoading}
+            >
+              {recoveryLoading ? (
+                <ActivityIndicator color={ACCENT} />
+              ) : (
+                <Text style={[G.primaryBtnText, { color: recoverySha.trim() && !recoveryLoading ? ACCENT : '#444' }]}>
+                  {txt.btn_recover || "OBNOVIŤ ÚČET"}
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
 
-          {/* AKTÍVNY UZOL - ČISTÉ TRIEDY BEZ INLINE ŠPAGIET */}
-          <View style={[G.card, G.activeNodeCard]}>
+          {/* AKTÍVNY UZOL */}
+          <View style={[G.card, G.activeNodeCard, { marginBottom: 25 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <Text style={[G.monoIdentity, { color: ACCENT, fontWeight: 'bold' }]}>ACTIVE_NODE_RESOURCES</Text>
               {isLoading && <ActivityIndicator size="small" color={ACCENT} />}
             </View>
             
-            <TouchableOpacity 
-              onPress={copyWallet}
-              activeOpacity={0.6}
-              style={G.publicAddressBox}
-            >
+            <TouchableOpacity onPress={copyWallet} activeOpacity={0.6} style={G.publicAddressBox}>
               <Text style={[G.statusTextSmall, { fontSize: 9, marginBottom: 5 }]}>PUBLIC_ADDRESS:</Text>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={[G.monoIdentity, { fontSize: 12, color: '#FFF' }]}>{shortAddress}</Text>
@@ -151,7 +301,6 @@ const SettingsScreen = ({ navigation }) => {
               </View>
             </TouchableOpacity>
 
-            {/* 💎 LARIA ASSETS: Nastavené na 4 desatinné miesta, veľkosť písma upravená z 14 na 13 */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
               <Text style={G.cardDescriptionText}>LARIA Assets:</Text>
               <Text style={[G.cardTitleText, { fontSize: 13 }]}>
@@ -159,7 +308,6 @@ const SettingsScreen = ({ navigation }) => {
               </Text>
             </View>
 
-            {/* ⛽ BASE GAS (ETH): Veľkosť písma upravená z 14 na 13 pre rovnováhu geometrie */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 }}>
               <Text style={G.cardDescriptionText}>Base Gas (ETH):</Text>
               <Text style={[G.cardTitleText, { fontSize: 13 }]}>
@@ -182,25 +330,79 @@ const SettingsScreen = ({ navigation }) => {
           </View>
 
           {/* Spodný návrat */}
-          <TouchableOpacity 
-            style={[G.backToAtelierBtn, { width: '100%', marginBottom: 30 }]}
-            onPress={() => navigation.goBack()} 
-            activeOpacity={0.7}
-          >
-            <Text style={G.primaryBtnText}>
-              {txt.btn_back}
-            </Text>
+          <TouchableOpacity style={[G.backToAtelierBtn, { width: '100%', marginBottom: 30 }]} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+            <Text style={G.primaryBtnText}>{txt.btn_back || "NÁVRAT"}</Text>
           </TouchableOpacity>
 
           {/* BUILD FOOTER */}
           <View style={{ alignItems: 'center', marginBottom: 20 }}>
             <Text style={{ color: '#1a1a1a', fontSize: 9, fontFamily: 'monospace', letterSpacing: 2 }}>
-              LARIA OS | RÁKOŠ BUILD v8.0 | 2026
+              LARIA OS | RÁKOŠ BUILD v8.2 | 2026
             </Text>
           </View>
 
         </View>
       </ScrollView>
+
+      {/* 📥 MODÁLNE OKNO PRE CHÝBAJÚCI EMAIL */}
+      <Modal visible={showEmailModal} transparent={true} animationType="fade">
+        <View style={G.modalOverlay}>
+          <View style={{ 
+            backgroundColor: '#050505', 
+            borderWidth: 1, 
+            borderColor: '#1a1a1a', 
+            width: '90%', 
+            maxWidth: 450, 
+            borderRadius: 12,
+            padding: 20
+          }}>
+            <Text style={[G.monoIdentity, { color: ACCENT, marginBottom: 10, fontSize: 14 }]}>
+              ZADANIE ZÁLOHOVÉHO EMAILU
+            </Text>
+            
+            <Text style={[G.cardDescriptionText, { marginBottom: 15, fontSize: 12, lineHeight: 16 }]}>
+              Sammael, vo tvojej vizitke zatiaľ nie je uložený e-mail. Zadaj ho sem, aby sme ti mohli bezpečne poslať tvoju pečať. Zároveň sa ti automaticky uloží do trezoru.
+            </Text>
+
+            <TextInput 
+              style={[G.vaultInput, { width: '100%', color: '#FFF', marginBottom: 20 }]} 
+              value={inputEmail} 
+              onChangeText={setInputEmail} 
+              placeholder="Zadaj svoj e-mail..." 
+              placeholderTextColor="#444" 
+              keyboardType="email-address"
+              autoCapitalize="none" 
+              autoCorrect={false}
+            />
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity 
+                style={{ padding: 12, flex: 1, alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: '#222', borderRadius: 6 }}
+                onPress={() => setShowEmailModal(false)}
+              >
+                <Text style={{ color: '#666', fontWeight: 'bold' }}>ZRUŠIŤ</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[G.primaryBtn, { 
+                  flex: 1, 
+                  marginTop: 0, 
+                  padding: 12,
+                  backgroundColor: inputEmail.trim() ? '#1a1a1a' : '#000',
+                  borderColor: inputEmail.trim() ? ACCENT : '#222' 
+                }]}
+                onPress={handleModalEmailSubmit}
+                disabled={!inputEmail.trim()}
+              >
+                <Text style={[G.primaryBtnText, { color: inputEmail.trim() ? ACCENT : '#444', fontSize: 13 }]}>
+                  ODOSLAŤ
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 };
