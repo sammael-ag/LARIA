@@ -19,7 +19,8 @@ import { G, ACCENT } from '../styles/styles';
 import { recoverFromGMatrix } from '../services/GMatrixService';
 
 const SettingsScreen = ({ navigation }) => {
-  const { t, vault, syncIdentity } = useLaria(); 
+  // 🔮 Doplnená funkcia obnovitIdentityCezSHA pre hlboké prebudenie identity
+  const { t, vault, syncIdentity, obnovitIdentityCezSHA } = useLaria(); 
   const txt = t('settings') || {}; 
 
   const [recoverySha, setRecoverySha] = useState('');
@@ -73,7 +74,7 @@ const SettingsScreen = ({ navigation }) => {
       // Sem neskôr prepojíš tvoj GMatrix call do Apps Scriptu
       Alert.alert(
         "ZÁLOHA ODOSLANÁ", 
-        `Tvoja bezpečná pečať (SHA) bola odoslaná na e-mail: ${targetEmail}\nUschovaj si ju pre prípad obnovy.`
+        `Tvoja bezpečná pečať (SHA) bola odoslaná na e-mail: ${targetEmail}\nUschovaj si LinkedIn pre prípad obnovy.`
       );
     } catch (error) {
       console.error("Chyba zálohy:", error);
@@ -128,7 +129,8 @@ const SettingsScreen = ({ navigation }) => {
 
   // 🔄 SKUTOČNÁ OBNOVA IDENTITY CEZ EXISTÚCE SHA (PREPOJENÉ NA BACKEND)
   const handleAccountRecovery = async () => {
-    const cleanSha = recoverySha.trim();
+    // 🛡️ Ošetrenie textu na malé písmená, aby SHA licovalo s blockchainovým/hex formátom (0xabc...)
+    const cleanSha = recoverySha.trim().toLowerCase();
     if (!cleanSha) return;
 
     if (!cleanSha.startsWith("0x") || cleanSha.length < 20) {
@@ -146,36 +148,43 @@ const SettingsScreen = ({ navigation }) => {
       if (response && response.success && response.data) {
         const matrixData = response.data;
         
-        // Mapujeme stiahnuté dáta z tabuľky presne do štruktúry lokálneho trezoru
-        const recoveredIdentity = {
-          sha: matrixData.sha,
-          date: matrixData.date,
-          meno: matrixData.meno,
-          kat: matrixData.kat,
-          lok: matrixData.lok,
-          popis: matrixData.popis,
-          tel: matrixData.tel,
-          email: matrixData.email,
-          fb: matrixData.fb,
-          tg: matrixData.tg,
-          gal: matrixData.gal,
-          isPublic: matrixData.isPublic === true || matrixData.isPublic === "true",
-          irc: matrixData.irc,
-          poznamka: matrixData.poznamka, // Sem sa vráti tvoj 12-znakový FING
-          krypt: matrixData.krypt         // Stará vygenerovaná adresa peňaženky
-        };
+        // 🔮 KROK 1: Spustíme hlbokú kvantovú reinkarnáciu identity v Contexte
+        const success = await obnovitIdentityCezSHA(matrixData.sha, matrixData.meno);
 
-        // Zapíšeme a zosynchronizujeme stiahnutú identitu do lokálneho trezoru aplikácie
-        await syncIdentity(recoveredIdentity);
+        if (success) {
+          // 🗄️ KROK 2: Namapujeme a zosynchronizujeme zvyšok stiahnutých dát vizitky z tabuľky
+          const fullIdentity = {
+            ...vault?.identity,
+            sha: matrixData.sha,
+            date: matrixData.date,
+            meno: matrixData.meno,
+            kat: matrixData.kat,
+            lok: matrixData.lok,
+            popis: matrixData.popis,
+            tel: matrixData.tel,
+            email: matrixData.email,
+            fb: matrixData.fb,
+            tg: matrixData.tg,
+            gal: matrixData.gal,
+            isPublic: matrixData.isPublic === true || matrixData.isPublic === "true",
+            irc: matrixData.irc,
+            poznamka: matrixData.sha.substring(0, 12), // FING odvodíme stabilne z SHA
+            krypt: matrixData.krypt
+          };
 
-        Alert.alert(
-          "OBNOVA ÚSPEŠNÁ", 
-          `Sammael, tvoja pôvodná identita [${recoveredIdentity.meno}] bola úspešne stiahnutá z Matrixu a obnovená.`
-        );
-        
-        // Vyčistíme políčko a vrátime ťa do Ateliéru k vizitkám
-        setRecoverySha('');
-        navigation.goBack();
+          await syncIdentity(fullIdentity);
+
+          Alert.alert(
+            "OBNOVA ÚSPEŠNÁ", 
+            `Sammael, tvoja pôvodná identita [${matrixData.meno}] bola úspešne stiahnutá z Matrixu a obnovená.`
+          );
+          
+          // Vyčistíme políčko a vrátime ťa do Ateliéru k vizitkám
+          setRecoverySha('');
+          navigation.goBack();
+        } else {
+          Alert.alert("CHYBA REINKARNÁCIE", "Kryptografický kokon odmietol prebudiť túto identitu.");
+        }
 
       } else {
         Alert.alert(
