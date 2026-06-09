@@ -5,11 +5,11 @@
  * Popis: Centralizovaný prístup k Matrixu so striktným mapovaním premenných (A-Q) a novým modulom pre obnovu identity cez SHA.
  */
 
-const G_MATRIX_READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
-const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbyD0INZlUfMJaBYFp8Q9ndgi9gQqYjPPyql9BjmulvvoF6LU6HLLP6gTRHHbrHbgZt6/exec";
+const G_MATRIX_READ_URL = "https://script.google.com/macros/s/AKfycbw9TyWIdK7FXZrWELD5rOEVb0QAN114wFB2YyWAWJCFUEnDmyPwaKH1LDm34jS4-Hoj/exec";
+const G_MATRIX_WRITE_URL = "https://script.google.com/macros/s/AKfycbz1ogNUeKmURTqWX5m5UcwsdShaSa80cQBg6WlDaBK8TSXRcuSOg2L8b7fKXzcZ_GU/exec";
 
 // 🌐 5. SKRIPT - CENTRÁLNY ROZVÁDZAČ PRE AUTOMATIZÁCIU JAZYKOV (Liquid Localization)
-const G_MATRIX_LANG_URL = "https://script.google.com/macros/s/AKfycbwLdeRMkIzSJFUH3adAMhUBjivD-zpt7b6JDtuaLF4KpfZWyjouoa-cgTsxtQe-xAvu/exec"; 
+const G_MATRIX_LANG_URL = "https://script.google.com/macros/s/AKfycbzAWSNXbBItqy-G-DwaeX67-_5WEBbqMIo2MqG5qf498Gj80FRihTA5uzeRUH59Qlg/exec"; 
 
 /**
  * 1. ČÍTANIE Z MATRIXU (Identity)
