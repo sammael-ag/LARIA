@@ -26,7 +26,15 @@ import CojeLaria from './src/components/CojeLaria';
 import { KryptoProvider } from './src/context/KryptoContext';
 import { LariaProvider, useLaria } from './src/context/LariaContext'; 
 
-const READ_URL = "https://script.google.com/macros/s/AKfycbw9TyWIdK7FXZrWELD5rOEVb0QAN114wFB2YyWAWJCFUEnDmyPwaKH1LDm34jS4-Hoj/exec";
+// 🔐 NOVÝ REVOLUČNÝ POHON: Rozdelenie jedinej ostrej URL brány na 3 časti proti botom
+const brana_p1 = "https://script.google.com/macros/s/";
+const brana_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ";
+const brana_p3 = "/exec";
+
+// Dynamická ladička, ktorá poskladá URL až za behu priamo v pamäti
+const ziskajBranaUrl = () => {
+  return `${brana_p1}${brana_p2}${brana_p3}`;
+};
 
 // --- 🛸 Pomocná funkcia na komplexné parsovanie hash-u a čistenie anomálií URL ---
 const parseHashLocation = () => {
@@ -239,7 +247,12 @@ const MasterWrapper = () => {
   const fetchData = async (targetId = null) => {
     setLoading(true);
     try {
-      const response = await fetch(READ_URL);
+      // Chirurgický zásah: Voláme novú dynamicky poskladanú adresu brány (vyvolá sa doGet a mravec Reader)
+      const url = `${ziskajBranaUrl()}?v=${Date.now()}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors'
+      });
       const rawData = await response.json();
       const cleanedData = rawData.reduce((acc, item) => {
         if (!item.poznamka || item.poznamka.trim() === "") return acc;
@@ -411,7 +424,7 @@ const MasterWrapper = () => {
       return;
     }
 
-    // Stav B: Chrome prompt nie je pripravený (keš, dev anomália) -> Odomykáme appku rovno na webe!
+    // Stav B: Chrome prompt nie je priapareny (keš, dev anomália) -> Odomykáme appku rovno na webe!
     if (!deferredPrompt) {
       console.log("⚠️ LARIA CORE: Systémový prompt nie je pripravený. Odomykám appku priamo na webe.");
       setIsAlreadyInstalled(true); 
