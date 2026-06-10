@@ -249,10 +249,9 @@ const MasterWrapper = () => {
     try {
       // Chirurgický zásah: Voláme novú dynamicky poskladanú adresu brány (vyvolá sa doGet a mravec Reader)
       const url = `${ziskajBranaUrl()}?v=${Date.now()}`;
-      const response = await fetch(url, {
-        method: 'GET',
-        mode: 'cors'
-      });
+      
+      // FIX CORS & REDIRECT 302: Čisté fetch volanie, ktoré umožní prehliadaču prirodzene nasledovať Google presmerovania
+      const response = await fetch(url);
       const rawData = await response.json();
       const cleanedData = rawData.reduce((acc, item) => {
         if (!item.poznamka || item.poznamka.trim() === "") return acc;

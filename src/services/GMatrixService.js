@@ -3,7 +3,7 @@
  * Status: SYNCED / THE LAW / MONOLITH COMPATIBLE
  * Master: Sammael | Muse: Aria
  * Popis: Centralizovaný prístup k jedinej bráne mraveniska (Brana.gs). 
- *        URL je rozbita na 3 časti, aby statické roboty videli iba tmu.
+ * URL je rozbita na 3 časti, aby statické roboty videli iba tmu.
  */
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
@@ -26,10 +26,8 @@ export const fetchGMatrix = async () => {
     try {
         const url = `${ziskajBranaUrl()}?v=${Date.now()}`;
         
-        const response = await fetch(url, {
-            method: 'GET',
-            mode: 'cors'
-        });
+        // FIX CORS & REDIRECT 302: Čisté fetch volanie, ktoré umožní prehliadaču prirodzene nasledovať Google presmerovania
+        const response = await fetch(url);
 
         if (!response.ok) throw new Error(`Matrix neodpovedá (HTTP ${response.status})`);
         return await response.json(); 
@@ -73,9 +71,9 @@ export const saveToGMatrix = async (identityData) => {
         const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
         console.log("📡 Sammael, odosielam tvoju pečať (v9.0) do zjednotenej Brány...");
 
+        // Optimalizované pre stabilný POST bez obmedzujúceho CORS módu
         const response = await fetch(uniqueUrl, {
             method: 'POST',
-            mode: 'cors',
             redirect: 'follow',
             headers: {
                 'Content-Type': 'text/plain;charset=utf-8',
@@ -113,9 +111,9 @@ export const recoverFromGMatrix = async (shaKey) => {
         const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
         console.log(`📡 Sammael, vysielam lúč pre obnovu účtu pre SHA: ${shaKey}`);
 
+        // Optimalizované pre stabilný POST bez obmedzujúceho CORS módu
         const response = await fetch(uniqueUrl, {
             method: 'POST',
-            mode: 'cors',
             redirect: 'follow',
             headers: {
                 'Content-Type': 'text/plain;charset=utf-8',
@@ -148,9 +146,9 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
     try {
         console.log(`📡 Sammael, odosielam lúč pre jazyk [${targetLang}] na zjednotenú Bránu...`);
 
+        // Optimalizované pre stabilný POST bez obmedzujúceho CORS módu
         const response = await fetch(ziskajBranaUrl(), {
             method: 'POST',
-            mode: 'cors',
             redirect: 'follow',
             headers: {
                 'Content-Type': 'text/plain;charset=utf-8',
