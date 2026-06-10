@@ -26,7 +26,7 @@ import CojeLaria from './src/components/CojeLaria';
 import { KryptoProvider } from './src/context/KryptoContext';
 import { LariaProvider, useLaria } from './src/context/LariaContext'; 
 
-const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
+const READ_URL = "https://script.google.com/macros/s/AKfycbw9TyWIdK7FXZrWELD5rOEVb0QAN114wFB2YyWAWJCFUEnDmyPwaKH1LDm34jS4-Hoj/exec";
 
 // --- 🛸 Pomocná funkcia na komplexné parsovanie hash-u a čistenie anomálií URL ---
 const parseHashLocation = () => {
