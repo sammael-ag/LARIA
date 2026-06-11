@@ -31,10 +31,7 @@ export const fetchGMatrix = async () => {
         // FIX CORS & REDIRECT 302: Pridaný redirect protocol a text/plain header, aby prehliadač neskolaboval na presmerovaní
         const response = await fetch(url, {
             method: 'GET',
-            redirect: 'follow',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8'
-            }
+            redirect: 'follow'
         });
 
         if (!response.ok) throw new Error(`Matrix neodpovedá (HTTP ${response.status})`);
