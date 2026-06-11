@@ -235,7 +235,8 @@
        // Chirurgický zásah: Voláme novú dynamicky poskladanú adresu brány a čistíme CORS režim natvrdo
        const url = `${ziskajBranaUrl()}?v=${Date.now()}`; 
        const response = await fetch(url, { 
-         method: 'GET'
+         method: 'GET',
+         redirect: 'follow'
        }); 
        const rawData = await response.json(); 
        const cleanedData = rawData.reduce((acc, item) => { 
