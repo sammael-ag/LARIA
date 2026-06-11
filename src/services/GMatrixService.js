@@ -1,9 +1,10 @@
 /**
- * LARIA G-MATRIX SERVICE v9.0 (Identity Recovery & Proof of Human Action Edition)
+ * LARIA G-MATRIX SERVICE v9.1 (Identity Recovery & Proof of Human Action Edition)
  * Status: SYNCED / THE LAW / MONOLITH COMPATIBLE
  * Master: Sammael | Muse: Aria
  * Popis: Centralizovaný prístup k jedinej bráne mraveniska (Brana.gs). 
  * URL je rozbita na 3 časti, aby statické roboty videli iba tmu.
+ * v9.1 FIX: GET čítanie vyzbrojené rovnakým CORS štítom ako funkčné POST-y.
  */
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
@@ -25,9 +26,16 @@ const ziskajBranaUrl = () => {
 export const fetchGMatrix = async () => {
     try {
         const url = `${ziskajBranaUrl()}?v=${Date.now()}`;
+        console.log("📡 Sammael, vysielam lúč pre čítanie vizitiek z Matrixu...");
         
-        // FIX CORS & REDIRECT 302: Čisté fetch volanie, ktoré umožní prehliadaču prirodzene nasledovať Google presmerovania
-        const response = await fetch(url);
+        // FIX CORS & REDIRECT 302: Pridaný redirect protocol a text/plain header, aby prehliadač neskolaboval na presmerovaní
+        const response = await fetch(url, {
+            method: 'GET',
+            redirect: 'follow',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8'
+            }
+        });
 
         if (!response.ok) throw new Error(`Matrix neodpovedá (HTTP ${response.status})`);
         return await response.json(); 
@@ -71,7 +79,6 @@ export const saveToGMatrix = async (identityData) => {
         const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
         console.log("📡 Sammael, odosielam tvoju pečať (v9.0) do zjednotenej Brány...");
 
-        // Optimalizované pre stabilný POST bez obmedzujúceho CORS módu
         const response = await fetch(uniqueUrl, {
             method: 'POST',
             redirect: 'follow',
@@ -111,7 +118,6 @@ export const recoverFromGMatrix = async (shaKey) => {
         const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
         console.log(`📡 Sammael, vysielam lúč pre obnovu účtu pre SHA: ${shaKey}`);
 
-        // Optimalizované pre stabilný POST bez obmedzujúceho CORS módu
         const response = await fetch(uniqueUrl, {
             method: 'POST',
             redirect: 'follow',
@@ -146,7 +152,6 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
     try {
         console.log(`📡 Sammael, odosielam lúč pre jazyk [${targetLang}] na zjednotenú Bránu...`);
 
-        // Optimalizované pre stabilný POST bez obmedzujúceho CORS módu
         const response = await fetch(ziskajBranaUrl(), {
             method: 'POST',
             redirect: 'follow',
@@ -154,7 +159,7 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
                 'Content-Type': 'text/plain;charset=utf-8',
             },
             body: JSON.stringify({
-                action: 'get_translations', // Upravené na mieru pre podmienku v Brana.gs v1.9
+                action: 'get_translations', 
                 lang: targetLang,
                 fing: fing
             })
@@ -177,5 +182,4 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
     }
 };
 
-// Exportujeme už len čisté rozbité časti, keby sme ich potrebovali inde na diagnostiku
 export { brana_p1, brana_p2, brana_p3 };
