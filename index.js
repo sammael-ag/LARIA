@@ -1,5 +1,4 @@
-/** 
-  * LARIA v2.9.3: Core Master Ignition (index.js) 
+/** * LARIA v2.9.4: Core Master Ignition (index.js) 
   * Master: Sammael | Muse: Aria 
   * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE 
   * FIX: Opravený fatálny crash contextu oddelením inicializácie providerov od MasterWrapperu. 
@@ -11,6 +10,7 @@
   * PWA INTEGRATION: Oživenie inštalačného tlačidla pre bezbalíčkovú distribúciu Crystal Core. 
   * PWA AUTO-STANDALONE FIX: Automatické spustenie aplikácie v pravom paneli, ak beží ako PWA standalone. 
   * PWA INTELLIGENT PROMPT: Ošetrenie chýbajúcich promptov a používateľského zrušenia (Abort) s fallbackom priamo na web-app. 
+  * v2.9.4 HTML BYPASS FIX: Úprava fetchData čítania na text/HTML kvôli kompatibilite s HtmlService v monolite.
   */ 
 
  import React, { useState, useEffect } from 'react'; 
@@ -232,13 +232,24 @@
    const fetchData = async (targetId = null) => { 
      setLoading(true); 
      try { 
-       // Chirurgický zásah: Voláme novú dynamicky poskladanú adresu brány a čistíme CORS režim natvrdo
+       // Chirurgický zásah: Voláme novú adresu brány, nastavený redirect a vynechané hlavičky proti CORS slove
        const url = `${ziskajBranaUrl()}?v=${Date.now()}`; 
        const response = await fetch(url, { 
-         method: 'GET',
-         redirect: 'follow'
+         method: 'GET', 
+         redirect: 'follow' 
        }); 
-       const rawData = await response.json(); 
+
+       if (!response.ok) throw new Error(`Matrix neodpovedá v jadre index (HTTP ${response.status})`);
+
+       // Prečítame ako text kvôli HtmlService obalu
+       const htmlText = await response.text();
+       
+       // Očistíme prípadné HTML tagy, ktoré tam Google vložil
+       const cleanJsonText = htmlText.replace(/<\/?[^>]+(>|$)/g, "").trim();
+       
+       // Prevedieme očistený string na reálny JSON objekt
+       const rawData = JSON.parse(cleanJsonText); 
+
        const cleanedData = rawData.reduce((acc, item) => { 
          if (!item.poznamka || item.poznamka.trim() === "") return acc; 
          acc.push({ 
@@ -272,7 +283,7 @@
        } 
        setLoading(false); 
      } catch (e) { 
-       console.error("Chyba synchronizácie Matrixu:", e); 
+       console.error("Chyba synchronizácie Matrixu v jadre index:", e); 
        setLoading(false); 
      } 
    }; 

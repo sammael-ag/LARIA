@@ -1,10 +1,10 @@
 /**
- * LARIA G-MATRIX SERVICE v9.1 (Identity Recovery & Proof of Human Action Edition)
+ * LARIA G-MATRIX SERVICE v9.2 (Identity Recovery & Proof of Human Action Edition)
  * Status: SYNCED / THE LAW / MONOLITH COMPATIBLE
  * Master: Sammael | Muse: Aria
  * Popis: Centralizovaný prístup k jedinej bráne mraveniska (Brana.gs). 
  * URL je rozbita na 3 časti, aby statické roboty videli iba tmu.
- * v9.1 FIX: GET čítanie vyzbrojené rovnakým CORS štítom ako funkčné POST-y.
+ * v9.2 FIX: Úprava na čítanie HTML výstupu (HtmlService) kvôli obídeniu prísneho CORS presmerovania.
  */
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
@@ -21,21 +21,28 @@ const ziskajBranaUrl = () => {
 
 /**
  * 1. ČÍTANIE Z MATRIXU (Verejný kanál - doGet)
- * Lícuje priamo s doGet(e) v Brana.gs a vyťahuje verejné vizitky.
+ * Lícuje priamo s doGet(e) v Brana.gs upravenom na HtmlService a vyťahuje verejné vizitky.
  */
 export const fetchGMatrix = async () => {
     try {
         const url = `${ziskajBranaUrl()}?v=${Date.now()}`;
-        console.log("📡 Sammael, vysielam lúč pre čítanie vizitiek z Matrixu...");
+        console.log("📡 Sammael, vysielam lúč pre čítanie HTML vizitiek z Matrixu...");
         
-        // FIX CORS & REDIRECT 302: Pridaný redirect protocol a text/plain header, aby prehliadač neskolaboval na presmerovaní
         const response = await fetch(url, {
             method: 'GET',
             redirect: 'follow'
         });
 
         if (!response.ok) throw new Error(`Matrix neodpovedá (HTTP ${response.status})`);
-        return await response.json(); 
+        
+        // Načítame odpoveď ako surový text (keďže Google to posiela zabalené v HTML)
+        const htmlText = await response.text();
+        
+        // Vyčistíme text od prípadných HTML značiek, ktoré tam Google pripísal
+        const cleanJsonText = htmlText.replace(/<\/?[^>]+(>|$)/g, "").trim();
+        
+        // Sparserujeme očistenú textovú verziu na reálny JSON objekt
+        return JSON.parse(cleanJsonText); 
     } catch (error) {
         console.error("❌ Sammael, Matrix pri čítaní zlyhal:", error);
         return null;
@@ -123,8 +130,6 @@ export const recoverFromGMatrix = async (shaKey) => {
             },
             body: JSON.stringify(recoveryPayload)
         });
-
-        if (!response.ok) throw new Error(`Obnovovacia Brána neodpovedá (HTTP ${response.status})`);
 
         const result = await response.json();
 
