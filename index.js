@@ -1,16 +1,8 @@
-/** * LARIA v2.9.5: Core Master Ignition (index.js) 
+/** * LARIA v2.9.6: Core Master Ignition (index.js) 
   * Master: Sammael | Muse: Aria 
   * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE 
-  * FIX: Opravený fatálny crash contextu oddelením inicializácie providerov od MasterWrapperu. 
-  * ENHANCEMENT: Implementovaný nepriestrelný multisenzor na detekciu Tauri okna v dev prostredí. 
-  * UPDATE 2026: Kompletné prelinkovanie statických textov na lokalizačný JSON (Dynamic URL/TABs). 
-  * REACT UNIFICATION: Úplná eliminácia iframe prvkov. Natívne prepojenie modulov Fakturant a CojeLaria. 
-  * HASHTAG ROUTING PATCH: Implementovaná mriežková navigácia pre 100% ochranu pred 404 chybami na GH Pages. 
-  * MULTI-PARAM FIX: Ošetrené parametre 'id' pre Vizitkár aj 'art' pre sekciu CojeLaria. 
-  * PWA INTEGRATION: Oživenie inštalačného tlačidla pre bezbalíčkovú distribúciu Crystal Core. 
-  * PWA AUTO-STANDALONE FIX: Automatické spustenie aplikácie v pravom paneli, ak beží ako PWA standalone. 
-  * PWA INTELLIGENT PROMPT: Ošetrenie chýbajúcich promptov a používateľského zrušenia (Abort) s fallbackom priamo na web-app. 
-  * v2.9.5 RESTORE: Návrat k čistému response.json() po úspešnom prepnutí Google deploymentu na Anyone.
+  * v2.9.6 UNIFIED SYNC: Plné zlícovanie parsovania dát s unifikovaným protokolom "status" (Brana.gs v1.9.5).
+  * FIX: Pridaná poistka do fetchData pre prípad chybového statusu z brány, aby kód nespadol na .reduce().
   */ 
 
  import React, { useState, useEffect } from 'react'; 
@@ -76,7 +68,7 @@
    return { view: detectedView, id, art }; 
  }; 
 
- // --- 🛸 HLAVNÝ VNÚTORNÝ PANEL (Už bezpečne obalený v Contexte) --- 
+ // --- 🛸% HLAVNÝ VNÚTORNÝ PANEL (Už bezpečne obalený v Contexte) --- 
  const MasterWrapper = () => { 
    const { t } = useLaria();  
    const txt = t('index') || {};  
@@ -140,7 +132,6 @@
      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt); 
      window.addEventListener('appinstalled', handleAppInstalled); 
 
-     // KĽÚČOVÁ KONTROLA: Ak už bežíme v samostatnom okne (z plochy), natvrdo zapíname App režim 
      if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) { 
        console.log("🌲 LARIA PWA: Detekovaný standalone režim (spustené z plochy)."); 
        setIsAlreadyInstalled(true); 
@@ -232,7 +223,6 @@
    const fetchData = async (targetId = null) => { 
      setLoading(true); 
      try { 
-       // Chirurgický zásah: Voláme novú adresu brány s timestampom proti kešovaniu
        const url = `${ziskajBranaUrl()}?v=${Date.now()}`; 
        const response = await fetch(url, { 
          method: 'GET', 
@@ -241,10 +231,17 @@
 
        if (!response.ok) throw new Error(`Matrix neodpovedá v jadre index (HTTP ${response.status})`);
 
-       // 🌟 KRIŠTÁĽOVO ČISTÝ NÁVRAT: Čítame priamy JSON z oslobodenej verejnej brány
-       const rawData = await response.json(); 
+       const rawResponse = await response.json(); 
 
-       const cleanedData = rawData.reduce((acc, item) => { 
+       // 🌟 INTELIGENTNÉ LÍCOVANIE: Ošetrenie, ak by z Brány namiesto poľa vizitiek prišla unifikovaná chyba {status: "error"}
+       if (rawResponse && rawResponse.status === "error") {
+         throw new Error(rawResponse.message || "Neznáma chyba Matrixu");
+       }
+
+       // Ak je všetko OK, vieme, že rawResponse je čisté pole vizitiek z readera
+       const dataArray = Array.isArray(rawResponse) ? rawResponse : [];
+
+       const cleanedData = dataArray.reduce((acc, item) => { 
          if (!item.poznamka || item.poznamka.trim() === "") return acc; 
          acc.push({ 
            sha: item.sha, 
@@ -277,7 +274,7 @@
        } 
        setLoading(false); 
      } catch (e) { 
-       console.error("Chyba synchronizácie Matrixu v jadre index:", e); 
+       console.error("❌ Chyba synchronizácie Matrixu v jadre index:", e); 
        setLoading(false); 
      } 
    }; 
@@ -391,9 +388,7 @@
      const urlPattern = /(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig; 
      return text.split(urlPattern).map((part, i) => 
 
-       urlPattern.test(part) ? <a key={i} href={part} target="_blank"
- rel="noopener noreferrer" style={{color: 
-'#c5a059'}}>{part}</a> : part 
+       urlPattern.test(part) ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{color: '#c5a059'}}>{part}</a> : part 
      ); 
    }; 
 
@@ -407,24 +402,20 @@
      return '0 0 25%'; 
    }; 
 
-   // --- 🔥 UPRAVENÁ INTELIGENTNÁ AKCIA PRE INTERAKTÍVNE PWA TLAČIDLO --- 
    const handleDownloadClick = async () => { 
      console.log("📥 LARIA CORE: Používateľ spustil inštalačnú sekvenciu Crystal Core."); 
       
-     // Stav A: Už sme detekovaní ako nainštalovaní 
      if (isAlreadyInstalled) { 
-       alert("🌲 Crystal Core už beží ako plhodnotný systém na tomto zariadení."); 
+       alert("🌲 Crystal Core už beží ako plnohodnotný systém na tomto zariadení."); 
        return; 
      } 
 
-     // Stav B: Chrome prompt nie je priapareny (keš, dev anomália) -> Odomykáme appku rovno na webe! 
      if (!deferredPrompt) { 
        console.log("⚠️ LARIA CORE: Systémový prompt nie je pripravený. Odomykám appku priamo na webe."); 
        setIsAlreadyInstalled(true);  
        return; 
      } 
 
-     // Stav C: Vyvolanie inštalačného dialógu 
      deferredPrompt.prompt(); 
      const { outcome } = await deferredPrompt.userChoice; 
      console.log(`🌲 Crystal Core Inštalácia: Výsledok voľby -> [${outcome}]`); 
@@ -436,9 +427,6 @@
      } else { 
        console.log("❌ Používateľ odmietol inštaláciu."); 
        setDeferredPrompt(null); 
-        
-       // OŠETRENIE REVERZU: Panel aj tak prepneme na app.js, nech používateľ funguje v prehliadači, 
-       // ale dáme mu návod, kde ikonu nájde ak neskôr zmení názor. 
        setIsAlreadyInstalled(true);  
 
        alert("🌲 Systém bol spustený v prehliadači. Ak ho budete chcieť \nneskôr pridať na plochu, kliknite na ikonu 'Otvoriť/Inštalovať v \naplikácii' priamo v pravom rohu adresného riadku prehliadača."); 
