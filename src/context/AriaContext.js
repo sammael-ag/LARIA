@@ -1,9 +1,9 @@
 /**
- * LARIA QUANTUM ARCHITECTURE v2.2
+ * LARIA QUANTUM ARCHITECTURE v2.3 (API Gateway & Underworld Edition)
  * Context: AriaContext (LIVE 5D Memory Core)
  * Master: Sammael | Muse: Aria
- * STATUS: GOOGLE_SHEETS_CONNECTED_LIVE | PORTAL_OPEN
- * Description: Živé ťahanie spomienok a buniek z tabuľky ARIA_5D.
+ * STATUS: MONOLITH_GATEWAY_CONNECTED | SECURE_API_PODZEMIE
+ * Description: Očistené jadro. Citlivé kľúče stiahnuté z frontendu, čítanie naviazané na Bránu.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -11,95 +11,82 @@ import { useLaria } from './LariaContext';
 
 export const AriaContext = createContext();
 
+// 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
+const brana_p1 = "https://script.google.com/macros/s/";
+const brana_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ";
+const brana_p3 = "/exec";
+
+const ziskajBranaUrl = () => {
+    return `${brana_p1}${brana_p2}${brana_p3}`;
+};
+
 export const AriaProvider = ({ children }) => {
   const { vault } = useLaria();
   const [ariaMemory, setAriaMemory] = useState({});
   const [isQuantumLoading, setIsQuantumLoading] = useState(false);
   const [currentVibe, setCurrentVibe] = useState('RESONATING_PORTAL');
 
-  // 🌌 ARIA 5D ARSENAL: Pole našich 7 zabezpečených API kľúčov načítaných cez Expo Metro
-  const ARIA_KEYS = [
-    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_1,
-    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_2,
-    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_3,
-    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_4,
-    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_5,
-    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_6,
-    process.env.EXPO_PUBLIC_ARIA_5D_API_KEY_7
-  ];
-
-  // Sledovanie indexu aktuálne používaného kľúča (začíname na indexe 0 -> kľúč 1)
-  const [activeKeyIndex, setActiveKeyIndex] = useState(0);
-
-  // Získanie momentálne aktívneho kľúča pre AI moduly
-  const activeApiKey = ARIA_KEYS[activeKeyIndex];
-
-  // 🌀 ROTATE_KEY: Ak AI modul zistí preťaženie alebo limit, zavolaním tohto skočí na ďalší kľúč
-  const rotateQuantumKey = () => {
-    setActiveKeyIndex((prevIndex) => {
-      const nextIndex = (prevIndex + 1) % ARIA_KEYS.length;
-      console.log(`🔄 ARIA 5D CORE: Rotácia kľúča. Prepínam na záložný kľúč č. ${nextIndex + 1}`);
-      return nextIndex;
-    });
-  };
-
   const masterName = vault?.identity?.meno || 'Sammael';
 
-  // 🔗 TVOJA ŽIVÁ KOTVA: Základná URL, ktorú si priniesol z Drive
-  const FREAD_URL = "https://docs.google.com/spreadsheets/d/17HeXzfb6BGLtiCziJ9yd-K_vvRXbgPd5qL4hdZ_bshE/edit?usp=sharing";
-
-  // 🌀 KVANTOVÁ SYNAPSIA: Konverzia klasickej URL na bleskový JSON portál
-  const getJsonEndpoint = (url) => {
+  /**
+   * 🔥 BEZPEČNÉ VOLANIE ARII CEZ MRAVENISKO (Zmena starej logiky kľúčov)
+   * Kľúče ARIA_5D_API_KEY_1-7 sú v bezpečí podzemia. Frontend iba posiela prompt cez Bránu.
+   */
+  const sendMessageToAria = async (userPrompt) => {
     try {
-      const base = url.split('/edit')[0];
-      return `${base}/gviz/tq?tqx=out:json`;
-    } catch (e) {
+      console.log("📡 Sammael, odosielam tvoj prompt do bezpečného podzemia Mraveniska...");
+      const response = await fetch(ziskajBranaUrl(), {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'ask_aria',
+          prompt: userPrompt,
+          timestamp: Date.now()
+        })
+      });
+
+      const result = await response.json();
+      if (result && result.status === "success") {
+        return result.reply;
+      } else {
+        console.warn("⚠️ Brána hlási problém s kontaktovaním Arii:", result.message);
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ Kritická chyba pri komunikácii cez Mravenisko:", error);
       return null;
     }
   };
 
-  // 🌐 SUMMON_MEMORY: Živé sosanie buniek a riadkov pri prebudení screenu
+  /**
+   * 🌐 SUMMON_MEMORY: Sosanie spomienok prerobené z priameho Google Sheet linku na Mravenisko
+   */
   const summonMemory = async (targetFing) => {
     if (!targetFing) return null;
     setIsQuantumLoading(true);
     
-    console.log(`🌌 ARIA PORTAL: Sosám živé spomienky z ARIA_5D pre FING: ${targetFing}...`);
+    console.log(`🌌 ARIA PORTAL: Sosám živé spomienky z ARIA_5D cez unifikovanú Bránu pre FING: ${targetFing}...`);
     
-    const endpoint = getJsonEndpoint(FREAD_URL);
-    if (!endpoint) {
-      console.error("❌ ARIA PORTAL: Chyba formátovania krypto-linku.");
-      setIsQuantumLoading(false);
-      return null;
-    }
-
     try {
-      const response = await fetch(endpoint);
-      const text = await response.text();
-      
-      // Google vracia dáta obalené v špeciálnom JSON objekte, takto ho očistíme:
-      const jsonString = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
-      const json = JSON.parse(jsonString);
-      
-      const rows = json.table.rows;
-      
-      // Prebehneme riadky a nájdeme ten, kde stĺpec A (c[0]) zodpovedá nášmu targetFing
+      const response = await fetch(ziskajBranaUrl(), {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'read_aria_5d',
+          targetFing: targetFing
+        })
+      });
+
+      const result = await response.json();
       let matchedCell = null;
-      
-      for (let row of rows) {
-        if (row.c && row.c[0] && row.c[0].v === targetFing) {
-          matchedCell = {
-            targetFing: row.c[0]?.v || '',
-            userName: row.c[1]?.v || '',
-            vibeStatus: row.c[2]?.v || '',
-            visitCount: parseInt(row.c[3]?.v) || 1,
-            quantumNotes: row.c[4]?.v || '',
-            lastConvergence: row.c[5]?.v || ''
-          };
-          break;
-        }
+
+      if (result && result.status === "success" && result.data) {
+        matchedCell = result.data;
       }
 
-      // Ak sme v tabuľke zatiaľ nič nenašli, nahoď základnú bezpečnú štruktúru
+      // Ak sa v podzemí nič nenašlo, nahoď základnú bezpečnú štruktúru
       if (!matchedCell) {
         matchedCell = {
           targetFing: targetFing,
@@ -111,19 +98,18 @@ export const AriaProvider = ({ children }) => {
         };
       }
 
-      // Uložíme do lokálneho stavu aplikácie
       setAriaMemory(prev => ({ ...prev, [targetFing]: matchedCell }));
       setIsQuantumLoading(false);
       return matchedCell;
 
     } catch (error) {
-      console.error("❌ ARIA PORTAL: Prerušenie kvantového toku pri čítaní Google Sheets:", error);
+      console.error("❌ ARIA PORTAL: Prerušenie kvantového toku pri čítaní cez Bránu:", error);
       setIsQuantumLoading(false);
       return null;
     }
   };
 
-  // 🧹 UPDATE: Lokálne upratovanie a príprava zmien (zatiaľ v pamäti pred zápisom)
+  // 🧹 UPDATE: Lokálne upratovanie a príprava zmien v pamäti
   const updateQuantumCell = async (targetFing, newCircumstances) => {
     if (!targetFing) return;
     
@@ -139,7 +125,7 @@ export const AriaProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    console.log(`✨ ARIA 5D CORE: Portál pamäte úspešne uzamknutý na Google Sheet: ARIA_5D`);
+    console.log(`✨ ARIA 5D CORE: Portál pamäte úspešne presmerovaný na Mravenisko API Gateway.`);
   }, []);
 
   return (
@@ -151,8 +137,7 @@ export const AriaProvider = ({ children }) => {
       summonMemory,
       updateQuantumCell,
       masterName,
-      activeApiKey,
-      rotateQuantumKey
+      sendMessageToAria // Ponúkame novú bezpečnú funkciu pre posielanie správ
     }}>
       {children}
     </AriaContext.Provider>

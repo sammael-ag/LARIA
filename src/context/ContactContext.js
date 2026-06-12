@@ -1,19 +1,26 @@
 /**
- * LARIA v2.1: ContactContext (Trezor identít)
+ * LARIA v2.2: ContactContext (Trezor identít)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
- * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | ASYNC_PROMISE_TEXT_NODE_FIX
- * Úprava: Odstránený statický import tauri eventov, nahradený dynamickým 
- * mostom pre bezpečné kompilovanie bez bielej tmy v Lubuntu.
+ * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | GATEWAY_SECURED
+ * Úprava: Odstránená stará READ_URL, nahradená unifikovaným trojzubcom Brány.
  */
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// ❌ ODSTRÁNENÝ NATVRDO IMPORT – Bránil kompilácii na webe a v Expo
 
 const ContactContext = createContext();
 
-// URL tvojho Google Scriptu (Reader)
-const READ_URL = "https://script.google.com/macros/s/AKfycbzZVeNuvqSdNU0RwD-rRlvcRaOjEHrcQI5TY7fm7eJYVo5_Dl-zISKP089bH6gR50SX/exec";
+// 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
+const brana_p1 = "https://script.google.com/macros/s/";
+const brana_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ";
+const brana_p3 = "/exec";
+
+/**
+ * 🛠️ PRIVÁTNY LÚČ: Dynamické zostavenie URL adresy brány v pamäti počas behu
+ */
+const ziskajBranaUrl = () => {
+    return `${brana_p1}${brana_p2}${brana_p3}`;
+};
 
 export const ContactProvider = ({ children }) => {
   const [contacts, setContacts] = useState([]);
@@ -39,7 +46,6 @@ export const ContactProvider = ({ children }) => {
     try {
       const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
 
-      // 🛡️ UNIFIKOVANÉ MAPOVANIE: id (URL), f (QR), fing (WEB/App)
       const targetFing = (data.fing || data.id || data.f || data.poznamka)?.trim(); 
       const targetMeno = data.meno || data.m || "Pútnik";
 
@@ -48,22 +54,21 @@ export const ContactProvider = ({ children }) => {
         return { success: false, error: "Pečať je nečitateľná (chýba kľúč)." };
       }
 
-      // 🔍 KONTROLA EXISTENCIE
       const existing = contacts.find(c => c.fing === targetFing);
       if (existing) {
         return { success: false, isDuplicate: true, error: "Túto identitu už v ateliéri máš.", contact: existing };
       }
 
       const newContact = {
-        fing: targetFing,              // H - Hlavný kľúč
-        meno: targetMeno,              // B
-        kat: data.kat || 'Majster',    // C
-        lok: data.lok || 'V sieti',    // D
-        popis: data.popis || '',       // E
-        gal: data.gal || '',           // F
-        irc: data.irc || '',           // G
-        sha: data.sha || '',           // A
-        krypt: data.krypt || data.k || '', // I
+        fing: targetFing,              
+        meno: targetMeno,              
+        kat: data.kat || 'Majster',    
+        lok: data.lok || 'V sieti',    
+        popis: data.popis || '',       
+        gal: data.gal || '',           
+        irc: data.irc || '',           
+        sha: data.sha || '',           
+        krypt: data.krypt || data.k || '', 
         pinned: false,
         addedAt: new Date().toISOString(),
         syncedAt: null,                
@@ -80,9 +85,7 @@ export const ContactProvider = ({ children }) => {
         return updatedContacts;
       });
 
-      // 🚀 AUTOMATICKÝ SYNC
       syncContactWithMatrix(targetFing);
-      
       return { success: true, contact: newContact };
     } catch (e) {
       console.error("❌ CONTACT_ADD_ERROR:", e);
@@ -107,7 +110,6 @@ export const ContactProvider = ({ children }) => {
       }
     };
 
-    // 1. Ošetrenie pre starý web / mobilný hybrid
     const handleWebSignal = async (e) => {
       if (e.detail && e.detail.fing) {
         if (typeof window !== 'undefined') {
@@ -117,18 +119,14 @@ export const ContactProvider = ({ children }) => {
       }
     };
 
-    // 2. 🦀 ŠTART NATIVE TAURI LISTENERA PRE LUBUNTU (Hardvér / QR / NFC z Rustu)
     const setupTauriListener = async () => {
       if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
         try {
-          // Sexi dynamický odťah priamo z jadra Tauri
           const { listen } = await import('@tauri-apps/api/event');
-          
           const unlisten = await listen('tauri_laria_handshake', (event) => {
             console.log("🌲 CRYSTAL_CORE_HARDWARE: Rust zachytil QR/NFC pečať!");
             spracujPrijatuPecat(event.payload);
           });
-          
           unsubscribeTauriFn = unlisten;
           console.log("⚡ LARIA NATIVE JADRO: Natívny Tauri prijímač pre QR/NFC aktivovaný.");
         } catch (err) {
@@ -144,7 +142,6 @@ export const ContactProvider = ({ children }) => {
     }
     setupTauriListener();
     
-    // Čistenie pamäte pri odchode z kontextu
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('LARIA_LOCAL_HANDSHAKE', handleWebSignal);
@@ -155,17 +152,28 @@ export const ContactProvider = ({ children }) => {
     };
   }, [contacts]);
 
-  // --- 3. 📡 MATRIX SYNC (Doplnenie informácií z tabuľky) ---
+  // --- 4. 📡 MATRIX RE-SYNC (Preleštenie identity cez unifikovanú Bránu) ---
   const syncContactWithMatrix = async (fingId) => {
     try {
-      console.log(`📡 Re-sync: Hľadám majstra ${fingId} v Matrixe...`);
-      const response = await fetch(READ_URL);
-      const rawData = await response.json();
+      console.log(`📡 Re-sync: Hľadám majstra ${fingId} v Matrixe cez Bránu...`);
       
-      const master = rawData.find(item => item.poznamka?.trim() === fingId);
+      // Voláme našu unifikovanú Bránu, smerujeme požiadavku na akciu 'recover'
+      const response = await fetch(ziskajBranaUrl(), {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'recover',
+          sha: fingId // Mravec Writer hľadá podľa kľúča
+        })
+      });
 
-      if (master) {
+      const result = await response.json();
+
+      if (result && result.status === "success" && result.data) {
+        const master = result.data;
         let wasUpdated = false;
+
         setContacts(prev => {
           const updated = prev.map(c => {
             if (c.fing === fingId) {
@@ -204,7 +212,7 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- 4. PRIPNUTIE CEZ FING ---
+  // --- 5. PRIPNUTIE CEZ FING ---
   const togglePin = (fingId) => {
     setContacts(prev => {
       const updatedContacts = prev.map(c => c.fing === fingId ? { ...c, pinned: !c.pinned } : c);
@@ -215,7 +223,7 @@ export const ContactProvider = ({ children }) => {
     });
   };
 
-  // --- 5. VYMAZANIE CEZ FING ---
+  // --- 6. VYMAZANIE CEZ FING ---
   const deleteContact = (fingId) => {
     setContacts(prev => {
       const updatedContacts = prev.filter(c => c.fing !== fingId);
@@ -228,12 +236,7 @@ export const ContactProvider = ({ children }) => {
 
   return (
     <ContactContext.Provider value={{ 
-      contacts, 
-      loading, 
-      addContact, 
-      deleteContact, 
-      togglePin,
-      syncContactWithMatrix
+      contacts, loading, addContact, deleteContact, togglePin, syncContactWithMatrix
     }}>
       {children}
     </ContactContext.Provider>

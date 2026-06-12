@@ -1,10 +1,16 @@
+/**
+ * LARIA v2.3: KryptoContext (Blockchain Core)
+ * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
+ * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | BLOCKCHAIN_CLEAN
+ * Úprava: Odstránené prebytočné API kľúče z frontendu, prečistené názvoslovie 
+ * systémových stavov pre dokonalé zladenie s Maveniskom.
+ */
+
 import React, { createContext, useContext, useState } from 'react';
 import { ethers } from 'ethers';
 
 // TIETO KONFIGURÁCIE SÚ PEVNÉ - BLOCKCHAIN NEPUSTÍ
 const KRYPTO_CONFIG = {
-  apiKey: "R6h9kbHCWY2GxHhhQTgpMmY9mw4R7nGM", 
-  projectId: "98074637-80ee-4f12-8f5e-f186a388d2da", 
   chainId: 8453,
   rpcUrl: "https://mainnet.base.org", // Zlícované s naším Base mostom vo WalletProvideri
   ownerAddress: "0xb648261d780427793Fb496b0E3bdD5e987C42498", 
@@ -19,9 +25,9 @@ export const KryptoProvider = ({ children }) => {
   const [lariaBalance, setLariaBalance] = useState("0.0000");
   const [ethBalance, setEthBalance] = useState("0.000000");
 
-  // --- KANÁL B: ARCHITECT (Vrátnik/Majiteľ) ---
-  const [adminLariaBalance, setAdminLariaBalance] = useState("0.0000");
-  const [adminEthBalance, setAdminEthBalance] = useState("0.000000");
+  // --- KANÁL B: SYSTEM DISPATCHER (Pôvodne Architect - Vrátnik/Majiteľ) ---
+  const [systemLariaBalance, setSystemLariaBalance] = useState("0.0000");
+  const [systemEthBalance, setSystemEthBalance] = useState("0.000000");
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -48,12 +54,12 @@ export const KryptoProvider = ({ children }) => {
 
     setIsLoading(true);
     try {
-      // Pripájame sa priamo na stabilný Base uzol, ktorý máme vo WalletProvideri
+      // Pripájame sa priamo na stabilný Base uzol
       const provider = new ethers.JsonRpcProvider(KRYPTO_CONFIG.rpcUrl);
 
       // 1. ETH Balance (Základné palivo siete Base)
       const rawEth = await provider.getBalance(addressToQuery);
-      const formattedEth = ethers.formatEther(rawEth); // Necháme čistý string z ethers
+      const formattedEth = ethers.formatEther(rawEth); 
 
       // 2. LARIA Balance (Náš SmartContract)
       const minABI = ["function balanceOf(address) view returns (uint256)"];
@@ -63,8 +69,8 @@ export const KryptoProvider = ({ children }) => {
       
       // --- ROZDVOJOVAČ LOGIKY S OCHRANOU PROTI CYKLENIU ---
       if (addressToQuery.toLowerCase() === KRYPTO_CONFIG.ownerAddress.toLowerCase()) {
-        setAdminEthBalance(formattedEth);
-        setAdminLariaBalance(formattedLaria);
+        setSystemEthBalance(formattedEth);
+        setSystemLariaBalance(formattedLaria);
       } else {
         setEthBalance(formattedEth);
         setLariaBalance(formattedLaria);
@@ -88,8 +94,10 @@ export const KryptoProvider = ({ children }) => {
     walletAddress: krypt, // Ponechané pre stopercentnú spätnú kompatibilitu so SettingsScreen
     ethBalance,
     lariaBalance,
-    adminEthBalance,
-    adminLariaBalance,
+    adminEthBalance: systemEthBalance,     // Spätná kompatibilita pre zvyšok aplikácie, ak by to niekde ťahalo starý názov
+    adminLariaBalance: systemLariaBalance, // Spätná kompatibilita pre zvyšok aplikácie
+    systemEthBalance,
+    systemLariaBalance,
     isLoading,
     generateAutoWallet,
     syncWalletData
