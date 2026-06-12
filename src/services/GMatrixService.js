@@ -181,4 +181,45 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
     }
 };
 
+/**
+ * 5. OVERENIE MASTER PRÍSTUPU (Zabezpečený kanál - doPost -> action: 'verify_master')
+ * Posiela kľúče na overenie priamo do podzemia Brana.gs. V kóde nezostávajú žiadne hashe.
+ */
+export const verifyMasterAccess = async (masterSHA, secretWord) => {
+    try {
+        const payload = {
+            action: 'verify_master',
+            masterSHA: masterSHA,
+            secretWord: secretWord
+        };
+
+        const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
+        console.log("📡 Sammael, vysielam lúč do Brány na overenie tajného prístupu...");
+
+        const response = await fetch(uniqueUrl, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`Brána neodpovedá (HTTP ${response.status})`);
+
+        const result = await response.json();
+        
+        if (result && result.status === "success" && result.verified === true) {
+            console.log("✅ Brána potvrdila identitu Majstra. Prístup povolený.");
+            return { success: true };
+        } else {
+            console.warn("⚠️ Brána zamietla prístup do velína:", result.message);
+            return { success: false, error: result.message };
+        }
+    } catch (error) {
+        console.error("❌ Kritická chyba pri sieťovom overovaní Master prístupu:", error);
+        return { success: false, error: error.message };
+    }
+};
+
 export { brana_p1, brana_p2, brana_p3 };

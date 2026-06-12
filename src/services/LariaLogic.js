@@ -1,14 +1,18 @@
+/**
+ * PROTOKOL LARIA ART v8.2 - THE CRYPTO SOVEREIGN SEAL
+ * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
+ * STATUS: SYNCED / CLEAN WEB THE LAW / CORE_AUDIT_PASSED
+ * Popis: Generátor identity, trezor a krypto-strážca bez indiskrétneho Device ID.
+ * Úprava: Odstránené staré tieňové štruktúry prístupu. Celá ostrá verifikácia
+ * Brány do velína je bezpečne zapuzdrená priamo v DashboardScreen.
+ */
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ethers } from 'ethers';
 
-/**
- * PROTOKOL LARIA ART v8.1 - THE CRYPTO SUVEREIGN SEAL
- * STATUS: SYNCED / CLEAN WEB THE LAW
- * Popis: Generátor identity, trezor a krypto-strážca bez indiskrétneho Device ID.
- */
-
 // --- 1. VNÚTORNÝ MLYNČEK (Generátor posvätného SHA) ---
-// Sammael, v novom rytme hashujeme kombináciu unikátneho krypto-kľúča a zadaného mena.
+// Sammael, v novym rytme hashujeme kombináciu unikátneho krypto-kľúča a zadaného mena.
+// ⚠️ MATEMATIKA JE SVÄTÁ - NEDOTÝKAŤ SA (Zákon stability identity Matrixu)
 export const generatePureSHA = (cryptoSalt, name) => {
   // 🛡️ ZÁKON IDENTITY: Ak chýba krypto-základ ALEBO meno, identita nevznikne
   if (!cryptoSalt || !name || name.trim() === "") {
@@ -37,12 +41,10 @@ export const generatePureSHA = (cryptoSalt, name) => {
 
 // --- 2. KRYPTOGRAFICKÝ PODPIS VIZITKY (Proof of Human Action) ---
 // Táto funkcia digitálne podpíše FING pomocou privátneho kľúča peňaženky aplikácie.
-// Google Sheets tak overí, že požiadavku posiela skutočný majiteľ peňaženky a nie bot.
 export const signLariaFing = async (privateKey, fing) => {
   try {
     if (!privateKey || !fing) return null;
     const wallet = new ethers.Wallet(privateKey);
-    // Vytvoríme nezameniteľný digitálny podpis pre nálhľad tabuľky
     const signature = await wallet.signMessage(fing);
     return signature;
   } catch (error) {
@@ -51,11 +53,7 @@ export const signLariaFing = async (privateKey, fing) => {
   }
 };
 
-// --- 3. TAJNÉ KONŠTANTY (Tiene tvojho sveta) ---
-const MASTER_SHA_SHADOW = "0x54f91c11a4a2a660f"; 
-const ARCHITECT_HASH_SHADOW = "0x75d93eeee454e9ed2";
-
-// --- 4. POMOCNÉ FUNKCIE TREZORU (AsyncStorage) ---
+// --- 3. POMOCNÉ FUNKCIE TREZORU (AsyncStorage) ---
 export const saveToVault = async (key, value) => {
   try {
     const jsonValue = JSON.stringify(value);
@@ -71,16 +69,8 @@ export const loadFromVault = async (key) => {
   } catch (e) { return null; }
 };
 
-// --- 5. OVERENIE PEČATE (Slovo Moci) ---
-export const verifyArchitectSeal = (secretWord) => {
-  if (!secretWord) return false;
-  // Zomelieme slovo so soľou "ARCHITECT"
-  const inputHash = generatePureSHA(secretWord, "ARCHITECT");
-  return inputHash === ARCHITECT_HASH_SHADOW;
-};
-
 /**
- * 6. OCHRANA IDENTITY (Anti-Drain Poistka)
+ * 4. OCHRANA IDENTITY (Anti-Drain Poistka)
  */
 export const getSacredWallet = async () => {
   const saved = await loadFromVault('identity');
@@ -95,7 +85,7 @@ export const getSacredWallet = async () => {
 };
 
 /**
- * 7. ROZHODOVACÍ PROTOKOL v8.1
+ * 5. ROZHODOVACÍ PROTOKOL v8.2
  */
 export const runLariaProtocol = (identity, hasSeal = false) => {
   if (!identity || !identity.sha) return { isAdmin: false };

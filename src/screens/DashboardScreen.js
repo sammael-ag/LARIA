@@ -13,6 +13,7 @@ import * as Crypto from 'expo-crypto';
 
 import { useLaria } from '../context/LariaContext';
 import { G, ACCENT } from '../styles/styles'; 
+import { verifyMasterAccess } from '../services/GMatrix';
 
 const DashboardScreen = ({ navigation, setCurrentView }) => {
   const { t, vault, unlockSeal } = useLaria(); // 🎯 Aktivácia jazykového motora
@@ -46,35 +47,30 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
   };
 
   const handleUnlock = async () => {
+    if (!masterSHA || !secretWord) return;
+
     try {
-      console.log("🔐 LARIA: Handshake architektovho vedomia...");
+      console.log("🔐 LARIA: Odosielam handshake požiadavku do podzemnej Brány...");
       
-      const hashA = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        secretWord + "ARCHITECT"
-      );
+      // Voláme našu novú sieťovú službu GMatrix
+      const response = await verifyMasterAccess(masterSHA, secretWord);
 
-      const finalProduct = `${architectSHA}${hashA}LUMIA_8D_SALT`;
-      const finalHash = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        finalProduct
-      );
-
-      const MASTER_TARGET_HASH = "91eb062f30e2eddfbeb04e08b4c030d0a13e216636699d893863736d6c4bf21c";
-
-      if (finalHash === MASTER_TARGET_HASH) {
+      if (response && response.success) {
         await unlockSeal(true); 
         setShowVaultInput(false);
         setSecretWord('');
-        setArchitectSHA('');
+        setMasterSHA('');
         navigation.navigate('Diagnostic');
       } else {
+        // Ak brána vráti false, potichu vyčistíme polia (ochrana pred bruteforce)
+        console.warn("❌ LARIA: Prístup zamietnutý Bránou.");
         setShowVaultInput(false);
         setSecretWord('');
-        setArchitectSHA('');
+        setMasterSHA('');
       }
     } catch (error) {
-      console.error("Auth Error:", error);
+      console.error("Auth Network Error:", error);
+      alert("Spojenie s Bránou zlyhalo. Skontroluj sieť mraveniska.");
       setShowVaultInput(false);
     }
   };
