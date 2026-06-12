@@ -13,7 +13,7 @@ import * as Crypto from 'expo-crypto';
 
 import { useLaria } from '../context/LariaContext';
 import { G, ACCENT } from '../styles/styles'; 
-import { verifyMasterAccess } from '../services/GMatrix';
+import { verifyMasterAccess } from '../services/GMatrixService';
 
 const DashboardScreen = ({ navigation, setCurrentView }) => {
   const { t, vault, unlockSeal } = useLaria(); // 🎯 Aktivácia jazykového motora
