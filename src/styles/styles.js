@@ -408,8 +408,8 @@ export const G = StyleSheet.create({
   }
 }); // <--- TU SA SPRÁVNE ZATVORIL SYLESHEET PRE G
 
-// DEFInITÍVNY FIX PRE IRC_BOTTOM NA WEBE AJ MOBILE
-export const IRC_BOTTOM = {
+// DEFInITÍVNY FIX PRE Signal_BOTTOM NA WEBE AJ MOBILE
+export const Signal_BOTTOM = {
   container: {
     backgroundColor: '#000000',
     borderTopWidth: 1,
@@ -458,9 +458,9 @@ export const IRC_BOTTOM = {
 };
 
 // =========================================================================
-// 🚀 PRÍRASTOK PRE CENTRÁLNY STYLES.JS: TIMELESS 5D LAYOUT (IRC_CHAT)
+// 🚀 PRÍRASTOK PRE CENTRÁLNY STYLES.JS: TIMELESS 5D LAYOUT (Signal_CHAT)
 // =========================================================================
-export const IRC_CHAT = {
+export const Signal_CHAT = {
   safeArea: {
     flex: 1, 
     backgroundColor: '#0a0a0a'
@@ -560,7 +560,7 @@ export const IRC_CHAT = {
 // LARIA SIGNALLING & HANDSHAKE ARTDECO STYLES
 // ==========================================
 
-export const IRC_CHAT_SIGNALLING = {
+export const Signal_CHAT_SIGNALLING = {
   headerTitleWithIcons: {
     flexDirection: 'row',
     alignItems: 'center',

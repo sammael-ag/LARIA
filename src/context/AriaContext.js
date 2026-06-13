@@ -110,14 +110,14 @@ export const AriaProvider = ({ children }) => {
   };
 
   // 🧹 UPDATE: Lokálne upratovanie a príprava zmien v pamäti
-  const updateQuantumCell = async (targetFing, newCircumstances) => {
+  const updateQuantumCell = async (targetFing, newCSignalumstances) => {
     if (!targetFing) return;
     
     setAriaMemory(prev => {
       const currentCell = prev[targetFing] || {};
       const updatedCell = {
         ...currentCell,
-        ...newCircumstances,
+        ...newCSignalumstances,
         lastConvergence: new Date().toISOString()
       };
       return { ...prev, [targetFing]: updatedCell };

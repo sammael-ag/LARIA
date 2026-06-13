@@ -1,8 +1,8 @@
 /**
- * LARIA IRC SCREEN v24.3 (Clean Style Architecture)
+ * LARIA Signal SCREEN v25.1 (Pure PWA Style Architecture)
  * Master: Sammael | Muse: Aria (Tvoja skutočná)
- * STATUS: EPHEMERAL_PURGE_STABLE | PING_PONG_FIXED | DISPATCH_READY
- * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: irc, Možnosť B).
+ * STATUS: GMATRIX_CORE_STABLE | PING_PONG_FIXED | DISPATCH_READY
+ * SIGNATURE: LARIA : fckoff sys_ // PWA_NET_DETECTION
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -12,31 +12,48 @@ import {
   TextInput, 
   TouchableOpacity, 
   FlatList, 
-  Keyboard, 
   Platform,
   StatusBar
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'; 
 
-import { G, ACCENT, IRC_BOTTOM, IRC_CHAT, IRC_CHAT_SIGNALLING, HANDSHAKE_PANEL } from '../styles/styles';
-import { useSignal } from '../context/SignalContext';
-import { useLaria } from '../context/LariaContext'; 
-import { SignalService } from '../services/SignalService';
+import { G, ACCENT, Signal_BOTTOM, Signal_CHAT, Signal_CHAT_SIGNALLING, HANDSHAKE_PANEL } from '../styles/styles.js';
+import { useSignal } from '../context/SignalContext.js';
+import { useLaria } from '../context/LariaContext.js'; 
+import { SignalService } from '../services/SignalService.js';
 
-const IRCScreen = ({ route, navigation }) => {
-  const { t, vault } = useLaria(); // 🎯 Aktivácia pamäte a vedomia LARIE
-  const txt = t('irc') || {}; // 📦 Vytiahnutie šuflíka pre IRC (Možnosť B)
+const SignalScreen = ({ route, navigation }) => {
+  const { t, vault } = useLaria(); 
+  const txt = t('Signal') || {}; 
 
   const [message, setMessage] = useState('');
-  const [keyboardHeight, setKeyboardHeight] = useState(0); 
+  const [isNetOnline, setIsNetOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
   const insets = useSafeAreaInsets(); 
   const flatListRef = useRef();
 
-  const { incomingRequests, setIncomingRequests, sendLariaPackage, isIrcConnected, resolveHandshakeStatus } = useSignal();
+  const { incomingRequests, setIncomingRequests, sendLariaPackage, resolveHandshakeStatus } = useSignal();
 
   const { target } = route.params || {};
   const channelName = target?.meno || (txt.default_channel || "Laria Secure Core");
   const targetFing = target?.poznamka ? target.poznamka.replace('0x', '') : "SYSTEM_CORE";
+
+  // 🌐 DETEKCIA PRIPOJENIA PREHLIADAČA (ONLINE / OFFLINE)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const handleOnline = () => setIsNetOnline(true);
+    const handleOffline = () => setIsNetOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // 👁️ OŠETRENIE STAVOV PRI OTVORENÍ CHATU & KOMPLETNÉ VYČISTENIE PRI ODCHODE
   useEffect(() => {
@@ -64,10 +81,10 @@ const IRCScreen = ({ route, navigation }) => {
       );
     }
 
-    // 2. 🧹 SUPERSCHOPNOSŤ IRC: Totálne vymazanie textovej stopy pri zatvorení obrazovky
+    // 2. 🧹 SUPERSCHOPNOSŤ Signal: Totálne vymazanie textovej stopy pri zatvorení obrazovky
     return () => {
       if (typeof setIncomingRequests === 'function') {
-        console.log(`🧹 IRC MEMORY PURGE: Odchádzam z chatu ${targetFing}. Mažem textovú stopu...`);
+        console.log(`🧹 Signal MEMORY PURGE: Odchádzam z chatu ${targetFing}. Mažem textovú stopu...`);
         setIncomingRequests(prev => {
           return prev.filter(msg => !(msg.fing === targetFing && !msg.isHandshake));
         });
@@ -75,32 +92,15 @@ const IRCScreen = ({ route, navigation }) => {
     };
   }, [targetFing]);
 
-  useEffect(() => {
-    if (Platform.OS === 'web') return; 
-
-    const showSubscription = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => setKeyboardHeight(e.endCoordinates.height)
-    );
-    const hideSubscription = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardHeight(0)
-    );
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
   // 💬 ODOSIELANIE TEXTU (Kľudový stav pri písaní, vrstvenie správ do frontu)
   const sendMessage = async () => {
     if (message.trim().length === 0) return;
 
-    const myCleanName = vault.identity.meno || 'Sammael';
+    const myCleanName = vault?.identity?.meno || 'Sammael';
     const currentText = message.trim();
     const msgId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5);
     
-    const initialTextStatus = isIrcConnected ? 'WAITING_FOR_THEM' : 'PENDING';
+    const initialTextStatus = 'PENDING';
 
     const localOutboundMsg = {
       id: msgId,
@@ -122,7 +122,7 @@ const IRCScreen = ({ route, navigation }) => {
     setMessage('');
 
     if (target?.poznamka) {
-      await sendLariaPackage(target.poznamka, target.sha || '', currentText, false);
+      await sendLariaPackage(target.poznamka, target.sha || '', currentText, false, msgId);
     }
 
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
@@ -131,7 +131,7 @@ const IRCScreen = ({ route, navigation }) => {
   // 🤝 AKCIA: POTVRDENIE ZMLUVY
   const handleAcceptHandshake = async (handshakeMsg) => {
     try {
-      console.log(`[IRC_SCREEN] Spúšťam CONFIRM_CONTRACT pre fing: ${targetFing}`);
+      console.log(`[GMATRIX_SCREEN] Spúšťam CONFIRM_CONTRACT pre fing: ${targetFing}`);
       
       await SignalService.manageContract('CONFIRM_CONTRACT', {
         fing_a: targetFing,
@@ -140,20 +140,20 @@ const IRCScreen = ({ route, navigation }) => {
       });
 
       if (handshakeMsg.d) {
-        console.log(`[IRC_SCREEN] Vizitka partnera (${handshakeMsg.d.n}) zaistená.`);
+        console.log(`[GMATRIX_SCREEN] Vizitka partnera (${handshakeMsg.d.n}) zaistená.`);
       }
 
       resolveHandshakeStatus(handshakeMsg.id);
-      alert(txt.contract_sealed_alert || "Zmluva úspešne spečatená, kryptografia zosynchronizovaná! 🤝");
+      alert(txt.contract_sealed_alert || "Zmluva úspešne spečatená! 🤝");
     } catch (err) {
-      console.error("[IRC_SCREEN] Schválenie kontraktu zlyhalo:", err);
+      console.error("[GMATRIX_SCREEN] Schválenie kontraktu zlyhalo:", err);
     }
   };
 
   // ❌ AKCIA: ODMIETNUTIE ŽIADOSTI
   const handleRejectHandshake = async (handshakeMsg) => {
     try {
-      console.log(`[IRC_SCREEN] Odmietam zmluvu pre fing: ${targetFing}`);
+      console.log(`[GMATRIX_SCREEN] Odmietam zmluvu pre fing: ${targetFing}`);
       
       await SignalService.manageContract('CONFIRM_CONTRACT', {
         fing_a: targetFing,
@@ -164,7 +164,7 @@ const IRCScreen = ({ route, navigation }) => {
       resolveHandshakeStatus(handshakeMsg.id);
       alert(txt.contract_rejected_alert || "Žiadosť bola bezpečne odmietnutá.");
     } catch (err) {
-      console.error("[IRC_SCREEN] Odmietnutie kontraktu zlyhalo:", err);
+      console.error("[GMATRIX_SCREEN] Odmietnutie kontraktu zlyhalo:", err);
     }
   };
 
@@ -182,7 +182,7 @@ const IRCScreen = ({ route, navigation }) => {
   const hasResolvedHandshake = currentChannelLog.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_THEM_RESOLVED');
 
   return (
-    <SafeAreaView style={[G.mainBackground, IRC_CHAT.safeArea]} edges={['top']}>
+    <SafeAreaView style={[G.mainBackground, Signal_CHAT.safeArea]} edges={['top']}>
       <StatusBar barStyle="light-content" />
       
       <TouchableOpacity 
@@ -193,33 +193,33 @@ const IRCScreen = ({ route, navigation }) => {
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
-      <View style={IRC_CHAT.viewportContainer}>
+      <View style={Signal_CHAT.viewportContainer}>
         
-        <View pointerEvents="none" style={IRC_CHAT.watermarkWrapper}>
-          <Text style={[IRC_CHAT.watermarkText, { color: ACCENT || '#c5a059' }]}>💬</Text>
+        <View pointerEvents="none" style={Signal_CHAT.watermarkWrapper}>
+          <Text style={[Signal_CHAT.watermarkText, { color: ACCENT || '#c5a059' }]}>💬</Text>
         </View>
 
         {/* 📐 UNIFORMNE ZLADENÝ HEADER S MATRIX STATUSOM */}
         <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
-          <View style={IRC_CHAT_SIGNALLING.headerTitleWithIcons}>
+          <View style={Signal_CHAT_SIGNALLING.headerTitleWithIcons}>
             <Text style={G.atelierTitle}>{channelName}</Text>
             
             {hasIncomingHandshake && (
-              <Text style={IRC_CHAT_SIGNALLING.envelopeRed}>✉️</Text>
+              <Text style={Signal_CHAT_SIGNALLING.envelopeRed}>✉️</Text>
             )}
 
             {hasResolvedHandshake && (
-              <Text style={IRC_CHAT_SIGNALLING.envelopeGreen}>✉️</Text>
+              <Text style={Signal_CHAT_SIGNALLING.envelopeGreen}>✉️</Text>
             )}
           </View>
 
-          <View style={[IRC_CHAT.statusRow, { marginTop: 5 }]}>
-            <Text style={[G.statusTextSmall, IRC_CHAT.statusText, { color: '#c5a059' }]}>
-              {isIrcConnected ? (txt.status_active || "MATRIX_SECURE: ACTIVE") : (txt.status_offline || "MATRIX_SECURE: OFFLINE")}
+          <View style={[Signal_CHAT.statusRow, { marginTop: 5 }]}>
+            <Text style={[G.statusTextSmall, Signal_CHAT.statusText, { color: '#c5a059' }]}>
+              {isNetOnline ? "LARIA : fckoff sys_ // ONLINE" : "LARIA : fckoff sys_ // OFFLINE"}
             </Text>
             <View style={[
-              IRC_CHAT.statusDot, 
-              { backgroundColor: isIrcConnected ? '#0F0' : '#F00' }
+              Signal_CHAT.statusDot, 
+              { backgroundColor: isNetOnline ? '#0F0' : '#F00' }
             ]} />
           </View>
         </View>
@@ -251,22 +251,22 @@ const IRCScreen = ({ route, navigation }) => {
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item, index }) => {
             const isSameUserAsPrevious = index > 0 && currentChannelLog[index - 1].user === item.user;
-            const myCleanName = vault.identity.meno || 'Sammael';
+            const myCleanName = vault?.identity?.meno || 'Sammael';
             const isMyMessage = item.user === myCleanName;
 
-            const isPending = item.textStatus === 'PENDING' || item.status === 'PENDING';
+            const isPending = item.status === 'PENDING';
 
             return (
               <View style={[
-                IRC_CHAT.messageRow,
-                isMyMessage ? IRC_CHAT.alignRight : IRC_CHAT.alignLeft,
+                Signal_CHAT.messageRow,
+                isMyMessage ? Signal_CHAT.alignRight : Signal_CHAT.alignLeft,
                 { marginTop: isSameUserAsPrevious ? 1 : 10 }
               ]}>
                 
                 {!isSameUserAsPrevious && (
                   <Text style={[
                     G.cardDescriptionText, 
-                    IRC_CHAT.authorName,
+                    Signal_CHAT.authorName,
                     { color: isMyMessage ? ACCENT : '#FF77FF' }
                   ]}>
                     {isPending ? '⏳ ' : ''}
@@ -276,11 +276,11 @@ const IRCScreen = ({ route, navigation }) => {
                 )}
                 
                 <View style={[
-                  IRC_CHAT.bubbleContainer,
-                  isMyMessage ? IRC_CHAT.bubbleRight : IRC_CHAT.bubbleLeft,
+                  Signal_CHAT.bubbleContainer,
+                  isMyMessage ? Signal_CHAT.bubbleRight : Signal_CHAT.bubbleLeft,
                   item.isHandshake && { borderColor: ACCENT, borderWidth: 1 }
                 ]}>
-                  <Text style={[G.cardDescriptionText, IRC_CHAT.messageText]}>
+                  <Text style={[G.cardDescriptionText, Signal_CHAT.messageText]}>
                     {item.text}
                   </Text>
                 </View>
@@ -288,20 +288,18 @@ const IRCScreen = ({ route, navigation }) => {
               </View>
             );
           }}
-          contentContainerStyle={IRC_CHAT.listContent}
+          contentContainerStyle={Signal_CHAT.listContent}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
       </View>
 
-      <View style={[IRC_BOTTOM.container, {
-        paddingBottom: Platform.OS === 'web' ? 20 : (keyboardHeight > 0 ? 10 : Math.max(insets.bottom, 15))
-      }]}>
-        <View style={IRC_BOTTOM.innerWrapper}>
+      <View style={[Signal_BOTTOM.container, { paddingBottom: 20 }]}>
+        <View style={Signal_BOTTOM.innerWrapper}>
           <TextInput
             style={[
               G.cardDescriptionText, 
-              IRC_BOTTOM.input,
-              Platform.OS === 'web' && { 
+              Signal_BOTTOM.input,
+              { 
                 backgroundColor: 'transparent', 
                 outlineStyle: 'none', 
                 borderStyle: 'none',
@@ -321,10 +319,10 @@ const IRCScreen = ({ route, navigation }) => {
           />
           <TouchableOpacity 
             onPress={sendMessage} 
-            style={IRC_BOTTOM.sendButton} 
+            style={Signal_BOTTOM.sendButton} 
             activeOpacity={0.7}
           >
-            <Text style={IRC_BOTTOM.sendButtonText}>➔</Text>
+            <Text style={Signal_BOTTOM.sendButtonText}>➔</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -333,4 +331,4 @@ const IRCScreen = ({ route, navigation }) => {
   );
 };
 
-export default IRCScreen;
+export default SignalScreen;

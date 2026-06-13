@@ -66,7 +66,7 @@ export const saveToGMatrix = async (identityData) => {
             tg: identityData.tg,               
             gal: identityData.gal,             
             isPublic: identityData.isPublic,   
-            irc: identityData.irc,             
+            Signal: identityData.Signal,             
             poznamka: identityData.fing || identityData.poznamka, 
             krypt: identityData.krypt,         
             jazyk: identityData.jazyk || 'sk'   

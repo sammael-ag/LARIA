@@ -240,7 +240,7 @@ const scrollToTop = () => {
             <View style={CONTACT_NOTIF.chatBadgeWrapper}>
               <TouchableOpacity 
                 style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} 
-                onPress={() => navigation.navigate('IRC', { target: item })} 
+                onPress={() => navigation.navigate('Signal', { target: item })} 
                 activeOpacity={0.5}
               >
                 <Text style={{ color: (ACCENT || '#c5a059'), fontSize: 18 }}>💬</Text>
@@ -352,22 +352,35 @@ const scrollToTop = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }} 
 
+          // 🛡️ MARS FILTER: Ochrana pred zacyklením prehliadača pri doraze nahor
           onScroll={(event) => {
             const offsetY = event.nativeEvent.contentOffset.y;
-            if (offsetY > 300) {
-              if (!showBackToTop) setShowBackToTop(true);
-            } else {
+            
+            // Ignorujeme záporné odrazy (elastický scroll navrchu)
+            if (offsetY <= 0) {
               if (showBackToTop) setShowBackToTop(false);
+              return;
+            }
+
+            // Prepíname stav IBA vtedy, ak sa reálne mení (žiadne layout záplavy)
+            if (offsetY > 300) {
+              if (!showBackToTop) {
+                setShowBackToTop(true);
+              }
+            } else {
+              if (showBackToTop) {
+                setShowBackToTop(false);
+              }
             }
           }}
-          scrollEventThrottle={16}
+          // Uvoľníme prúd eventov na 32ms, aby mal webový engine čas dýchať
+          scrollEventThrottle={32}
 
           ListHeaderComponent={
             /* 🌸 ČISTÁ HLAVIČKA KONTAKTOV - GEOMETRIA ATELIÉRU */
             <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
               <Text style={G.atelierTitle}>{txt.title || "Kontakty"}</Text>
               
-              {/* Vyhľadávanie a tlačidlá plynule pod čistým nadpisom */}
               <TextInput 
                 style={[G.vaultInput, { width: '100%', marginTop: 10 }]} 
                 placeholder={txt.search_placeholder || "HĽADAŤ (MENO, KAT, ID)..."} 

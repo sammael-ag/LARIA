@@ -274,7 +274,7 @@ const SettingsScreen = ({ navigation }) => {
             tg: matrixData.tg,
             gal: matrixData.gal,
             isPublic: matrixData.isPublic === true || matrixData.isPublic === "true",
-            irc: matrixData.irc,
+            Signal: matrixData.Signal,
             poznamka: matrixData.sha.substring(0, 12),
             krypt: matrixData.krypt
           };

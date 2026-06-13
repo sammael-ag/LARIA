@@ -58,7 +58,7 @@ const CardEditorScreen = ({ navigation }) => {
     tg: vault?.identity?.tg || '',
     gal: vault?.identity?.gal || '',
     isPublic: vault?.identity?.isPublic !== undefined ? vault.identity.isPublic : true, // 📢 DEFAULT = TRUE
-    irc: vault?.identity?.irc || '',
+    Signal: vault?.identity?.Signal || '',
     poznamka: vault?.identity?.poznamka || '',
     krypt: vault?.identity?.krypt || '',
     revo: vault?.identity?.revo || '',
@@ -155,7 +155,7 @@ const CardEditorScreen = ({ navigation }) => {
         tg: localData.tg,    
         gal: localData.gal,  
         isPublic: localData.isPublic, 
-        irc: localData.irc,  
+        Signal: localData.Signal,  
         poznamka: localData.poznamka, 
         krypt: localData.krypt 
       };

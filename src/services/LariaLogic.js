@@ -94,7 +94,7 @@ export const runLariaProtocol = (identity, hasSeal = false) => {
 
   return {
     isOnline: !!identity.sha,
-    isIrcOnline: !!identity.irc,
+    isSignalOnline: !!identity.Signal,
     hasNFC: !!identity.nfc,
     isParanoid: !identity.email && !!identity.sha,
     isGoogleFull: !!identity.email && !!identity.isPublic,

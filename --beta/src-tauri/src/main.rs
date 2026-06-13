@@ -32,14 +32,14 @@ fn ping_crystal_core() -> String {
     "pong".to_string()
 }
 
-// 📡 3. NATÍVNY IRC MOST (Pre budúci Hyperspeed a šifrovanie v kove)
+// 📡 3. NATÍVNY Signal MOST (Pre budúci Hyperspeed a šifrovanie v kove)
 #[tauri::command]
 fn spracuj_native_signal(payload: SignalPayload) -> CommandResponse {
     let clean_sender = payload.sender_fing.replace("0x", "");
     let clean_target = payload.target_fing.replace("0x", "");
     
     println!(
-        "📡 [Rust Core - IRC Most]: Zachytený signál! Od: {} -> Pre: {}. Text: {}", 
+        "📡 [Rust Core - Signal Most]: Zachytený signál! Od: {} -> Pre: {}. Text: {}", 
         clean_sender, clean_target, payload.msg_text
     );
 

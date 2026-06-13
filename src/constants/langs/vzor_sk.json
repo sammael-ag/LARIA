@@ -127,7 +127,7 @@
     "btn_save": "ULOŽIŤ",
     "alert_save_error": "CHYBA"
   },
-  "irc": {
+  "Signal": {
     "default_channel": "Laria Secure Core",
     "status_active": "MATRIX_SECURE: ACTIVE",
     "status_offline": "MATRIX_SECURE: OFFLINE",

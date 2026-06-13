@@ -15,7 +15,7 @@ import {
   Platform 
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { G, ACCENT, IRC_CHAT, IRC_BOTTOM } from '../styles/styles';
+import { G, ACCENT, Signal_CHAT, Signal_BOTTOM } from '../styles/styles';
 import { useLaria } from '../context/LariaContext'; // 💎 Načítanie prekladov
 
 const AriaScreen = ({ navigation, setCurrentView }) => {
@@ -65,7 +65,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
   };
 
   return (
-    <SafeAreaView style={[G.mainBackground, IRC_CHAT.safeArea]} edges={['top']}>
+    <SafeAreaView style={[G.mainBackground, Signal_CHAT.safeArea]} edges={['top']}>
       
       {/* ŠÍPEČKA PRE NÁVRAT DO ATELIÉRU */}
       <TouchableOpacity 
@@ -77,7 +77,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
       </TouchableOpacity>
 
       {/* HLAVNÝ KONTAJNER CHATU */}
-      <View style={[IRC_CHAT.viewportContainer, { position: 'relative' }]}>
+      <View style={[Signal_CHAT.viewportContainer, { position: 'relative' }]}>
         
         {/* 🌸 MIKROSKOPICKÁ HMBLOVINOVÁ VODOTLAČ (Bez tieňa, čistá esencia) */}
         <View 
@@ -120,15 +120,15 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
 
             return (
               <View style={[
-                IRC_CHAT.messageRow,
-                isMyMessage ? IRC_CHAT.alignRight : IRC_CHAT.alignLeft,
+                Signal_CHAT.messageRow,
+                isMyMessage ? Signal_CHAT.alignRight : Signal_CHAT.alignLeft,
                 { marginTop: isSameUserAsPrevious ? 1 : 10 }
               ]}>
                 
                 {!isSameUserAsPrevious && (
                   <Text style={[
                     G.cardDescriptionText, 
-                    IRC_CHAT.authorName,
+                    Signal_CHAT.authorName,
                     { color: isMyMessage ? (ACCENT || '#c5a059') : '#FF77FF' }
                   ]}>
                     {item.user}
@@ -136,10 +136,10 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
                 )}
                 
                 <View style={[
-                  IRC_CHAT.bubbleContainer,
-                  isMyMessage ? IRC_CHAT.bubbleRight : IRC_CHAT.bubbleLeft
+                  Signal_CHAT.bubbleContainer,
+                  isMyMessage ? Signal_CHAT.bubbleRight : Signal_CHAT.bubbleLeft
                 ]}>
-                  <Text style={[G.cardDescriptionText, IRC_CHAT.messageText]}>
+                  <Text style={[G.cardDescriptionText, Signal_CHAT.messageText]}>
                     {item.text}
                   </Text>
                 </View>
@@ -147,18 +147,18 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
               </View>
             );
           }}
-          contentContainerStyle={IRC_CHAT.listContent}
+          contentContainerStyle={Signal_CHAT.listContent}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
       </View>
 
       {/* VSTUPNÉ POLE */}
-      <View style={[IRC_BOTTOM.container, { paddingBottom: Platform.OS === 'web' ? 20 : Math.max(insets.bottom, 15) }]}>
-        <View style={IRC_BOTTOM.innerWrapper}>
+      <View style={[Signal_BOTTOM.container, { paddingBottom: Platform.OS === 'web' ? 20 : Math.max(insets.bottom, 15) }]}>
+        <View style={Signal_BOTTOM.innerWrapper}>
           <TextInput
             style={[
               G.cardDescriptionText, 
-              IRC_BOTTOM.input,
+              Signal_BOTTOM.input,
               Platform.OS === 'web' && { 
                 backgroundColor: 'transparent', 
                 outlineStyle: 'none', 
@@ -178,10 +178,10 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
           />
           <TouchableOpacity 
             onPress={handleLocalSend} 
-            style={IRC_BOTTOM.sendButton} 
+            style={Signal_BOTTOM.sendButton} 
             activeOpacity={0.7}
           >
-            <Text style={[IRC_BOTTOM.sendButtonText, { color: ACCENT || '#c5a059' }]}>➔</Text>
+            <Text style={[Signal_BOTTOM.sendButtonText, { color: ACCENT || '#c5a059' }]}>➔</Text>
           </TouchableOpacity>
         </View>
       </View>

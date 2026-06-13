@@ -46,7 +46,7 @@ export const LariaProvider = ({ children }) => {
     identity: { 
       SECURE_ID: null, sha: null, meno: "Sammael", kat: "Majster", lok: "Rákoš",    
       popis: "", tel: "", email: "", fb: "", tg: "", gal: "", isPublic: false, 
-      irc: "", poznamka: "", krypt: null, privateKey: null, jazyk: "sk"
+      Signal: "", poznamka: "", krypt: null, privateKey: null, jazyk: "sk"
     }
   });
 

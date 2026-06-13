@@ -66,7 +66,7 @@ export const ContactProvider = ({ children }) => {
         lok: data.lok || 'V sieti',    
         popis: data.popis || '',       
         gal: data.gal || '',           
-        irc: data.irc || '',           
+        Signal: data.Signal || '',           
         sha: data.sha || '',           
         krypt: data.krypt || data.k || '', 
         pinned: false,
@@ -186,7 +186,7 @@ export const ContactProvider = ({ children }) => {
                 lok: master.lok || c.lok,
                 popis: master.popis || c.popis,
                 gal: master.gal || c.gal,
-                irc: master.irc || c.irc,
+                Signal: master.Signal || c.Signal,
                 krypt: master.krypt || c.krypt,
                 syncedAt: new Date().toISOString()
               };

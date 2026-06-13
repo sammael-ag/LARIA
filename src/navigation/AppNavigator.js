@@ -14,7 +14,7 @@ import CardScreen from '../screens/CardScreen.js';
 import CardEditorScreen from '../screens/CardEditorScreen.js';
 import ContactsScreen from '../screens/ContactsScreen.js';
 import ScannerScreen from '../screens/ScannerScreen.js';
-import IrcScreen from '../screens/IrcScreen.js';
+import SignalScreen from '../screens/SignalScreen.js';
 import SettingsScreen from '../screens/SettingsScreen.js';
 import AdminScreen from '../screens/AdminScreen.js'; 
 // ... ďalšie importy ...
@@ -48,7 +48,7 @@ const AppNavigator = () => {
       <Stack.Screen name="CardEditor" component={CardEditorScreen} />
       <Stack.Screen name="Contacts" component={ContactsScreen} />
       <Stack.Screen name="Scanner" component={ScannerScreen} />
-      <Stack.Screen name="IRC" component={IrcScreen} />
+      <Stack.Screen name="Signal" component={SignalScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="Admin" component={AdminScreen} />
       {/* 📍 Tu sa neskôr pripoja tvoje ďalšie moduly/screeny */}

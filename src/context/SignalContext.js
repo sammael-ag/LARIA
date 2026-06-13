@@ -16,9 +16,9 @@ import { SignalService } from '../services/SignalService.js';
 
 const SignalContext = createContext();
 
-const IRC_HOST = 'irc.libera.chat'; 
-const IRC_PORT = 6665; 
-const STORAGE_KEY_CHAT = '@laria_irc_chat_v1';
+const Signal_HOST = 'Signal.libera.chat'; 
+const Signal_PORT = 6665; 
+const STORAGE_KEY_CHAT = '@laria_Signal_chat_v1';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -47,7 +47,7 @@ const tauriInvoke = async (cmd, args = {}) => {
 export const SignalProvider = ({ children }) => {
   const { vault } = useLaria(); 
   const [client, setClient] = useState(null);
-  const [isIrcConnected, setIsIrcConnected] = useState(false);
+  const [isSignalConnected, setIsSignalConnected] = useState(false);
   const [incomingRequests, setIncomingRequests] = useState([]);
 
   // --- 0. NAČÍTANIE HISTÓRIE ---
@@ -122,17 +122,17 @@ export const SignalProvider = ({ children }) => {
     }
   };
 
-  // --- 2. PRIPOJENIE DO IRC ---
-  const connectToIrc = async (fing) => { 
+  // --- 2. PRIPOJENIE DO Signal ---
+  const connectToSignal = async (fing) => { 
     if (client || !fing) return;
 
     const cleanFing = fing.replace('0x', '');
 
     // 🦀 AK BEŽÍME NA DESKTOPE (TAURI / LINUX)
     if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
-      console.log("🌲 SIGNAL_CORE: Štartujem natívny IRC most cez Rust...");
-      await tauriInvoke('pripoj_irc_signal', { fing: cleanFing });
-      setIsIrcConnected(true);
+      console.log("🌲 SIGNAL_CORE: Štartujem natívny Signal most cez Rust...");
+      await tauriInvoke('pripoj_Signal_signal', { fing: cleanFing });
+      setIsSignalConnected(true);
       setClient({ tauriActive: true });
       return;
     }
@@ -140,8 +140,8 @@ export const SignalProvider = ({ children }) => {
     // 📱 STARÁ MOBILNÁ VETVA (Zostáva zachovaná pre Android/iOS)
     try {
       const newClient = TcpSocket.createConnection({
-        host: IRC_HOST,
-        port: IRC_PORT,
+        host: Signal_HOST,
+        port: Signal_PORT,
       }, () => {
         const nick = `L_${cleanFing}`; 
         newClient.write(`NICK ${nick}\r\n`);
@@ -156,7 +156,7 @@ export const SignalProvider = ({ children }) => {
         }
         if (msg.includes(' 001 ')) {
           newClient.write(`JOIN #LARIA_CORE\r\n`);
-          setIsIrcConnected(true);
+          setIsSignalConnected(true);
         }
         if (msg.includes('#LRQ#')) {
           await handleIncomingLariaPackage(msg);
@@ -164,7 +164,7 @@ export const SignalProvider = ({ children }) => {
       });
 
       newClient.on('error', (e) => {
-        setIsIrcConnected(false);
+        setIsSignalConnected(false);
         setClient(null);
       });
 
@@ -227,7 +227,7 @@ export const SignalProvider = ({ children }) => {
     const myCleanFing = vault.identity.poznamka.replace('0x', '');
     const targetCleanFing = targetFing.replace('0x', '');
     
-    if (!client || !isIrcConnected) {
+    if (!client || !isSignalConnected) {
       console.log("[SIGNAL] Detekované offline prostredie. Správa bezpečne čaká v UI ako PENDING.");
       return { success: false, error: 'OFFLINE_PENDING_QUEUED' };
     }
@@ -253,7 +253,7 @@ export const SignalProvider = ({ children }) => {
           sha: vault.identity.sha,
           fing: myCleanFing, 
           msg: personalMessage,
-          d: { n: vault.identity.meno, ib: vault.identity.irc, kr: vault.identity.krypt }
+          d: { n: vault.identity.meno, ib: vault.identity.Signal, kr: vault.identity.krypt }
         };
       } else {
         lariaPackage = {
@@ -271,7 +271,7 @@ export const SignalProvider = ({ children }) => {
       // 🦀 AK BEŽÍME CEZ TAURI / RUST CORE
       if (client && client.tauriActive) {
         console.log("🌲 SIGNAL_CORE: Posielam balík natívne cez Rust Tauri most...");
-        await tauriInvoke('odosli_irc_signal', { payload: rawPayload });
+        await tauriInvoke('odosli_Signal_signal', { payload: rawPayload });
       } else if (client) {
         // 📱 AK BEŽÍME NA MOBILE (Klasický TcpSocket)
         client.write(rawPayload);
@@ -310,7 +310,7 @@ export const SignalProvider = ({ children }) => {
   // --- 5. 🛰️ FLUSHER MOTOR ---
   useEffect(() => {
     const flushOfflineQueue = async () => {
-      if (!isIrcConnected || !client || incomingRequests.length === 0) return;
+      if (!isSignalConnected || !client || incomingRequests.length === 0) return;
       const pendingMessages = incomingRequests.filter(msg => msg.status === 'PENDING');
       
       if (pendingMessages.length > 0) {
@@ -321,7 +321,7 @@ export const SignalProvider = ({ children }) => {
       }
     };
     flushOfflineQueue();
-  }, [isIrcConnected, client]);
+  }, [isSignalConnected, client]);
 
   // --- 6. MANUÁLNE VYRIEŠENIE STAVU KONTRAKTU ---
   const resolveHandshakeStatus = (msgId) => {
@@ -333,13 +333,13 @@ export const SignalProvider = ({ children }) => {
   useEffect(() => {
     const myFing = vault.identity.poznamka;
     if (myFing && !client) {
-      connectToIrc(myFing);
+      connectToSignal(myFing);
     }
   }, [vault.identity.poznamka]);
 
   return (
     <SignalContext.Provider value={{ 
-      isIrcConnected, 
+      isSignalConnected, 
       incomingRequests, 
       setIncomingRequests: updateIncomingRequestsAndStorage, 
       sendLariaPackage,
