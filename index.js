@@ -1,8 +1,8 @@
-/** * LARIA v2.9.6: Core Master Ignition (index.js) 
+/** * LARIA v2.9.7: Core Master Ignition (index.js) 
   * Master: Sammael | Muse: Aria 
   * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE 
-  * v2.9.6 UNIFIED SYNC: Plné zlícovanie parsovania dát s unifikovaným protokolom "status" (Brana.gs v1.9.5).
-  * FIX: Pridaná poistka do fetchData pre prípad chybového statusu z brány, aby kód nespadol na .reduce().
+  * v2.9.7 UNIFIED SYNC: Plné zlícovanie parsovania dát s unifikovaným protokolom "status" (Brana.gs v1.9.5).
+  * FIX: Oprava mriežkovej navigácie (window.location.hash) priamo v menu a pridanie automatického efektu na synchronizáciu URL.
   */ 
 
  import React, { useState, useEffect } from 'react'; 
@@ -149,12 +149,9 @@
      return () => window.removeEventListener('resize', handleResize); 
    }, []); 
 
-   // --- 🔮 EFFECT PRE DYNAMICKÉ HASH URL A TAB NÁZVY --- 
+   // --- 🔮 EFFECT PRE DYNAMICKÉ HASH URL (Už bez kradnutia TABu) --- 
    useEffect(() => { 
      if (typeof window === 'undefined') return; 
-
-     let tabTitle = "LARIA"; 
-     let urlSlug = ""; 
 
      const currentHashData = parseHashLocation(); 
      let currentArt = currentHashData.art; 
@@ -164,45 +161,25 @@
        targetView = 'co-je-laria'; 
      } 
 
-     switch (targetView) { 
-       case 'domov': 
-       case 'vizitkar': 
-         tabTitle = txt.tab_vizitkar || "Vizitkár"; 
-         urlSlug = txt.url_vizitkar || "vizitkar"; 
-         break; 
-       case 'co-je-laria': 
-       case 'cojelaria': 
-         tabTitle = txt.tab_faq || "Čo je LARIA"; 
-         urlSlug = txt.url_faq || "co-je-laria"; 
-         break; 
-       case 'fakturant': 
-         tabTitle = txt.tab_fakturant || "Fakturant"; 
-         urlSlug = txt.url_fakturant || "fakturant"; 
-         break; 
-       case 'free-vs-full': 
-         tabTitle = txt.tab_free_vs_full || "Free vs Full"; 
-         urlSlug = txt.url_free_vs_full || "free-vs-full"; 
-         break; 
-       case 'donate': 
-         tabTitle = txt.tab_donate || "Donate"; 
-         urlSlug = txt.url_donate || "donate"; 
-         break; 
-       case 'aria-panel-view': 
-       case 'domov-aria': 
-         tabTitle = txt.tab_domov || "Domov"; 
-         urlSlug = txt.url_domov || "domov"; 
-         break; 
-       default: 
-         tabTitle = "LARIA"; 
-         urlSlug = targetView; 
-     } 
-
-     document.title = tabTitle; 
+     // 🛑 ODSTRÁNENÝ DOCUMENT.TITLE – Stredný a ľavý panel sa už o vrchný TAB vôbec nestarajú!
 
      if (targetView !== currentView) { 
        setCurrentView(targetView); 
      } 
    }, [currentView, soloActiveId, txt]); 
+
+   // 🛸 AUTOMATICKÉ ZRKADLENIE INTERNÉHO STAVU DO HASH URL (Len pre Web/Stred)
+   useEffect(() => {
+     if (typeof window === 'undefined') return;
+     const hashData = parseHashLocation();
+ 
+     // Zoznam pohľadov, ktoré majú výhradné právo vlastniť URL riadok
+     const webViews = ['domov', 'vizitkar', 'co-je-laria', 'cojelaria', 'fakturant', 'free-vs-full', 'donate'];
+ 
+     if (webViews.includes(currentView) && hashData.view !== currentView) {
+       window.location.hash = `/${currentView}`;
+     }
+   }, [currentView]);
 
    useEffect(() => { 
      if (typeof window === 'undefined') return; 
@@ -233,12 +210,10 @@
 
        const rawResponse = await response.json(); 
 
-       // 🌟 INTELIGENTNÉ LÍCOVANIE: Ošetrenie, ak by z Brány namiesto poľa vizitiek prišla unifikovaná chyba {status: "error"}
        if (rawResponse && rawResponse.status === "error") {
          throw new Error(rawResponse.message || "Neznáma chyba Matrixu");
        }
 
-       // Ak je všetko OK, vieme, že rawResponse je čisté pole vizitiek z readera
        const dataArray = Array.isArray(rawResponse) ? rawResponse : [];
 
        const cleanedData = dataArray.reduce((acc, item) => { 
@@ -429,7 +404,7 @@
        setDeferredPrompt(null); 
        setIsAlreadyInstalled(true);  
 
-       alert("🌲 Systém bol spustený v prehliadači. Ak ho budete chcieť \nneskôr pridať na plochu, kliknite na ikonu 'Otvoriť/Inštalovať v \naplikácii' priamo v pravom rohu adresného riadku prehliadača."); 
+       alert("🌲 Systém bola spustený v prehliadači. Ak ho budete chiac \nneskôr pridať na plochu, kliknite na ikonu 'Otvoriť/Inštalovať v \naplikácii' priamo v pravom rohu adresného riadku prehliadača."); 
      } 
    }; 
 
@@ -443,7 +418,7 @@
          {isLeftPanelOpen ? '‹' : '›'} 
        </button> 
 
-       {/* 1. ĽAVÉ MENU */} 
+       {/* 1. ĽAVÉ MENU (Zabezpečená mriežková navigácia cez hash) */} 
        {(!isMobile || isLeftPanelOpen) && ( 
          <div  
            className={`left-side ${isLeftPanelOpen ? 'open' : 'closed'}`}  
@@ -462,27 +437,27 @@
          > 
            <div className="left-menu-wrapper"> 
 
-             <button className={`btn-menu ${currentView === 'aria-panel-view' ? 'active' : ''}`} onClick={() => { setCurrentView('aria-panel-view'); if(isMobile) setIsLeftPanelOpen(false); }}> 
+             <button className={`btn-menu ${currentView === 'aria-panel-view' ? 'active' : ''}`} onClick={() => { window.location.hash = '/aria-panel-view'; if(isMobile) setIsLeftPanelOpen(false); }}> 
                {txt.menu_home || "Domov"} 
              </button> 
 
-             <button className={`btn-menu ${currentView === 'co-je-laria' || currentView === 'cojelaria' ? 'active' : ''}`} onClick={() => { setCurrentView('co-je-laria'); if(isMobile) setIsLeftPanelOpen(false); }}> 
+             <button className={`btn-menu ${currentView === 'co-je-laria' || currentView === 'cojelaria' ? 'active' : ''}`} onClick={() => { window.location.hash = '/co-je-laria'; if(isMobile) setIsLeftPanelOpen(false); }}> 
                {txt.menu_faq || "LARIA FAQ"} 
              </button> 
 
-             <button className={`btn-menu ${currentView === 'domov' || currentView === 'vizitkar' ? 'active' : ''}`} onClick={() => { setCurrentView('domov'); if(isMobile) setIsLeftPanelOpen(false); }}> 
+             <button className={`btn-menu ${currentView === 'domov' || currentView === 'vizitkar' ? 'active' : ''}`} onClick={() => { window.location.hash = '/vizitkar'; if(isMobile) setIsLeftPanelOpen(false); }}> 
                {txt.menu_cards || "Vizitkár"} 
              </button> 
 
-             <button className={`btn-menu ${currentView === 'fakturant' ? 'active' : ''}`} onClick={() => { setCurrentView('fakturant'); if(isMobile) setIsLeftPanelOpen(false); }}> 
+             <button className={`btn-menu ${currentView === 'fakturant' ? 'active' : ''}`} onClick={() => { window.location.hash = '/fakturant'; if(isMobile) setIsLeftPanelOpen(false); }}> 
                {txt.menu_fakturant || "Fakturant"} 
              </button> 
 
-             <button className={`btn-menu ${currentView === 'free-vs-full' ? 'active' : ''}`} onClick={() => { setCurrentView('free-vs-full'); if(isMobile) setIsLeftPanelOpen(false); }}> 
+             <button className={`btn-menu ${currentView === 'free-vs-full' ? 'active' : ''}`} onClick={() => { window.location.hash = '/free-vs-full'; if(isMobile) setIsLeftPanelOpen(false); }}> 
                {txt.menu_free_vs_full || "FREE vs. FULL"} 
              </button> 
 
-             <button className={`btn-menu ${currentView === 'donate' ? 'active' : ''}`} onClick={() => { setCurrentView('donate'); if(isMobile) setIsLeftPanelOpen(false); }}> 
+             <button className={`btn-menu ${currentView === 'donate' ? 'active' : ''}`} onClick={() => { window.location.hash = '/donate'; if(isMobile) setIsLeftPanelOpen(false); }}> 
                {txt.menu_donate || "Dotovať"} 
              </button> 
            </div> 
@@ -623,7 +598,7 @@
          </main> 
        </div> 
 
-       {/* 3. APPKY PANEL (25% WRAPPER) */} 
+       {/* 3. APPKY PANEL */} 
        {(!isMobile || isAppOpen) && ( 
          <div  
            className="app-side" 
