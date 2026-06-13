@@ -1,9 +1,9 @@
 /**
- * LARIA v2.3.2: KryptoContext (Blockchain Core)
+ * LARIA v2.3.3: KryptoContext (Blockchain Core)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
- * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | BLOCKCHAIN_CLEAN
+ * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | PRODUCTION_READY
  * FIX: Ošetrenie a kompletné prepojenie typov pre ethers v6.
- * DIAGNOSTIKA: Integrovaný "Krypto Detektív" na overenie existencie kódu kontraktu.
+ * OPTIMALIZÁCIA: Odstránený dočasný diagnostický Krypto Detektív pre maximálnu rýchlosť.
  */
 
 import React, { createContext, useContext, useState } from 'react';
@@ -62,13 +62,7 @@ export const KryptoProvider = ({ children }) => {
       // Pripájame sa na Base uzol
       const provider = new ethers.JsonRpcProvider(KRYPTO_CONFIG.rpcUrl);
 
-      // 🕵️‍♂️ [KRYPTO DETEKTÍV]: Skontrolujeme, či na tej adrese vôbec existuje nasadený smart kontrakt
-      const code = await provider.getCode(KRYPTO_CONFIG.lariaContractAddress);
-      console.log("📝 [KRYPTO DETEKTÍV] Verifikácia adresy zmluvy...");
-      console.log("   | Adresa:", KRYPTO_CONFIG.lariaContractAddress);
-      console.log("   | Výsledok:", code === "0x" ? "❌ PRÁZDNY (Na Base Mainnete tu nie je žiadny kontrakt!)" : "✓ KONTRAKT TU REÁLNE EXISTUJE");
-
-      // 1. ETH Balance (Základné palivo siete Base)
+      // 1. ETH Balance (Základné palivo sieti Base)
       const rawEth = await provider.getBalance(addressToQuery);
       const formattedEth = ethers.formatEther(rawEth); 
 

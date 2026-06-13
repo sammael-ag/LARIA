@@ -3,6 +3,7 @@
  * Master: Sammael | Muse: Aria
  * Status: GEOMETRY_DEFINITIVE_NO_SPAGHETTI / DEEP_LOGGING_EDITION
  * ÚPRAVA: Logy rozdelené na stabilné a dočasne označené pre ľahké vymazanie.
+ *         Oživený reálny odosielací modul zálohy cez novú funkciu GMatrixService.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -15,8 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useKrypto } from '../context/KryptoContext';
 import { useLaria } from '../context/LariaContext'; 
 import { G, ACCENT } from '../styles/styles'; 
-// 📡 Importujeme sieťový mlynček pre obnovu
-import { recoverFromGMatrix } from '../services/GMatrixService';
+// 📡 Importujeme sieťový mlynček pre obnovu a pre reálne odosielanie emailu
+import { recoverFromGMatrix, sendEmailViaGMatrix } from '../services/GMatrixService';
 
 const SettingsScreen = ({ navigation }) => {
   // 🕵️‍♂️ [TEMPORARY_DEV_TRACE] -> Pôjde neskôr von
@@ -111,20 +112,52 @@ const SettingsScreen = ({ navigation }) => {
   const executeEmailBackup = async (targetEmail) => {
     setEmailLoading(true);
     // 📑 [STABLE_CORE_LOG]
-    console.log(`📧 [LARIA_LOG] Štart executeEmailBackup pre: ${targetEmail}`);
+    console.log(`📧 [LARIA_LOG] Štart ostrej funkcie executeEmailBackup pre: ${targetEmail}`);
+    
     try {
-      const successTitle = txt.alert_backup_success || "ZÁLOHA ODOSLANÁ";
-      const successDesc = (txt.alert_backup_desc || "Tvoja bezpečná pečať (SHA) bola odoslaná na e-mail: {email}\nUschovaj si ju pre prípad obnovy.")
-        .replace("{email}", targetEmail);
+      const currentSha = vault?.identity?.sha || "0x00";
+      const currentMeno = vault?.identity?.meno || "Cestovateľ";
+      const emailSubject = "LARIA: Tvoja zálohovaná pečať identity";
 
-      if (Platform.OS === 'web') {
-        alert(`${successTitle}\n${successDesc}`);
+      // 🛰️ BALÍK DÁT PRE HTML ŠABLÓNU (<?= masterName ?> a <?= userSha ?>)
+      const templateVariables = {
+        masterName: currentMeno,
+        userSha: currentSha
+      };
+
+      // 🚀 Reálny výstrel na bránu cez upravený GMatrixService
+      const result = await sendEmailViaGMatrix(
+        targetEmail, 
+        "backup_sha_email", // presný názov HTML súboru v GAS
+        emailSubject, 
+        templateVariables
+      );
+
+      if (result && result.success) {
+        const successTitle = txt.alert_backup_success || "ZÁLOHA ODOSLANÁ";
+        const successDesc = (txt.alert_backup_desc || "Tvoja bezpečná pečať (SHA) bola odoslaná na e-mail: {email}\nUschovaj si ju pre prípad obnovy.")
+          .replace("{email}", targetEmail);
+
+        if (Platform.OS === 'web') {
+          alert(`${successTitle}\n${successDesc}`);
+        } else {
+          Alert.alert(successTitle, successDesc);
+        }
       } else {
-        Alert.alert(successTitle, successDesc);
+        // Chybová odozva priamo od brány
+        const errorTitle = "ODOSLANIE ZLYHALO";
+        const errorDesc = result.error || "Brána mravca zlyhala pri generovaní šablóny.";
+        if (Platform.OS === 'web') alert(`${errorTitle}\n${errorDesc}`);
+        else Alert.alert(errorTitle, errorDesc);
       }
+
     } catch (error) {
       // 📑 [STABLE_CORE_LOG] -> Chybové logy si určite nechávame trvalo!
-      console.error("❌ [LARIA_ERROR] Chyba zálohy emailu:", error);
+      console.error("❌ [LARIA_ERROR] Kritická chyba zálohy emailu v sieťovej vrstve:", error);
+      const failTitle = txt.alert_network_fail_title || "CHYBA MATRIXU";
+      const failDesc = "Nepodarilo sa spojiť s poštovým uzlom. Skontroluj internetové spojenie.";
+      if (Platform.OS === 'web') alert(`${failTitle}\n${failDesc}`);
+      else Alert.alert(failTitle, failDesc);
     } finally {
       setEmailLoading(false);
     }
@@ -184,7 +217,7 @@ const SettingsScreen = ({ navigation }) => {
   // 🔄 HLAVNÝ TERČ VYŠETROVANIA: OBNOVA IDENTITY
   const handleAccountRecovery = async () => {
     // 🕵️‍♂️ [TEMPORARY_DEV_TRACE] -> Klúčový detektívny log pre zistenie kliku na webe
-    console.log("🔥 [LARIA_TRACE] >>> FUNKCIA handleAccountRecovery BOLA ÚSPEŠNE VYVOLANÁ! <<<");
+    console.log("🔥 [LARIA_TRACE] >>> FUNKCIA handleAccountRecovery BOLA ÚSPEEDNE VYVOLANÁ! <<<");
     
     const cleanSha = recoverySha.trim().toLowerCase();
     // 🕵️‍♂️ [TEMPORARY_DEV_TRACE]
@@ -248,7 +281,7 @@ const SettingsScreen = ({ navigation }) => {
 
           await syncIdentity(fullIdentity);
 
-          const successTitle = txt.alert_recovery_success_title || "OBNOVA ÚSPEŠNÁ";
+          const successTitle = txt.alert_recovery_success_title || "OBNOVA ÚSTEŠNÁ";
           const successMsg = (txt.alert_recovery_success_desc || "Sammael, tvoja pôvodná identita [{name}] bola úspešne stiahnutá z Matrixu a obnovená.")
             .replace("{name}", matrixData.meno);
 
@@ -481,7 +514,7 @@ const SettingsScreen = ({ navigation }) => {
             <TextInput 
               style={[G.vaultInput, { width: '100%', color: '#FFF', marginBottom: 20 }]} 
               value={inputEmail} 
-              onChangeText={setInputEmail} 
+              onChangeText={inputEmail} 
               placeholder={txt.modal_email_placeholder || "Zadaj svoj e-mail..."} 
               placeholderTextColor="#444" 
               keyboardType="email-address"

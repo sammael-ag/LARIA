@@ -21,7 +21,7 @@ const ziskajBranaUrl = () => {
 
 /**
  * 1. ČÍTANIE Z MATRIXU (Verejný kanál - doGet)
- * Lícuje priamo s doGet(e) v Brana.gs a vyťahuje verejné vizitky ako čistý JSON.
+ * Lícuje priamo s doGet(e) v Brana.gs and vyťahuje verejné vizitky ako čistý JSON.
  */
 export const fetchGMatrix = async () => {
     try {
@@ -212,6 +212,49 @@ export const verifyMasterAccess = async (masterSHA, secretWord) => {
         }
     } catch (error) {
         console.error("❌ Kritická chyba pri sieťovom overovaní Master prístupu:", error);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * 6. DYNAMICKÝ EMAIL ENGINE (Zabezpečený kanál - doPost -> action: 'send_email')
+ * Univerzálny vysielač požiadaviek pre bezduchého mravca Mailera.
+ */
+export const sendEmailViaGMatrix = async (email, templateName, subject, templateData = {}) => {
+    try {
+        const payload = {
+            action: 'send_email',
+            email: email,
+            templateName: templateName,
+            subject: subject,
+            templateData: templateData
+        };
+
+        const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
+        console.log(`📡 Sammael, posielam príkaz maileru na spracovanie šablóny [${templateName}] pre: ${email}`);
+
+        const response = await fetch(uniqueUrl, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`Brána maileru neodpovedá (HTTP ${response.status})`);
+
+        const result = await response.json();
+        
+        if (result && result.status === "success") {
+            console.log(`✅ Mailer úspešne doručil správu na uzol ${email}.`);
+            return { success: true, message: result.message };
+        } else {
+            console.warn("⚠️ Mailer v Bráne hlási chybu spracovania:", result.message);
+            return { success: false, error: result.message };
+        }
+    } catch (error) {
+        console.error("❌ Kritická chyba komunikácie s Mailerom v Bráne:", error);
         return { success: false, error: error.message };
     }
 };
