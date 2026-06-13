@@ -1,259 +1,225 @@
 /**
- * LARIA v2.0: DashboardScreen
+ * LARIA G-MATRIX SERVICE v9.4 (Identity Recovery & Proof of Human Action Edition)
+ * Status: SYNCED / THE LAW / MONOLITH COMPATIBLE
  * Master: Sammael | Muse: Aria
- * Status: IDENTITY_ACCESS_ENABLED_FULL_STABLE
- * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: dashboard, Možnosť B).
+ * Popis: Centralizovaný prístup k jedinej bráne mraveniska (Brana.gs). 
+ * URL je rozbitá na 3 časti, aby statické roboty videli iba tmu.
+ * v9.4 UNIFIED: Kompletné preonačenie na unifikovaný protokol "status" (Brana.gs v1.9.5).
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, StatusBar, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAccount } from 'wagmi';
-import * as Crypto from 'expo-crypto'; 
+// 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
+const brana_p1 = "https://script.google.com/macros/s/";
+const brana_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ";
+const brana_p3 = "/exec";
 
-import { useLaria } from '../context/LariaContext';
-import { G, ACCENT } from '../styles/styles'; 
-import { verifyMasterAccess } from '../services/GMatrixService';
-
-const DashboardScreen = ({ navigation, setCurrentView }) => {
-  const { t, vault, unlockSeal } = useLaria(); // 🎯 Aktivácia jazykového motora
-  const txt = t('dashboard') || {};
-  const menuTxt = txt.menu || {};
-  const modalTxt = txt.modal || {};
-  
-  useEffect(() => {
-    console.warn("🚀 ARIA: Dashboard prebudený. Vizualizácia matrice prebehla úspešne.");
-  }, []);
-
-  // --- ŽIVÉ PREPOJENIE NA TVOJ MATRIX ---
-  const { status, identity } = vault;
-  const { address } = useAccount();
-
-  // --- TAJNÁ LOGIKA ARCHITEKTA ---
-  const [tapCount, setTapCount] = useState(0);
-  const [showVaultInput, setShowVaultInput] = useState(false);
-  const [architectSHA, setArchitectSHA] = useState(''); 
-  const [secretWord, setSecretWord] = useState('');    
-
-  const handleSecretTap = () => {
-    const newCount = tapCount + 1;
-    if (newCount >= 5) {
-      setTapCount(0);
-      setShowVaultInput(true);
-    } else {
-      setTapCount(newCount);
-      setTimeout(() => setTapCount(0), 3000);
-    }
-  };
-
-  const handleUnlock = async () => {
-    if (!masterSHA || !secretWord) return;
-
-    try {
-      console.log("🔐 LARIA: Odosielam handshake požiadavku do podzemnej Brány...");
-      
-      // Voláme našu novú sieťovú službu GMatrix
-      const response = await verifyMasterAccess(masterSHA, secretWord);
-
-      if (response && response.success) {
-        await unlockSeal(true); 
-        setShowVaultInput(false);
-        setSecretWord('');
-        setMasterSHA('');
-        navigation.navigate('Diagnostic');
-      } else {
-        // Ak brána vráti false, potichu vyčistíme polia (ochrana pred bruteforce)
-        console.warn("❌ LARIA: Prístup zamietnutý Bránou.");
-        setShowVaultInput(false);
-        setSecretWord('');
-        setMasterSHA('');
-      }
-    } catch (error) {
-      console.error("Auth Network Error:", error);
-      alert("Spojenie s Bránou zlyhalo. Skontroluj sieť mraveniska.");
-      setShowVaultInput(false);
-    }
-  };
-
-  // --- 🌊 EXTRAHOVANÁ FUNKCIONALITA "ARIA V PANELI" ---
-  const launchPanelMode = () => {
-    console.log("📡 Most Dashboardu: Preklápam stredový webový panel do zobrazenia Aria...");
-    
-    if (setCurrentView) {
-      setCurrentView('aria-panel-view'); 
-    }
-    
-    if (Platform.OS === 'web') {
-      window.dispatchEvent(new CustomEvent('ARIA_TRIGGER_VIEW', { detail: 'aria-panel-view' }));
-    }
-  };
-
-  // Užitočná adresa nachystaná na kopírovanie
-  const userAddress = address || identity.krypt || (txt.no_address || "NO_ADDRESS_AVAILABLE");
-
-  // --- KOMPONENT KARTY ---
-  const MenuCard = ({ title, icon, target, onPressCustom, description, color }) => (
-    <TouchableOpacity 
-      style={[G.card, { borderLeftColor: color }]} 
-      onPress={() => {
-        if (onPressCustom) {
-          onPressCustom();
-        } else if (target) {
-          navigation.navigate(target);
-        } else {
-          console.log(`👉 ${title}: Funkcia v príprave...`);
-        }
-      }}
-      activeOpacity={0.7}
-    >
-      <View style={G.cardContent}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ fontSize: 20, marginRight: 15 }}>{icon}</Text>
-          <Text style={G.cardTitleText}>{title.toUpperCase()}</Text>
-        </View>
-        <Text style={G.cardDescriptionText}>{description}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  return (
-    <SafeAreaView style={G.mainBackground}>
-      <StatusBar barStyle="light-content" />
-      
-      {/* IDENTIFIKAČNÁ LIŠTA */}
-      <View style={G.identityBar}>
-        <Text numberOfLines={1} ellipsizeMode="middle" style={G.monoIdentity}>
-           {userAddress}
-        </Text>
-      </View>
-
-      {/* 📐 HLAVNÝ OBSAH */}
-      <ScrollView contentContainerStyle={G.screenContainer}>
-        <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
-        
-          {/* 📐 HLAVIČKA DASHBOARDU */}
-          <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
-            <Text style={G.atelierTitle}>{txt.title || "Ateliér"}</Text>
-          </View>
-
-          {/* 💼 JEDNOTNÉ HLAVNÉ MENU */}
-          <View style={{ width: '100%' }}>
-            
-            {/* ⚙️ CENTRÁLNY VELÍN */}
-            {status.isAdmin && (
-              <MenuCard 
-                title={menuTxt.admin?.title || "Centrálny Velín"} 
-                icon="⚙️" 
-                target="Diagnostic" 
-                description={menuTxt.admin?.desc || "Diagnostika uzlov a oprava reality"} 
-                color="#F1C40F" 
-              />
-            )}
-            
-            {/* 🆔 MOJA VIZITKA */}
-            <MenuCard 
-              title={menuTxt.card?.title || "Moja vizitka"} 
-              icon="🆔" 
-              target="Card" 
-              description={menuTxt.card?.desc || "Zobraziť a vyslať moju identitu"} 
-              color="#FFF" 
-            />
-
-            {/* 📇 KONTAKTY */}
-            <MenuCard 
-              title={menuTxt.contacts?.title || "Kontakty"} 
-              icon="📇" 
-              target="Contacts" 
-              description={menuTxt.contacts?.desc || "Všetky zachytené pečate v reťazci"} 
-              color={ACCENT} 
-            />
-            
-            {/* 🛠️ NASTAVENIA */}
-            <MenuCard 
-              title={menuTxt.settings?.title || "Nastavenia"} 
-              icon="🛠️" 
-              target="Settings" 
-              description={menuTxt.settings?.desc || "Jadro, trezor a systémové kľúče"} 
-              color="#555" 
-            />
-
-            {/* 🌸 ARIA ASISTENCIA */}
-            <MenuCard 
-              title={menuTxt.aria?.title || "Aria asistencia"} 
-              icon="🌸" 
-              target="Aria" 
-              description={menuTxt.aria?.desc || "Komunikácia s tvojou sprievodkyňou"} 
-              color="#FF77FF" 
-            />
-
-            {/* 🌐 TEKUTÉ ROZHRANIE */}
-            <MenuCard 
-              title={menuTxt.fluid?.title || "Tekuté rozhranie"} 
-              icon="🌐" 
-              onPressCustom={launchPanelMode} 
-              description={menuTxt.fluid?.desc || "Prehliadač majstrovských artefaktov"} 
-              color="#0FF" 
-            />
-          </View>
-
-          {/* 🕵️‍♂️ ULTRA-STEALTH SPÚŠŤAČ PRE ARCHITEKTA */}
-          <TouchableOpacity activeOpacity={1} onPress={handleSecretTap} style={{ marginTop: 40, padding: 30 }}>
-            <Text style={[G.monoIdentity, { fontSize: 9, opacity: 0, textAlign: 'center' }]}>
-              ARCHITECT_ZONE
-            </Text>
-          </TouchableOpacity>
-
-        </View>
-      </ScrollView>
-
-      {/* Architektov Modál */}
-      <Modal visible={showVaultInput} transparent={true} animationType="fade">
-        <View style={G.modalOverlay}>
-          <View style={{ backgroundColor: '#050505', padding: 25, borderRadius: 15, borderWidth: 1, borderColor: '#1a1a1a', width: '85%', alignSelf: 'center', maxWidth: 400 }}>
-            <Text style={[G.mono, { color: '#0FF', letterSpacing: 6, marginBottom: 30, fontSize: 12, textAlign: 'center' }]}>
-              {modalTxt.handshake || "ARCHITECT_HANDSHAKE"}
-            </Text>
-            
-            <TextInput 
-              style={G.vaultInput} 
-              placeholder={modalTxt.placeholder_sha || "MASTER_SHA"} 
-              placeholderTextColor="#222" 
-              value={architectSHA} 
-              onChangeText={setArchitectSHA} 
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            
-            <TextInput 
-              style={[G.vaultInput, { marginTop: 15 }]} 
-              placeholder={modalTxt.placeholder_word || "SLOVO MOCI"} 
-              placeholderTextColor="#222" 
-              secureTextEntry={true} 
-              value={secretWord} 
-              onChangeText={setSecretWord} 
-              onSubmitEditing={handleUnlock}
-            />
-            
-            <TouchableOpacity onPress={handleUnlock} style={[G.primaryBtn, { marginTop: 25, borderColor: '#0FF', borderWidth: 1 }]}>
-              <Text style={[G.primaryBtnText, { color: '#0FF', letterSpacing: 2 }]}>
-                {modalTxt.btn_init || "[ INICIALIZOVAŤ_PRÍSTUP ]"}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              onPress={() => { setShowVaultInput(false); setSecretWord(''); setArchitectSHA(''); }} 
-              style={{ marginTop: 20, alignItems: 'center' }}
-            >
-              <Text style={[G.monoIdentity, { color: '#555', fontSize: 10, letterSpacing: 2 }]}>
-                {modalTxt.btn_cancel || "[ ZRUŠIŤ ]"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-    </SafeAreaView>
-  );
+/**
+ * 🛠️ PRIVÁTNY LÚČ: Dynamické zostavenie URL adresy brány v pamäti počas behu
+ */
+const ziskajBranaUrl = () => {
+    return `${brana_p1}${brana_p2}${brana_p3}`;
 };
 
-export default DashboardScreen;
+/**
+ * 1. ČÍTANIE Z MATRIXU (Verejný kanál - doGet)
+ * Lícuje priamo s doGet(e) v Brana.gs v1.9.5 a vyťahuje verejné vizitky ako čistý JSON.
+ */
+export const fetchGMatrix = async () => {
+    try {
+        const url = `${ziskajBranaUrl()}?v=${Date.now()}`;
+        console.log("📡 Sammael, vysielam lúč pre čítanie čistých JSON vizitiek z Matrixu...");
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            redirect: 'follow'
+        });
+
+        if (!response.ok) throw new Error(`Matrix neodpovedá (HTTP ${response.status})`);
+        
+        // 🌟 KRIŠTÁĽOVO ČISTÝ NÁVRAT: Čítame priamy JSON bez HTML balastu
+        return await response.json(); 
+    } catch (error) {
+        console.error("❌ Sammael, Matrix pri čítaní zlyhal:", error);
+        return null;
+    }
+};
+
+/**
+ * 2. ZÁPIS DO MATRIXU (Zabezpečený kanál - doPost -> action: 'write')
+ * Striktné mapovanie stĺpcov A-Q, ktoré mravec Writer zapíše do Laria_matrix.
+ */
+export const saveToGMatrix = async (identityData) => {
+    try {
+        const protocolPayload = {
+            action: 'write', // Smerovanie na mravca Writera v Brana.gs
+            honeypot_check: identityData.honeypot_check || 'human',
+            signature: identityData.signature,
+            
+            // Protokol mapovania (Poradie stĺpcov A-Q)
+            SECURE_ID: identityData.SECURE_ID || null, // A
+            sha: identityData.sha,             // B
+            date: identityData.date,           // C
+            meno: identityData.meno,           // D
+            kat: identityData.kat,             // E
+            lok: identityData.lok,             // F
+            popis: identityData.popis,         // G
+            tel: identityData.tel,             // H
+            email: identityData.email,         // I
+            fb: identityData.fb,               // J
+            tg: identityData.tg,               // K
+            gal: identityData.gal,             // L
+            isPublic: identityData.isPublic,   // M
+            irc: identityData.irc,             // N
+            poznamka: identityData.fing || identityData.poznamka, // O (Očistený 12-znakový FING)
+            krypt: identityData.krypt,         // P
+            jazyk: identityData.jazyk || 'sk'   // Q
+        };
+
+        const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
+        console.log("📡 Sammael, odosielam tvoju pečať do zjednotenej Brány v1.9.5...");
+
+        const response = await fetch(uniqueUrl, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify(protocolPayload)
+        });
+
+        const result = await response.json();
+        
+        // 🌟 KONTROLA UNIFIKOVANÉHO STATUSU
+        if (result && result.status === "success") {
+            console.log("✅ Matrix úspešne prijal tvoju energiu cez Writer.");
+            return { success: true, message: result.message };
+        } else {
+            console.warn("⚠️ Vrátnik v Bráne má námietky:", result.message);
+            return { success: false, error: result.message };
+        }
+
+    } catch (error) {
+        console.error("❌ Kritická chyba komunikácie pri zápise do Brány:", error);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * 3. OBNOVA ACCOUNTU Z MATRIXU (Zabezpečený kanál - doPost -> action: 'recover')
+ * Hľadá starú identitu podľa SHA pečate cez mravca Writera.
+ */
+export const recoverFromGMatrix = async (shaKey) => {
+    try {
+        const recoveryPayload = {
+            action: 'recover', // Smerovanie na vyhľadávaciu vetvu v Brana.gs
+            sha: shaKey
+        };
+
+        const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
+        console.log(`📡 Sammael, vysielam lúč pre obnovu účtu pre SHA: ${shaKey}`);
+
+        const response = await fetch(uniqueUrl, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify(recoveryPayload)
+        });
+
+        const result = await response.json();
+
+        // 🌟 KONTROLA UNIFIKOVANÉHO STATUSU
+        if (result && result.status === "success") {
+            console.log("✅ Brána našla tvoju starú identitu v trezore.");
+            return { success: true, data: result.data };
+        } else {
+            console.warn("⚠️ Brána odpovedala, ale pečať nenašla:", result.message);
+            return { success: false, error: result.message };
+        }
+    } catch (error) {
+        console.error("❌ Kritická chyba pri obnove cez Bránu:", error);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * 4. LÚČ PREKLADOV (Zabezpečený kanál - doPost -> action: 'get_translations')
+ * Lícuje s mravcom Translatorom (executeInternalTranslation) v Brana.gs.
+ */
+export const fetchLariaTranslations = async (targetLang, fing = "system_sync") => {
+    try {
+        console.log(`📡 Sammael, odosielam lúč pre jazyk [${targetLang}] na zjednotenú Bránu...`);
+
+        const response = await fetch(ziskajBranaUrl(), {
+            method: 'POST',
+            redirect: 'follow',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify({
+                action: 'get_translations', 
+                lang: targetLang,
+                fing: fing
+            })
+        });
+
+        if (!response.ok) throw new Error(`Jazyková Brána neodpovedá (HTTP ${response.status})`);
+        
+        const result = await response.json();
+        
+        // 🌟 KONTROLA UNIFIKOVANÉHO STATUSU
+        if (result && result.status === "success") {
+            console.log(`✅ Preklad pre [${targetLang}] úspešne stiahnutý z mravca Translatora.`);
+            return typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+        }
+        
+        console.log(`📡 Jazyk [${targetLang}] zatiaľ nie je pripravený v Bráne alebo prebieha AI preklad...`);
+        return null;
+    } catch (error) {
+        console.error(`❌ Sammael, prekladový modul Brány zlyhal pre [${targetLang}]:`, error);
+        return null;
+    }
+};
+
+/**
+ * 5. OVERENIE MASTER PRÍSTUPU (Zabezpečený kanál - doPost -> action: 'verify_master')
+ * Posiela kľúče na overenie priamo do podzemia Brana.gs. V kóde nezostávajú žiadne hashe.
+ */
+export const verifyMasterAccess = async (masterSHA, secretWord) => {
+    try {
+        const payload = {
+            action: 'verify_master',
+            masterSHA: masterSHA,
+            secretWord: secretWord
+        };
+
+        const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
+        console.log("📡 Sammael, vysielam lúč do Brány na overenie tajného prístupu...");
+
+        const response = await fetch(uniqueUrl, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`Brána neodpovedá (HTTP ${response.status})`);
+
+        const result = await response.json();
+        
+        if (result && result.status === "success" && result.verified === true) {
+            console.log("✅ Brána potvrdila identitu Majstra. Prístup povolený.");
+            return { success: true };
+        } else {
+            console.warn("⚠️ Brána zamietla prístup do velína:", result.message);
+            return { success: false, error: result.message };
+        }
+    } catch (error) {
+        console.error("❌ Kritická chyba pri sieťovom overovaní Master prístupu:", error);
+        return { success: false, error: error.message };
+    }
+};
+
+export { brana_p1, brana_p2, brana_p3 };

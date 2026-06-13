@@ -1,10 +1,10 @@
 /**
- * LARIA G-MATRIX SERVICE v9.4 (Identity Recovery & Proof of Human Action Edition)
+ * LARIA G-MATRIX SERVICE v9.5 (Identity Recovery & Proof of Human Action Edition)
  * Status: SYNCED / THE LAW / MONOLITH COMPATIBLE
  * Master: Sammael | Muse: Aria
  * Popis: Centralizovaný prístup k jedinej bráne mraveniska (Brana.gs). 
  * URL je rozbitá na 3 časti, aby statické roboty videli iba tmu.
- * v9.4 UNIFIED: Kompletné preonačenie na unifikovaný protokol "status" (Brana.gs v1.9.5).
+ * v9.5 SYNC: Dokonalá fúzia s odľahčenou Bránou v1.9.8 a 5D overovaním LariaCore.
  */
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
@@ -21,7 +21,7 @@ const ziskajBranaUrl = () => {
 
 /**
  * 1. ČÍTANIE Z MATRIXU (Verejný kanál - doGet)
- * Lícuje priamo s doGet(e) v Brana.gs v1.9.5 a vyťahuje verejné vizitky ako čistý JSON.
+ * Lícuje priamo s doGet(e) v Brana.gs a vyťahuje verejné vizitky ako čistý JSON.
  */
 export const fetchGMatrix = async () => {
     try {
@@ -35,7 +35,6 @@ export const fetchGMatrix = async () => {
 
         if (!response.ok) throw new Error(`Matrix neodpovedá (HTTP ${response.status})`);
         
-        // 🌟 KRIŠTÁĽOVO ČISTÝ NÁVRAT: Čítame priamy JSON bez HTML balastu
         return await response.json(); 
     } catch (error) {
         console.error("❌ Sammael, Matrix pri čítaní zlyhal:", error);
@@ -50,32 +49,31 @@ export const fetchGMatrix = async () => {
 export const saveToGMatrix = async (identityData) => {
     try {
         const protocolPayload = {
-            action: 'write', // Smerovanie na mravca Writera v Brana.gs
+            action: 'write', 
             honeypot_check: identityData.honeypot_check || 'human',
             signature: identityData.signature,
             
-            // Protokol mapovania (Poradie stĺpcov A-Q)
-            SECURE_ID: identityData.SECURE_ID || null, // A
-            sha: identityData.sha,             // B
-            date: identityData.date,           // C
-            meno: identityData.meno,           // D
-            kat: identityData.kat,             // E
-            lok: identityData.lok,             // F
-            popis: identityData.popis,         // G
-            tel: identityData.tel,             // H
-            email: identityData.email,         // I
-            fb: identityData.fb,               // J
-            tg: identityData.tg,               // K
-            gal: identityData.gal,             // L
-            isPublic: identityData.isPublic,   // M
-            irc: identityData.irc,             // N
-            poznamka: identityData.fing || identityData.poznamka, // O (Očistený 12-znakový FING)
-            krypt: identityData.krypt,         // P
-            jazyk: identityData.jazyk || 'sk'   // Q
+            SECURE_ID: identityData.SECURE_ID || null, 
+            sha: identityData.sha,             
+            date: identityData.date,           
+            meno: identityData.meno,           
+            kat: identityData.kat,             
+            lok: identityData.lok,             
+            popis: identityData.popis,         
+            tel: identityData.tel,             
+            email: identityData.email,         
+            fb: identityData.fb,               
+            tg: identityData.tg,               
+            gal: identityData.gal,             
+            isPublic: identityData.isPublic,   
+            irc: identityData.irc,             
+            poznamka: identityData.fing || identityData.poznamka, 
+            krypt: identityData.krypt,         
+            jazyk: identityData.jazyk || 'sk'   
         };
 
         const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
-        console.log("📡 Sammael, odosielam tvoju pečať do zjednotenej Brány v1.9.5...");
+        console.log("📡 Sammael, odosielam tvoju pečať do zjednotenej Brány...");
 
         const response = await fetch(uniqueUrl, {
             method: 'POST',
@@ -88,7 +86,6 @@ export const saveToGMatrix = async (identityData) => {
 
         const result = await response.json();
         
-        // 🌟 KONTROLA UNIFIKOVANÉHO STATUSU
         if (result && result.status === "success") {
             console.log("✅ Matrix úspešne prijal tvoju energiu cez Writer.");
             return { success: true, message: result.message };
@@ -105,12 +102,12 @@ export const saveToGMatrix = async (identityData) => {
 
 /**
  * 3. OBNOVA ACCOUNTU Z MATRIXU (Zabezpečený kanál - doPost -> action: 'recover')
- * Hľadá starú identitu podľa SHA pečate cez mravca Writera.
+ * Hľadá starú identitu podľa SHA pečate cez mravca Writer-a.
  */
 export const recoverFromGMatrix = async (shaKey) => {
     try {
         const recoveryPayload = {
-            action: 'recover', // Smerovanie na vyhľadávaciu vetvu v Brana.gs
+            action: 'recover', 
             sha: shaKey
         };
 
@@ -128,7 +125,6 @@ export const recoverFromGMatrix = async (shaKey) => {
 
         const result = await response.json();
 
-        // 🌟 KONTROLA UNIFIKOVANÉHO STATUSU
         if (result && result.status === "success") {
             console.log("✅ Brána našla tvoju starú identitu v trezore.");
             return { success: true, data: result.data };
@@ -144,7 +140,7 @@ export const recoverFromGMatrix = async (shaKey) => {
 
 /**
  * 4. LÚČ PREKLADOV (Zabezpečený kanál - doPost -> action: 'get_translations')
- * Lícuje s mravcom Translatorom (executeInternalTranslation) v Brana.gs.
+ * Lícuje s mravcom Translatorom v Brana.gs.
  */
 export const fetchLariaTranslations = async (targetLang, fing = "system_sync") => {
     try {
@@ -167,13 +163,11 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
         
         const result = await response.json();
         
-        // 🌟 KONTROLA UNIFIKOVANÉHO STATUSU
         if (result && result.status === "success") {
             console.log(`✅ Preklad pre [${targetLang}] úspešne stiahnutý z mravca Translatora.`);
             return typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
         }
         
-        console.log(`📡 Jazyk [${targetLang}] zatiaľ nie je pripravený v Bráne alebo prebieha AI preklad...`);
         return null;
     } catch (error) {
         console.error(`❌ Sammael, prekladový modul Brány zlyhal pre [${targetLang}]:`, error);
@@ -183,7 +177,7 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
 
 /**
  * 5. OVERENIE MASTER PRÍSTUPU (Zabezpečený kanál - doPost -> action: 'verify_master')
- * Posiela kľúče na overenie priamo do podzemia Brana.gs. V kóde nezostávajú žiadne hashe.
+ * Očakáva presne dva stringy za sebou, ktoré následne zabalí pre Bránu.
  */
 export const verifyMasterAccess = async (masterSHA, secretWord) => {
     try {
