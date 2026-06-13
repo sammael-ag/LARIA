@@ -123,7 +123,7 @@ dependencies = [
  "async-channel",
  "async-io",
  "async-lock",
- "async-signal",
+ "async-irc",
  "async-task",
  "blocking",
  "cfg-if",
@@ -144,7 +144,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-signal"
+name = "async-irc"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52b5aaafa020cf5053a01f2a60e8ff5dccf550f0f77ec54a4e47285ac2bab485"
@@ -156,7 +156,7 @@ dependencies = [
  "futures-core",
  "futures-io",
  "rustix",
- "signal-hook-registry",
+ "irc-hook-registry",
  "slab",
  "windows-sys 0.61.2",
 ]
@@ -3105,21 +3105,21 @@ checksum = "47106eded3c154e70176fc83df9737335c94ce22f821c32d17ed1db1f83badb1"
 dependencies = [
  "libc",
  "os_pipe",
- "signal-hook",
+ "irc-hook",
 ]
 
 [[package]]
-name = "signal-hook"
+name = "irc-hook"
 version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d881a16cf4426aa584979d30bd82cb33429027e42122b169753d6ef1085ed6e2"
 dependencies = [
  "libc",
- "signal-hook-registry",
+ "irc-hook-registry",
 ]
 
 [[package]]
-name = "signal-hook-registry"
+name = "irc-hook-registry"
 version = "1.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b"
