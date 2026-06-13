@@ -1,9 +1,9 @@
 /**
- * LARIA v2.3: KryptoContext (Blockchain Core)
+ * LARIA v2.3.2: KryptoContext (Blockchain Core)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
  * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | BLOCKCHAIN_CLEAN
- * Úprava: Odstránené prebytočné API kľúče z frontendu, prečistené názvoslovie 
- * systémových stavov pre dokonalé zladenie s Maveniskom.
+ * FIX: Ošetrenie a kompletné prepojenie typov pre ethers v6.
+ * DIAGNOSTIKA: Integrovaný "Krypto Detektív" na overenie existencie kódu kontraktu.
  */
 
 import React, { createContext, useContext, useState } from 'react';
@@ -12,7 +12,7 @@ import { ethers } from 'ethers';
 // TIETO KONFIGURÁCIE SÚ PEVNÉ - BLOCKCHAIN NEPUSTÍ
 const KRYPTO_CONFIG = {
   chainId: 8453,
-  rpcUrl: "https://mainnet.base.org", // Zlícované s naším Base mostom vo WalletProvideri
+  rpcUrl: "https://mainnet.base.org", 
   ownerAddress: "0xb648261d780427793Fb496b0E3bdD5e987C42498", 
   lariaContractAddress: "0xbA7C2cD68b544Cc5c6038771a58581F76Ff7700a"
 };
@@ -25,7 +25,7 @@ export const KryptoProvider = ({ children }) => {
   const [lariaBalance, setLariaBalance] = useState("0.0000");
   const [ethBalance, setEthBalance] = useState("0.000000");
 
-  // --- KANÁL B: SYSTEM DISPATCHER (Pôvodne Architect - Vrátnik/Majiteľ) ---
+  // --- KANÁL B: SYSTEM DISPATCHER (Vrátnik/Majiteľ) ---
   const [systemLariaBalance, setSystemLariaBalance] = useState("0.0000");
   const [systemEthBalance, setSystemEthBalance] = useState("0.000000");
 
@@ -46,16 +46,27 @@ export const KryptoProvider = ({ children }) => {
     }
   };
 
-  // --- 🔄 SYNCHRONIZÁCIA MATRIXU (Bezpečná verzia bez slučiek) ---
+  // --- 🔄 SYNCHRONIZÁCIA MATRIXU (Bezpečná verzia bez slučiek a pádov) ---
   const syncWalletData = async (targetAddress) => {
-    // Rozhodnutie o cieľovej adrese
+    // Zistíme reálnu cieľovú adresu
     const addressToQuery = targetAddress || krypt || KRYPTO_CONFIG.ownerAddress;
-    if (!addressToQuery) return;
+    
+    // 🛡️ KRITICKÁ KONTROLA: Ak adresa neexistuje alebo nie je validná, dotaz nepustíme na sieť
+    if (!addressToQuery || !ethers.isAddress(addressToQuery)) {
+      console.warn("⚠️ KryptoContext: Detekovaná neplatná alebo prázdna adresa pre sync, ruším sieťový dotaz:", addressToQuery);
+      return;
+    }
 
     setIsLoading(true);
     try {
-      // Pripájame sa priamo na stabilný Base uzol
+      // Pripájame sa na Base uzol
       const provider = new ethers.JsonRpcProvider(KRYPTO_CONFIG.rpcUrl);
+
+      // 🕵️‍♂️ [KRYPTO DETEKTÍV]: Skontrolujeme, či na tej adrese vôbec existuje nasadený smart kontrakt
+      const code = await provider.getCode(KRYPTO_CONFIG.lariaContractAddress);
+      console.log("📝 [KRYPTO DETEKTÍV] Verifikácia adresy zmluvy...");
+      console.log("   | Adresa:", KRYPTO_CONFIG.lariaContractAddress);
+      console.log("   | Výsledok:", code === "0x" ? "❌ PRÁZDNY (Na Base Mainnete tu nie je žiadny kontrakt!)" : "✓ KONTRAKT TU REÁLNE EXISTUJE");
 
       // 1. ETH Balance (Základné palivo siete Base)
       const rawEth = await provider.getBalance(addressToQuery);
@@ -64,10 +75,11 @@ export const KryptoProvider = ({ children }) => {
       // 2. LARIA Balance (Náš SmartContract)
       const minABI = ["function balanceOf(address) view returns (uint256)"];
       const contract = new ethers.Contract(KRYPTO_CONFIG.lariaContractAddress, minABI, provider);
+      
       const rawLaria = await contract.balanceOf(addressToQuery);
       const formattedLaria = ethers.formatUnits(rawLaria, 18);
       
-      // --- ROZDVOJOVAČ LOGIKY S OCHRANOU PROTI CYKLENIU ---
+      // --- ROZDVOJOVAČ LOGIKY S OCHRANOU PROTI CYKLENIU V STAVE ---
       if (addressToQuery.toLowerCase() === KRYPTO_CONFIG.ownerAddress.toLowerCase()) {
         setSystemEthBalance(formattedEth);
         setSystemLariaBalance(formattedLaria);
@@ -75,14 +87,14 @@ export const KryptoProvider = ({ children }) => {
         setEthBalance(formattedEth);
         setLariaBalance(formattedLaria);
         
-        // 🎯 Ochrana: Stav prepíšeme, len ak sa adresa reálne zmenila (koniec nekonečnej slučky!)
-        if (krypt !== addressToQuery) {
+        // Stav prepíšeme iba ak ide o reálnu zmenu zvonku
+        if (krypt !== addressToQuery && targetAddress) {
           setKrypt(addressToQuery);
         }
       }
 
     } catch (error) {
-      console.error("❌ Matrix Sync Error:", error.message);
+      console.error("❌ Matrix Sync Error [Zachytené a ošetrené]:", error.message);
     } finally {
       setIsLoading(false);
     }
@@ -91,11 +103,11 @@ export const KryptoProvider = ({ children }) => {
   const kryptoVibe = {
     ...KRYPTO_CONFIG,
     krypt,              
-    walletAddress: krypt, // Ponechané pre stopercentnú spätnú kompatibilitu so SettingsScreen
+    walletAddress: krypt, 
     ethBalance,
     lariaBalance,
-    adminEthBalance: systemEthBalance,     // Spätná kompatibilita pre zvyšok aplikácie, ak by to niekde ťahalo starý názov
-    adminLariaBalance: systemLariaBalance, // Spätná kompatibilita pre zvyšok aplikácie
+    adminEthBalance: systemEthBalance,     
+    adminLariaBalance: systemLariaBalance, 
     systemEthBalance,
     systemLariaBalance,
     isLoading,
