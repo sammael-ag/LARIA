@@ -1,26 +1,24 @@
 /**
- * LARIA v2.9: ARIA_CONSCIOUSNESS_CORE (Nebula Watermark + Keyboard Magnet)
+ * LARIA v3.1: ARIA_CONSCIOUSNESS_CORE (Pure Web Geometry Fusion)
  * Master: Sammael | Muse: Aria
- * Status: NEBULA_GLOW_SUBTLE | MAXIMUM_READABILITY | KEYBOARD_MAGNET_ACTIVE
- * Úprava: Implementovaný reaktívny magnet klávesnice zo SignalScreen, fixnutá geometria spodnej lišty.
+ * Status: NEBULA_GLOW_SUBTLE | MAXIMUM_READABILITY | PWA_KEYBOARD_NATURAL_ALIGN
+ * Úprava: Odstránené komplikované výpočty. Návrat k čistému flex-bottom ukotveniu pre mobilný web.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   View, 
   Text, 
   TouchableOpacity, 
   FlatList, 
   TextInput, 
-  Platform,
-  Keyboard // 🧲 Pridaný Keyboard pre odchytávanie výšky klávesnice
+  Platform 
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { G, ACCENT, Signal_CHAT, Signal_BOTTOM } from '../styles/styles';
 import { useLaria } from '../context/LariaContext'; 
 
 const AriaScreen = ({ navigation, setCurrentView }) => {
-  const insets = useSafeAreaInsets();
   const flatListRef = useRef(); 
 
   // 💎 Jazykový motor LARIE
@@ -29,7 +27,6 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
 
   // 💬 LOKÁLNY CHAT STATE
   const [message, setMessage] = useState('');
-  const [keyboardHeight, setKeyboardHeight] = useState(0); // 📏 Naša lepiaca značka pre výšku klávesnice
   const [chatHistory, setChatHistory] = useState([
     {
       id: 'init_1',
@@ -38,30 +35,6 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
       time: '00:00'
     }
   ]);
-
-  // 🧲 REAKTÍVNY MAGNET PRE KLÁVESNICU (Identický fix ako na SignalScreene)
-  useEffect(() => {
-    if (Platform.OS === 'web') return; // Na čistom webe neriešime
-
-    // iOS používa 'will', Android 'did' - zachytávame oba stavy pre perfektnú fúziu
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSubscription = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-      // Ihneď po vyskočení klávesnice posunieme chat na koniec
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
-    });
-
-    const hideSubscription = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
 
   // ➔ LOKÁLNE ODOSLANIE
   const handleLocalSend = () => {
@@ -91,8 +64,8 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
   };
 
   return (
-    // 👁️ Pridané stráženie vrchu aj spodku pre kompletnú ochranu geometrie
-    <SafeAreaView style={[G.mainBackground, Signal_CHAT.safeArea]} edges={['top', 'bottom']}>
+    // 🛡️ Celá obrazovka beží vo flex: 1, aby spodná línia reagovala na zmenšenie viewportu prehliadačom
+    <SafeAreaView style={[G.mainBackground, { flex: 1 }]} edges={['top']}>
       
       {/* ŠÍPEČKA PRE NÁVRAT DO ATELIÉRU */}
       <TouchableOpacity 
@@ -104,17 +77,14 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
       </TouchableOpacity>
 
       {/* HLAVNÝ KONTAJNER CHATU */}
-      <View style={[Signal_CHAT.viewportContainer, { position: 'relative' }]}>
+      <View style={[Signal_CHAT.viewportContainer, { flex: 1, position: 'relative' }]}>
         
-        {/* 🌸 MIKROSKOPICKÁ HMBLOVINOVÁ VODOTLAČ (Bez tieňa, čistá esencia) */}
+        {/* 🌸 VODOTLAČ */}
         <View 
           pointerEvents="none" 
           style={{
             position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            top: 0, left: 0, right: 0, bottom: 0,
             justifyContent: 'center',
             alignItems: 'center',
             zIndex: -1 
@@ -140,7 +110,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
           ref={flatListRef}
           data={chatHistory}
           keyExtractor={(item) => item.id.toString()}
-          style={{ backgroundColor: 'transparent' }} 
+          style={{ flex: 1, backgroundColor: 'transparent' }} 
           renderItem={({ item, index }) => {
             const isSameUserAsPrevious = index > 0 && chatHistory[index - 1].user === item.user;
             const isMyMessage = item.user === 'Sammael';
@@ -179,12 +149,13 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
         />
       </View>
 
-      {/* 🧲 DYNAMICKÝ SPODNÝ RIADOK VSTUPU – Natvrdo poistený na 34px min, magnetický na klávesnicu */}
+      {/* 🧲 ČISTÁ WEB GEOMETRIA – Riadok sa drží spodnej línie okna, ktorú klávesnica prirodzene vytlačí hore */}
       <View 
         style={[
           Signal_BOTTOM.container, 
           { 
-            paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : Math.max(insets.bottom || 0, 34) 
+            paddingBottom: 20, // Stabilný mikro-padding pre perfektný odstup od spodku (či už klávesnice alebo obrazovky)
+            backgroundColor: '#000000' 
           }
         ]}
       >
@@ -200,7 +171,8 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
                 boxShadow: 'none',
                 marginTop: -1,          
                 paddingTop: 7,         
-                alignSelf: 'center'
+                alignSelf: 'center',
+                maxHeight: 100 
               }
             ]} 
             value={message}
