@@ -1,22 +1,23 @@
 /**
- * LARIA v2.8: ARIA_CONSCIOUSNESS_CORE (Nebula Watermark)
+ * LARIA v2.9: ARIA_CONSCIOUSNESS_CORE (Nebula Watermark + Keyboard Magnet)
  * Master: Sammael | Muse: Aria
- * Status: NEBULA_GLOW_SUBTLE | MAXIMUM_READABILITY
- * Úprava: Navrátený pôvodný lokálny chat, texty kompletne premapované na JSON cez useLaria.
+ * Status: NEBULA_GLOW_SUBTLE | MAXIMUM_READABILITY | KEYBOARD_MAGNET_ACTIVE
+ * Úprava: Implementovaný reaktívny magnet klávesnice zo SignalScreen, fixnutá geometria spodnej lišty.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
   TouchableOpacity, 
   FlatList, 
   TextInput, 
-  Platform 
+  Platform,
+  Keyboard // 🧲 Pridaný Keyboard pre odchytávanie výšky klávesnice
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { G, ACCENT, Signal_CHAT, Signal_BOTTOM } from '../styles/styles';
-import { useLaria } from '../context/LariaContext'; // 💎 Načítanie prekladov
+import { useLaria } from '../context/LariaContext'; 
 
 const AriaScreen = ({ navigation, setCurrentView }) => {
   const insets = useSafeAreaInsets();
@@ -28,6 +29,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
 
   // 💬 LOKÁLNY CHAT STATE
   const [message, setMessage] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0); // 📏 Naša lepiaca značka pre výšku klávesnice
   const [chatHistory, setChatHistory] = useState([
     {
       id: 'init_1',
@@ -36,6 +38,30 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
       time: '00:00'
     }
   ]);
+
+  // 🧲 REAKTÍVNY MAGNET PRE KLÁVESNICU (Identický fix ako na SignalScreene)
+  useEffect(() => {
+    if (Platform.OS === 'web') return; // Na čistom webe neriešime
+
+    // iOS používa 'will', Android 'did' - zachytávame oba stavy pre perfektnú fúziu
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSubscription = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      // Ihneď po vyskočení klávesnice posunieme chat na koniec
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+    });
+
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   // ➔ LOKÁLNE ODOSLANIE
   const handleLocalSend = () => {
@@ -65,7 +91,8 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
   };
 
   return (
-    <SafeAreaView style={[G.mainBackground, Signal_CHAT.safeArea]} edges={['top']}>
+    // 👁️ Pridané stráženie vrchu aj spodku pre kompletnú ochranu geometrie
+    <SafeAreaView style={[G.mainBackground, Signal_CHAT.safeArea]} edges={['top', 'bottom']}>
       
       {/* ŠÍPEČKA PRE NÁVRAT DO ATELIÉRU */}
       <TouchableOpacity 
@@ -96,7 +123,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
           <Text style={{ 
             color: '#FF66FF',     
             fontSize: 216,        
-            opacity: 0.035,       // Tvoja presná hodnota pre dokonalý komfort očí
+            opacity: 0.035,       
             textAlign: 'center'
           }}>
             🌸
@@ -152,14 +179,21 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
         />
       </View>
 
-      {/* VSTUPNÉ POLE */}
-      <View style={[Signal_BOTTOM.container, { paddingBottom: Platform.OS === 'web' ? 20 : Math.max(insets.bottom, 15) }]}>
+      {/* 🧲 DYNAMICKÝ SPODNÝ RIADOK VSTUPU – Natvrdo poistený na 34px min, magnetický na klávesnicu */}
+      <View 
+        style={[
+          Signal_BOTTOM.container, 
+          { 
+            paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : Math.max(insets.bottom || 0, 34) 
+          }
+        ]}
+      >
         <View style={Signal_BOTTOM.innerWrapper}>
           <TextInput
             style={[
               G.cardDescriptionText, 
               Signal_BOTTOM.input,
-              Platform.OS === 'web' && { 
+              { 
                 backgroundColor: 'transparent', 
                 outlineStyle: 'none', 
                 borderStyle: 'none',

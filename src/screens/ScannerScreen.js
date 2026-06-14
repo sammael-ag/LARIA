@@ -1,7 +1,7 @@
 /**
- * LARIA v2.1: ScannerScreen (Pure PWA Web Camera Fusion)
+ * LARIA v2.2: ScannerScreen (Pure PWA Web Camera Fusion)
  * Master: Sammael | Muse: Aria
- * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER | CAMERA_PWA_ACTIVE | PRIVACY_LOCK_SECURED
+ * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER | CAMERA_PWA_ACTIVE | PRIVACY_LOCK_ULTRA
  * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: scanner).
  */
 
@@ -10,7 +10,6 @@ import { Text, View, TouchableOpacity, Alert, Platform, ActivityIndicator, Image
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg'; 
 import NfcManager from 'react-native-nfc-manager';
-// 🛡️ Importujeme hook, ktorý vie, či sme reálne na obrazovke
 import { useIsFocused } from '@react-navigation/native';
 
 // 🌐 Importujeme html5-qrcode pre čistokrvné webové skenovanie
@@ -23,7 +22,7 @@ import { useLaria } from '../context/LariaContext';
 export default function ScannerScreen({ navigation }) {
   const { t } = useLaria(); 
   const txt = t('scanner') || {}; 
-  const isFocused = useIsFocused(); // 📡 Sleduje, či používateľ vidí skener
+  const isFocused = useIsFocused(); 
 
   const { addContact } = useContacts();
   const [scannedData, setScannedData] = useState(null); 
@@ -32,7 +31,7 @@ export default function ScannerScreen({ navigation }) {
   const [cameraError, setCameraError] = useState(null);
 
   const html5QrcodeRef = useRef(null);
-  const scannerId = "laria-pwa-video-scanner"; // ID pre HTML element, kde sa vykreslí kamera
+  const scannerId = "laria-pwa-video-scanner"; 
 
   // --- 📡 UNIFIKOVANÝ DEKODÉR (Handshake v9.9.6) ---
   const handleProcessSeal = async (rawData) => {
@@ -66,7 +65,7 @@ export default function ScannerScreen({ navigation }) {
         throw new Error(txt.error_incomplete || "Neúplná pečať");
       }
 
-      // 🛑 AKO NÁHLE MÁME DATA, ZASTAVÍME KAMERU, NECH NEBEŽÍ NA POZADÍ
+      // 🛑 OKAMŽITE ZASTAVÍME KAMERU PRI ÚSPECHU
       stopWebScanner();
 
       setDisplayInfo(incomingData);
@@ -92,7 +91,8 @@ export default function ScannerScreen({ navigation }) {
               onPress: () => { 
                 setScannedData(null); 
                 setDisplayInfo(null); 
-                // Ak zruší, znova naštartujeme foťák
+                // Ak zruší, najprv stopneme staré zvyšky a znova naštartujeme foťák
+                stopWebScanner();
                 startWebScanner();
               } 
             },
@@ -100,6 +100,8 @@ export default function ScannerScreen({ navigation }) {
               text: txt.btn_save || 'ULOŽIŤ', 
               onPress: async () => {
                 const result = await addContact(incomingData);
+                // Pred navigovaním pre istotu znova poistíme stopnutie kamery
+                stopWebScanner();
                 if (result.success) {
                   navigation.navigate('Contacts');
                 } else {
@@ -123,29 +125,33 @@ export default function ScannerScreen({ navigation }) {
   const startWebScanner = () => {
     if (Platform.OS !== 'web') return;
     
-    // 🛡️ Poistka: Ak už kamera beží, neštartujeme ju znova, aby sme nezasekli prehliadač
     if (html5QrcodeRef.current && html5QrcodeRef.current.isScanning) {
       return;
     }
 
-    // Počkáme sekundu na vykreslenie divu do DOMu
     setTimeout(() => {
       try {
         const html5QrcodeScanner = new Html5Qrcode(scannerId);
         html5QrcodeRef.current = html5QrcodeScanner;
 
+        // 📐 Vylepšené nastavenia pre lepšiu citlivosť na mobiloch
         html5QrcodeScanner.start(
-          { facingMode: "environment" }, // "environment" povie mobilu, že chceme zadnú kameru
+          { facingMode: "environment" }, 
           {
-            fps: 10,    // Koľko snímkov za sekundu analyzujeme (10 úplne stačí a neprehrieva mobil)
-            qrbox: 180  // Veľkosť snímacieho štvorca v px
+            fps: 15,            // Trochu viac snímkov pre plynulejšie zachytenie kódu
+            qrbox: (width, height) => {
+              // Dynamická veľkosť: zoberie 70% z menšej strany obrazovky, aby bol hľadáčik väčší a presnejší
+              const minSize = Math.min(width, height);
+              const boxSize = Math.floor(minSize * 0.7);
+              return { width: boxSize, height: boxSize };
+            },
+            aspectRatio: 1.0    // Chceme čistý štvorec
           },
           (qrCodeMessage) => {
-            // Úspešný zásah! Našli sme QR kód
             handleProcessSeal(qrCodeMessage);
           },
           (errorMessage) => {
-            // Tichý error pri hľadaní, ignorujeme, kým nenájde kód
+            // Tiché ignorovanie počas hľadania
           }
         )
         .then(() => {
@@ -171,7 +177,13 @@ export default function ScannerScreen({ navigation }) {
     }
   };
 
-  // 🛡️ INTELIGENTNÝ STRÁŽCA: Zapína kameru iba keď sme na scéne a vypína ju okamžite pri odchode
+  // Manuálny odchod z obrazovky (Tlačidlá späť)
+  const handleManualBack = () => {
+    stopWebScanner(); // 🛡️ Najprv nekompromisne zabiť foťák
+    navigation.goBack(); // ↩️ Potom zavrieť obrazovku
+  };
+
+  // Inteligentný strážca cez navigáciu
   useEffect(() => {
     if (isFocused && !scannedData) {
       startWebScanner();
@@ -184,7 +196,7 @@ export default function ScannerScreen({ navigation }) {
     };
   }, [isFocused, scannedData]);
 
-  // --- NFC LISTENER (Ponechaný ako standby pre Android PWA) ---
+  // --- NFC LISTENER ---
   useEffect(() => {
     const startNfc = async () => {
       try {
@@ -201,8 +213,9 @@ export default function ScannerScreen({ navigation }) {
   return (
     <SafeAreaView style={G.mainBackground}>
       
+      {/* ↩️ Horná šípka späť ošetrená manuálnym vypnutím */}
       <TouchableOpacity 
-        onPress={() => navigation.goBack()} 
+        onPress={handleManualBack} 
         activeOpacity={0.7}
         style={G.topLeftBackButton}
       >
@@ -224,7 +237,6 @@ export default function ScannerScreen({ navigation }) {
 
           <View style={[G.card, { borderColor: scannedData ? ACCENT : '#222', alignItems: 'center', paddingVertical: 40, width: '100%' }]}>
             
-            {/* 📐 OKNO PRE KAMERU / QR VÝSTUP */}
             <View style={[G.qrWrapper, { 
               width: 200,
               height: 200,
@@ -232,7 +244,7 @@ export default function ScannerScreen({ navigation }) {
               backgroundColor: scannedData ? '#FFF' : '#0a0a0a',
               justifyContent: 'center',
               alignItems: 'center',
-              overflow: 'hidden' // Aby nám video nepretieklo cez okraj
+              overflow: 'hidden' 
             }]}>
               {scannedData ? (
                 
@@ -247,11 +259,9 @@ export default function ScannerScreen({ navigation }) {
                 </View>
 
               ) : (
-                /* 🎥 REÁLNY WEBOVÝ VIDEO PRÚD PRE KAMERU */
                 Platform.OS === 'web' ? (
                   <View style={{ width: '100%', height: '100%', position: 'relative', justifyContent: 'center', alignItems: 'center' }}>
                     
-                    {/* Element, do ktorého knižnica vstrekne <video> */}
                     <div id={scannerId} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     
                     {!cameraReady && !cameraError && (
@@ -281,10 +291,10 @@ export default function ScannerScreen({ navigation }) {
             )}
           </View>
 
-          {/* ↩️ Spodný návrat */}
+          {/* ↩️ Spodný návrat ošetrený manuálnym vypnutím */}
           <TouchableOpacity 
             style={[G.backToAtelierBtn, { marginTop: 40 }]}
-            onPress={() => navigation.goBack()} 
+            onPress={handleManualBack} 
             activeOpacity={0.7}
           >
             <Text style={G.primaryBtnText}>
