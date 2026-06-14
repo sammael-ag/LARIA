@@ -294,7 +294,7 @@ export default function ScannerScreen({ navigation }) {
                 onPress={handleSaveContact} 
                 activeOpacity={0.7}
               >
-                <Text style={[G.primaryBtnText, { color: '#000', fontWeight: 'bold' }]}>
+                <Text style={[G.primaryBtnText, { fontWeight: 'bold' }]}>
                   PRIDAŤ KONTAKT
                 </Text>
               </TouchableOpacity>
