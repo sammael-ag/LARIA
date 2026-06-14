@@ -1,7 +1,7 @@
 /**
- * LARIA Signal SCREEN v25.1 (Pure PWA Style Architecture)
+ * LARIA Signal SCREEN v25.2 (Pure PWA Style Architecture)
  * Master: Sammael | Muse: Aria (Tvoja skutočná)
- * STATUS: GMATRIX_CORE_STABLE | PING_PONG_FIXED | DISPATCH_READY
+ * STATUS: GMATRIX_CORE_STABLE | PING_PONG_FIXED | DISPATCH_READY | KEYBOARD_MAGNET_ACTIVE
  * SIGNATURE: LARIA : fckoff sys_ // PWA_NET_DETECTION
  */
 
@@ -13,7 +13,8 @@ import {
   TouchableOpacity, 
   FlatList, 
   Platform,
-  StatusBar
+  StatusBar,
+  Keyboard // 🧲 Pridaný Keyboard pre odchytávanie výšky klávesnice
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'; 
 
@@ -30,6 +31,7 @@ const SignalScreen = ({ route, navigation }) => {
   const [isNetOnline, setIsNetOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
+  const [keyboardHeight, setKeyboardHeight] = useState(0); // 📏 Naša lepiaca značka pre výšku klávesnice
   const insets = useSafeAreaInsets(); 
   const flatListRef = useRef();
 
@@ -55,9 +57,32 @@ const SignalScreen = ({ route, navigation }) => {
     };
   }, []);
 
+  // 🧲 REAKTÍVNY MAGNET PRE KLÁVESNICU (Iba pre reálne mobily, iOS/Android si žiada native listeners)
+  useEffect(() => {
+    if (Platform.OS === 'web') return; // Na čistom webe neriešime, tam klávesnica nevyskakuje zo spodu
+
+    // iOS používa 'will', Android väčšinou 'did', zachytíme oba prípady pre istotu
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSubscription = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      // Hneď po otvorení klávesnice posunieme zoznam na koniec, nech vidíš posledné správy
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+    });
+
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
   // 👁️ OŠETRENIE STAVOV PRI OTVORENÍ CHATU & KOMPLETNÉ VYČISTENIE PRI ODCHODE
   useEffect(() => {
-    // 1. PING-PONG PRI VSTUPE (Preklopenie na WAITING_FOR_THEM)
     if (typeof setIncomingRequests === 'function' && incomingRequests.length > 0) {
       setIncomingRequests(prev => 
         prev.map(msg => {
@@ -81,7 +106,6 @@ const SignalScreen = ({ route, navigation }) => {
       );
     }
 
-    // 2. 🧹 SUPERSCHOPNOSŤ Signal: Totálne vymazanie textovej stopy pri zatvorení obrazovky
     return () => {
       if (typeof setIncomingRequests === 'function') {
         console.log(`🧹 Signal MEMORY PURGE: Odchádzam z chatu ${targetFing}. Mažem textovú stopu...`);
@@ -92,7 +116,7 @@ const SignalScreen = ({ route, navigation }) => {
     };
   }, [targetFing]);
 
-  // 💬 ODOSIELANIE TEXTU (Kľudový stav pri písaní, vrstvenie správ do frontu)
+  // 💬 ODOSIELANIE TEXTU
   const sendMessage = async () => {
     if (message.trim().length === 0) return;
 
@@ -182,7 +206,7 @@ const SignalScreen = ({ route, navigation }) => {
   const hasResolvedHandshake = currentChannelLog.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_THEM_RESOLVED');
 
   return (
-    <SafeAreaView style={[G.mainBackground, Signal_CHAT.safeArea]} edges={['top']}>
+    <SafeAreaView style={[G.mainBackground, Signal_CHAT.safeArea]} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" />
       
       <TouchableOpacity 
@@ -199,7 +223,7 @@ const SignalScreen = ({ route, navigation }) => {
           <Text style={[Signal_CHAT.watermarkText, { color: ACCENT || '#c5a059' }]}>💬</Text>
         </View>
 
-        {/* 📐 UNIFORMNE ZLADENÝ HEADER S MATRIX STATUSOM */}
+        {/* HEADER */}
         <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
           <View style={Signal_CHAT_SIGNALLING.headerTitleWithIcons}>
             <Text style={G.atelierTitle}>{channelName}</Text>
@@ -224,7 +248,7 @@ const SignalScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* 🤝 AKČNÝ RIADOK POD HEADEROM */}
+        {/* AKČNÝ RIADOK POD HEADEROM */}
         {activeHandshakeRequest && (
           <View style={HANDSHAKE_PANEL.container}>
             <TouchableOpacity 
@@ -253,7 +277,6 @@ const SignalScreen = ({ route, navigation }) => {
             const isSameUserAsPrevious = index > 0 && currentChannelLog[index - 1].user === item.user;
             const myCleanName = vault?.identity?.meno || 'Sammael';
             const isMyMessage = item.user === myCleanName;
-
             const isPending = item.status === 'PENDING';
 
             return (
@@ -293,7 +316,15 @@ const SignalScreen = ({ route, navigation }) => {
         />
       </View>
 
-      <View style={[Signal_BOTTOM.container, { paddingBottom: 20 }]}>
+      {/* 🧲 DYNAMICKÝ SPODNÝ RIADOK – Lepí sa na klávesnicu vďaka keyboardHeight */}
+      <View 
+        style={[
+          Signal_BOTTOM.container, 
+          { 
+            paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : (insets.bottom || 34) 
+          }
+        ]}
+      >
         <View style={Signal_BOTTOM.innerWrapper}>
           <TextInput
             style={[

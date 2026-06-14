@@ -581,13 +581,13 @@
                    CrystalCore 
                  </div> 
                  <div className="card-description-text" style={{ textAlign: 'center', padding: '0 10px', marginBottom: '40px', fontSize: '13px', lineHeight: '22px' }}> 
-                   Pre plnú synchronizáciu so sieťami, Gopher protokolom a prístup k hardvérovým uzlom spustite lokálny systém. 
+                   Pre prístup k svojej vizitke, prehľad kontaktov a rychly chat aktivuj Core. 
                  </div> 
                  <div style={{ flexGrow: 1 }}></div> 
                  <div style={{ width: '100%', maxWidth: '320px', alignSelf: 'center', marginBottom: '30px' }}> 
                    <button className="primary-btn" onClick={handleDownloadClick}> 
                      <span className="primary-btn-text"> 
-                       {deferredPrompt ? (txt.btn_download || "Stiahnuť Crystal Core") : "Inštalovať Crystal Core"} 
+                       {deferredPrompt ? (txt.btn_download || "Spustiť Crystal Core") : "Aktivovať Crystal Core"} 
                      </span> 
                    </button> 
                  </div> 
