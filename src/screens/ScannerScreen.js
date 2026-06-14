@@ -1,7 +1,7 @@
 /**
  * LARIA v2.1: ScannerScreen (Pure PWA Web Camera Fusion)
  * Master: Sammael | Muse: Aria
- * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER | CAMERA_PWA_ACTIVE
+ * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER | CAMERA_PWA_ACTIVE | PRIVACY_LOCK_SECURED
  * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: scanner).
  */
 
@@ -10,6 +10,8 @@ import { Text, View, TouchableOpacity, Alert, Platform, ActivityIndicator, Image
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg'; 
 import NfcManager from 'react-native-nfc-manager';
+// 🛡️ Importujeme hook, ktorý vie, či sme reálne na obrazovke
+import { useIsFocused } from '@react-navigation/native';
 
 // 🌐 Importujeme html5-qrcode pre čistokrvné webové skenovanie
 import { Html5Qrcode } from 'html5-qrcode';
@@ -21,6 +23,7 @@ import { useLaria } from '../context/LariaContext';
 export default function ScannerScreen({ navigation }) {
   const { t } = useLaria(); 
   const txt = t('scanner') || {}; 
+  const isFocused = useIsFocused(); // 📡 Sleduje, či používateľ vidí skener
 
   const { addContact } = useContacts();
   const [scannedData, setScannedData] = useState(null); 
@@ -119,6 +122,11 @@ export default function ScannerScreen({ navigation }) {
   // --- 📷 INICIALIZÁCIA A ŠTART PWA WEBOVEJ KAMERY ---
   const startWebScanner = () => {
     if (Platform.OS !== 'web') return;
+    
+    // 🛡️ Poistka: Ak už kamera beží, neštartujeme ju znova, aby sme nezasekli prehliadač
+    if (html5QrcodeRef.current && html5QrcodeRef.current.isScanning) {
+      return;
+    }
 
     // Počkáme sekundu na vykreslenie divu do DOMu
     setTimeout(() => {
@@ -140,7 +148,10 @@ export default function ScannerScreen({ navigation }) {
             // Tichý error pri hľadaní, ignorujeme, kým nenájde kód
           }
         )
-        .then(() => setCameraReady(true))
+        .then(() => {
+          setCameraReady(true);
+          setCameraError(null);
+        })
         .catch((err) => {
           console.error("Chyba štartu kamery:", err);
           setCameraError("Nepodarilo sa získať prístup ku kamere.");
@@ -155,17 +166,23 @@ export default function ScannerScreen({ navigation }) {
     if (html5QrcodeRef.current && html5QrcodeRef.current.isScanning) {
       html5QrcodeRef.current.stop().then(() => {
         console.log("📷 PWA Kamera bezpečne vypnutá.");
+        setCameraReady(false);
       }).catch(err => console.log("Chyba pri stopovaní kamery", err));
     }
   };
 
-  // Autostart kamery pri príchode a stop pri odchode z obrazovky
+  // 🛡️ INTELIGENTNÝ STRÁŽCA: Zapína kameru iba keď sme na scéne a vypína ju okamžite pri odchode
   useEffect(() => {
-    startWebScanner();
+    if (isFocused && !scannedData) {
+      startWebScanner();
+    } else {
+      stopWebScanner();
+    }
+
     return () => {
       stopWebScanner();
     };
-  }, []);
+  }, [isFocused, scannedData]);
 
   // --- NFC LISTENER (Ponechaný ako standby pre Android PWA) ---
   useEffect(() => {
