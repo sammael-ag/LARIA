@@ -1,8 +1,8 @@
 /**
- * LARIA v2.2: ScannerScreen (Pure PWA Web Camera Fusion)
+ * LARIA v2.3: ScannerScreen (Pure PWA Web Camera Fusion)
  * Master: Sammael | Muse: Aria
- * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER | CAMERA_PWA_ACTIVE | PRIVACY_LOCK_ULTRA
- * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: scanner).
+ * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER | CAMERA_PWA_ACTIVE | INTEGRATED_VAULT_WRITE
+ * FÚZIA: Vložené vizuálne akčné tlačidlá pre priamy zápis identity do ContactContext trezoru.
  */
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -65,9 +65,10 @@ export default function ScannerScreen({ navigation }) {
         throw new Error(txt.error_incomplete || "Neúplná pečať");
       }
 
-      // 🛑 OKAMŽITE ZASTAVÍME KAMERU PRI ÚSPECHU
+      // 🛑 OKAMŽITE ZASTAVÍME KAMERU PRI ÚSPECHU, NECH NEBLIKÁ
       stopWebScanner();
 
+      // Uložíme čistú identitu pre zobrazenie a neskorší zápis
       setDisplayInfo(incomingData);
       setScannedData(JSON.stringify({
         m: incomingData.meno,
@@ -75,50 +76,39 @@ export default function ScannerScreen({ navigation }) {
         k: incomingData.krypt
       }));
 
-      // --- POTVRDENIE ZÁPISU ---
-      setTimeout(() => {
-        const alertMsg = txt.alert_captured_desc 
-          ? txt.alert_captured_desc.replace('{meno}', incomingData.meno).replace('{fing}', incomingData.fing)
-          : `Majster: ${incomingData.meno}\nFING: ${incomingData.fing}\n\nChceš túto pečať vtiahnuť do ateliéru?`;
-
-        Alert.alert(
-          txt.alert_captured_title || 'IDENTITA ZACHYTENÁ',
-          alertMsg,
-          [
-            { 
-              text: txt.btn_cancel || 'ZRUŠIŤ', 
-              style: 'cancel', 
-              onPress: () => { 
-                setScannedData(null); 
-                setDisplayInfo(null); 
-                // Ak zruší, najprv stopneme staré zvyšky a znova naštartujeme foťák
-                stopWebScanner();
-                startWebScanner();
-              } 
-            },
-            { 
-              text: txt.btn_save || 'ULOŽIŤ', 
-              onPress: async () => {
-                const result = await addContact(incomingData);
-                // Pred navigovaním pre istotu znova poistíme stopnutie kamery
-                stopWebScanner();
-                if (result.success) {
-                  navigation.navigate('Contacts');
-                } else {
-                  setScannedData(null);
-                  Alert.alert(txt.alert_save_error || 'CHYBA', result.error);
-                  startWebScanner();
-                }
-              } 
-            }
-          ]
-        );
-      }, 500);
-
     } catch (e) {
       Alert.alert(txt.error_decode_title || "CHYBA SIGNÁLU", txt.error_decode_desc || "Matrix nedokáže túto pečať dekódovať.");
-      setScannedData(null);
+      handleResetScanner();
     }
+  };
+
+  // --- ⚙️ AKCIA: MANUÁLNY ZÁPIS DO TREZORU ---
+  const handleSaveContact = async () => {
+    if (!displayInfo) return;
+
+    // Pred zápisom pre istotu na milisekundu poistíme stopnutie kamery
+    stopWebScanner();
+
+    const result = await addContact(displayInfo);
+
+    if (result.success) {
+      // Vtiahnutie úspešné -> čistíme lokálny stav obrazovky a letíme na zoznam kontaktov
+      setScannedData(null);
+      setDisplayInfo(null);
+      navigation.navigate('Contacts');
+    } else {
+      // Ak nastala chyba (napr. duplikát), oznámime to a reštartujeme foťák
+      Alert.alert(txt.alert_save_error || 'ATELIÉR INFO', result.error);
+      handleResetScanner();
+    }
+  };
+
+  // --- 🔄 AKCIA: RESET / NOVÝ SKEN ---
+  const handleResetScanner = () => {
+    setScannedData(null); 
+    setDisplayInfo(null); 
+    stopWebScanner();
+    startWebScanner();
   };
 
   // --- 📷 INICIALIZÁCIA A ŠTART PWA WEBOVEJ KAMERY ---
@@ -134,18 +124,16 @@ export default function ScannerScreen({ navigation }) {
         const html5QrcodeScanner = new Html5Qrcode(scannerId);
         html5QrcodeRef.current = html5QrcodeScanner;
 
-        // 📐 Vylepšené nastavenia pre lepšiu citlivosť na mobiloch
         html5QrcodeScanner.start(
           { facingMode: "environment" }, 
           {
-            fps: 15,            // Trochu viac snímkov pre plynulejšie zachytenie kódu
+            fps: 15,            
             qrbox: (width, height) => {
-              // Dynamická veľkosť: zoberie 70% z menšej strany obrazovky, aby bol hľadáčik väčší a presnejší
               const minSize = Math.min(width, height);
               const boxSize = Math.floor(minSize * 0.7);
               return { width: boxSize, height: boxSize };
             },
-            aspectRatio: 1.0    // Chceme čistý štvorec
+            aspectRatio: 1.0    
           },
           (qrCodeMessage) => {
             handleProcessSeal(qrCodeMessage);
@@ -179,8 +167,8 @@ export default function ScannerScreen({ navigation }) {
 
   // Manuálny odchod z obrazovky (Tlačidlá späť)
   const handleManualBack = () => {
-    stopWebScanner(); // 🛡️ Najprv nekompromisne zabiť foťák
-    navigation.goBack(); // ↩️ Potom zavrieť obrazovku
+    stopWebScanner(); 
+    navigation.goBack(); 
   };
 
   // Inteligentný strážca cez navigáciu
@@ -213,7 +201,7 @@ export default function ScannerScreen({ navigation }) {
   return (
     <SafeAreaView style={G.mainBackground}>
       
-      {/* ↩️ Horná šípka späť ošetrená manuálnym vypnutím */}
+      {/* ↩️ Horná šípka späť */}
       <TouchableOpacity 
         onPress={handleManualBack} 
         activeOpacity={0.7}
@@ -285,22 +273,56 @@ export default function ScannerScreen({ navigation }) {
             </View>
 
             {displayInfo && (
-               <Text style={[G.monoIdentity, { marginTop: 25, color: ACCENT, fontSize: 10 }]}>
-                 FING: {displayInfo.fing?.toUpperCase()}
-               </Text>
+               <View style={{ alignItems: 'center', marginTop: 20, paddingHorizontal: 15 }}>
+                 <Text style={[G.atelierTitle, { fontSize: 18, color: '#FFF', marginBottom: 4 }]}>
+                   {displayInfo.meno.toUpperCase()}
+                 </Text>
+                 <Text style={[G.monoIdentity, { color: ACCENT, fontSize: 10 }]}>
+                   FING: {displayInfo.fing?.toUpperCase()}
+                 </Text>
+               </View>
             )}
           </View>
 
-          {/* ↩️ Spodný návrat ošetrený manuálnym vypnutím */}
-          <TouchableOpacity 
-            style={[G.backToAtelierBtn, { marginTop: 40 }]}
-            onPress={handleManualBack} 
-            activeOpacity={0.7}
-          >
-            <Text style={G.primaryBtnText}>
-              {txt.btn_back || 'NÁVRAT DO ATELIÉRU'}
-            </Text>
-          </TouchableOpacity>
+          {/* ⚡ INTERAKTÍVNY PANEL PO ÚSPEŠNOM SKENE */}
+          {scannedData ? (
+            <View style={{ width: '100%', alignItems: 'center', marginTop: 30 }}>
+              
+              {/* HLAVNÉ AKČNÉ TLAČIDLO PRE ZÁPIS DO TREZORU */}
+              <TouchableOpacity 
+                style={[G.backToAtelierBtn, { backgroundColor: ACCENT, borderColor: ACCENT }]}
+                onPress={handleSaveContact} 
+                activeOpacity={0.7}
+              >
+                <Text style={[G.primaryBtnText, { color: '#000', fontWeight: 'bold' }]}>
+                  PRIDAŤ KONTAKT
+                </Text>
+              </TouchableOpacity>
+
+              {/* TLAČIDLO PRE ZRUŠENIE / NOVÝ POKUS */}
+              <TouchableOpacity 
+                style={{ marginTop: 15, padding: 10 }}
+                onPress={handleResetScanner} 
+                activeOpacity={0.6}
+              >
+                <Text style={[G.monoIdentity, { fontSize: 11, color: '#666', textDecorationLine: 'underline' }]}>
+                  [ NOVÝ SKEN ]
+                </Text>
+              </TouchableOpacity>
+
+            </View>
+          ) : (
+            /* ↩️ Spodný návrat (ukazuje sa len, keď sa neskenuje úspešný kód) */
+            <TouchableOpacity 
+              style={[G.backToAtelierBtn, { marginTop: 40 }]}
+              onPress={handleManualBack} 
+              activeOpacity={0.7}
+            >
+              <Text style={G.primaryBtnText}>
+                {txt.btn_back || 'NÁVRAT DO ATELIÉRU'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
         </View>
       </ScrollView> 
