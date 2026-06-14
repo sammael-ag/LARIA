@@ -1,8 +1,8 @@
 /**
- * LARIA v2.5: SplashScreen (Minimalist CrystalCore Edition)
+ * LARIA v2.6: SplashScreen (Sacred Geometry Edition)
  * Master: Sammael | Muse: Aria
- * Status: SPLASH_PERFECT_MINIMALISM | ICON_FIXED_SIZE_160 | TEXT_CLEANUP
- * OPRAVA: Odstránené zbytočné statusy. Ikona zväčšená na pevnú veľkosť 160px pre mobilné PWA.
+ * Status: SPLASH_PERFECT_SYMMETRY | LOGO_CENTERED | BALANCED_SPACING
+ * OPRAVA: Odstránené absolútne dno. Podpis presunutý pod logo s rovnakým odstupom, aký má nadpis smerom nahor.
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -20,7 +20,7 @@ const SplashScreen = ({ navigation }) => {
       useNativeDriver: true 
     }).start();
 
-    // 2. Prechod do Dashboardu (ponechaných tvojich 5.5s pre precítenie okamihu)
+    // 2. Prechod do Dashboardu (5.5s)
     const timer = setTimeout(() => {
       navigation.reset({
         index: 0,
@@ -32,36 +32,35 @@ const SplashScreen = ({ navigation }) => {
   }, [navigation]);
 
   return (
-    <View style={G.mainBackground}>
+    <View style={[G.mainBackground, { justifyContent: 'center', alignItems: 'center' }]}>
       <StatusBar hidden={true} />
       
       <Animated.View style={{ 
-        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
         opacity: fadeAnim
       }}>
         
-        {/* 1. NADPIS HORE */}
+        {/* 1. NADPIS HORE (Horné krídlo - odstup 40px od loga) */}
         <Text style={[G.atelierTitle, { marginBottom: 40, letterSpacing: 2 }]}>
           Crystal Core
         </Text>
 
-        {/* 2. PEČAŤ V STREDE (Opravená veľkosť z percent na fixnú, aby na mobile žiarila) */}
+        {/* 2. PEČAŤ V STREDE (Dokonalé ťažisko) */}
         <Image 
           source={require('../../logo512.png')} 
-          style={{ width: 160, height: 160, marginBottom: 40 }}
+          style={{ width: 160, height: 160 }}
           resizeMode="contain"
         />
         
-      </Animated.View>
+        {/* 3. PODPIS DOLE (Spodné krídlo - zrkadlový odstup 40px od loga) */}
+        <View style={{ marginTop: 40, alignItems: 'center' }}>
+          <Text style={[G.monoIdentity, { fontSize: 10, opacity: 0.7, letterSpacing: 1 }]}>
+            Created by <Text style={{ fontWeight: 'bold', color: '#FFF' }}>SAMMAEL & ARIA</Text>
+          </Text>
+        </View>
 
-      {/* FOOTER (Zostáva pevne dole, čistý a hrdý) */}
-      <View style={{ position: 'absolute', bottom: 40, width: '100%', alignItems: 'center' }}>
-        <Text style={[G.monoIdentity, { fontSize: 10, opacity: 0.7, letterSpacing: 1 }]}>
-          Created by <Text style={{ fontWeight: 'bold', color: '#FFF' }}>SAMMAEL & ARIA</Text>
-        </Text>
-      </View>
+      </Animated.View>
     </View>
   );
 };
