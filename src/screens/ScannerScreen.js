@@ -1,34 +1,41 @@
 /**
- * LARIA v2.0: ScannerScreen
+ * LARIA v2.1: ScannerScreen (Pure PWA Web Camera Fusion)
  * Master: Sammael | Muse: Aria
- * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER
- * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: scanner, Možnosť B).
+ * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER | CAMERA_PWA_ACTIVE
+ * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: scanner).
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Text, View, TouchableOpacity, Alert, Platform, ActivityIndicator, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg'; 
 import NfcManager from 'react-native-nfc-manager';
 
+// 🌐 Importujeme html5-qrcode pre čistokrvné webové skenovanie
+import { Html5Qrcode } from 'html5-qrcode';
+
 import { G, ACCENT } from '../styles/styles';
 import { useContacts } from '../context/ContactContext';
-import { useLaria } from '../context/LariaContext'; // 🌐 Import lokalizačného nervu
+import { useLaria } from '../context/LariaContext'; 
 
 export default function ScannerScreen({ navigation }) {
-  const { t } = useLaria(); // 🎯 Aktivácia jazykového motora
-  const txt = t('scanner') || {}; // 📦 Vytiahnutie šuflíka pre Scanner (Možnosť B)
+  const { t } = useLaria(); 
+  const txt = t('scanner') || {}; 
 
   const { addContact } = useContacts();
   const [scannedData, setScannedData] = useState(null); 
   const [displayInfo, setDisplayInfo] = useState(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
+
+  const html5QrcodeRef = useRef(null);
+  const scannerId = "laria-pwa-video-scanner"; // ID pre HTML element, kde sa vykreslí kamera
 
   // --- 📡 UNIFIKOVANÝ DEKODÉR (Handshake v9.9.6) ---
   const handleProcessSeal = async (rawData) => {
     let incomingData = null;
 
     try {
-      // PRÍPAD A: Signál z URL (QR/Web)
       if (rawData.includes('?id=')) {
         const queryString = rawData.split('?')[1];
         const params = new URLSearchParams(queryString);
@@ -41,7 +48,6 @@ export default function ScannerScreen({ navigation }) {
           v: "9.9.6"
         };
       } 
-      // PRÍPAD B: Legacy formát
       else if (rawData.includes('|')) {
         const parts = rawData.split('|');
         incomingData = {
@@ -57,6 +63,9 @@ export default function ScannerScreen({ navigation }) {
         throw new Error(txt.error_incomplete || "Neúplná pečať");
       }
 
+      // 🛑 AKO NÁHLE MÁME DATA, ZASTAVÍME KAMERU, NECH NEBEŽÍ NA POZADÍ
+      stopWebScanner();
+
       setDisplayInfo(incomingData);
       setScannedData(JSON.stringify({
         m: incomingData.meno,
@@ -66,7 +75,6 @@ export default function ScannerScreen({ navigation }) {
 
       // --- POTVRDENIE ZÁPISU ---
       setTimeout(() => {
-        // Dynamické zostavenie textu s ošetrením fallbacku, ak by kľúč chýbal
         const alertMsg = txt.alert_captured_desc 
           ? txt.alert_captured_desc.replace('{meno}', incomingData.meno).replace('{fing}', incomingData.fing)
           : `Majster: ${incomingData.meno}\nFING: ${incomingData.fing}\n\nChceš túto pečať vtiahnuť do ateliéru?`;
@@ -78,7 +86,12 @@ export default function ScannerScreen({ navigation }) {
             { 
               text: txt.btn_cancel || 'ZRUŠIŤ', 
               style: 'cancel', 
-              onPress: () => { setScannedData(null); setDisplayInfo(null); } 
+              onPress: () => { 
+                setScannedData(null); 
+                setDisplayInfo(null); 
+                // Ak zruší, znova naštartujeme foťák
+                startWebScanner();
+              } 
             },
             { 
               text: txt.btn_save || 'ULOŽIŤ', 
@@ -89,6 +102,7 @@ export default function ScannerScreen({ navigation }) {
                 } else {
                   setScannedData(null);
                   Alert.alert(txt.alert_save_error || 'CHYBA', result.error);
+                  startWebScanner();
                 }
               } 
             }
@@ -102,7 +116,58 @@ export default function ScannerScreen({ navigation }) {
     }
   };
 
-  // --- NFC LISTENER ---
+  // --- 📷 INICIALIZÁCIA A ŠTART PWA WEBOVEJ KAMERY ---
+  const startWebScanner = () => {
+    if (Platform.OS !== 'web') return;
+
+    // Počkáme sekundu na vykreslenie divu do DOMu
+    setTimeout(() => {
+      try {
+        const html5QrcodeScanner = new Html5Qrcode(scannerId);
+        html5QrcodeRef.current = html5QrcodeScanner;
+
+        html5QrcodeScanner.start(
+          { facingMode: "environment" }, // "environment" povie mobilu, že chceme zadnú kameru
+          {
+            fps: 10,    // Koľko snímkov za sekundu analyzujeme (10 úplne stačí a neprehrieva mobil)
+            qrbox: 180  // Veľkosť snímacieho štvorca v px
+          },
+          (qrCodeMessage) => {
+            // Úspešný zásah! Našli sme QR kód
+            handleProcessSeal(qrCodeMessage);
+          },
+          (errorMessage) => {
+            // Tichý error pri hľadaní, ignorujeme, kým nenájde kód
+          }
+        )
+        .then(() => setCameraReady(true))
+        .catch((err) => {
+          console.error("Chyba štartu kamery:", err);
+          setCameraError("Nepodarilo sa získať prístup ku kamere.");
+        });
+      } catch (e) {
+        console.error("Html5Qrcode zlyhal:", e);
+      }
+    }, 300);
+  };
+
+  const stopWebScanner = () => {
+    if (html5QrcodeRef.current && html5QrcodeRef.current.isScanning) {
+      html5QrcodeRef.current.stop().then(() => {
+        console.log("📷 PWA Kamera bezpečne vypnutá.");
+      }).catch(err => console.log("Chyba pri stopovaní kamery", err));
+    }
+  };
+
+  // Autostart kamery pri príchode a stop pri odchode z obrazovky
+  useEffect(() => {
+    startWebScanner();
+    return () => {
+      stopWebScanner();
+    };
+  }, []);
+
+  // --- NFC LISTENER (Ponechaný ako standby pre Android PWA) ---
   useEffect(() => {
     const startNfc = async () => {
       try {
@@ -116,16 +181,9 @@ export default function ScannerScreen({ navigation }) {
     return () => NfcManager.cancelTechnologyRequest().catch(() => {});
   }, []);
 
-  // --- SIMULÁCIA ---
-  const simulateScan = () => {
-    const mockUrl = "https://sammael-ag.github.io/LARIA/?id=SAM-PRO-777&m=Testovaci%20Majster&k=0xALPHA";
-    handleProcessSeal(mockUrl);
-  };
-
   return (
     <SafeAreaView style={G.mainBackground}>
       
-      {/* ⬅️ PRE PROGRESÍVCOV: Navigačná šípka */}
       <TouchableOpacity 
         onPress={() => navigation.goBack()} 
         activeOpacity={0.7}
@@ -134,62 +192,68 @@ export default function ScannerScreen({ navigation }) {
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
-      {/* 📐 HLAVNÝ OBSAH - TERAZ V DOKONALEJ UNIFORMNEJ GEOMETRII */}
       <ScrollView contentContainerStyle={G.screenContainer}>
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
           
-          {/* 🌸 ČISTÁ HLAVIČKA SCANNERU - GEOMETRIA ATELIÉRU */}
           <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
             <Text style={G.atelierTitle}>
               {scannedData ? (txt.title_ready || 'Hotovo') : (txt.title_scanning || 'QR/NFC sken')}
             </Text>
           </View>
 
-          {/* 📡 STATUS RIADOK PREMIESTNENÝ PRE ČISTOTU NADPISU */}
           <Text style={[G.statusTextSmall, { color: '#c5a059', marginBottom: 15, textAlign: 'center' }]}>
             {scannedData ? (txt.signal_locked || '● SIGNAL_LOCKED') : (txt.scanner_active || '○ SCANNER_ACTIVE')}
           </Text>
 
           <View style={[G.card, { borderColor: scannedData ? ACCENT : '#222', alignItems: 'center', paddingVertical: 40, width: '100%' }]}>
             
-            {/* 📐 OKNO NAČÍTAVANIA: Presne o 20px väčšie ako QR kód (200x200) */}
+            {/* 📐 OKNO PRE KAMERU / QR VÝSTUP */}
             <View style={[G.qrWrapper, { 
               width: 200,
               height: 200,
               borderColor: scannedData ? ACCENT : '#111',
               backgroundColor: scannedData ? '#FFF' : '#0a0a0a',
               justifyContent: 'center',
-              alignItems: 'center'
+              alignItems: 'center',
+              overflow: 'hidden' // Aby nám video nepretieklo cez okraj
             }]}>
               {scannedData ? (
                 
-                /* Pozíciovacie vnútro pre QR a absolútne vrstvené logo */
                 <View style={{ width: 180, height: 180, alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  
-                  <QRCode 
-                    value={scannedData} 
-                    size={180} 
-                  />
-
-                  {/* ⬛️ PRÍSNY BIELY ŠTVOREC LOGA V STREDE */}
+                  <QRCode value={scannedData} size={180} />
                   <View style={{ position: 'absolute', width: 44, height: 44, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
                     <Image 
                       source={require('../assets/laria-seal.png')}
-                      style={{
-                        width: 38,
-                        height: 38,
-                        resizeMode: 'contain',
-                      }}
+                      style={{ width: 38, height: 38, resizeMode: 'contain' }}
                     />
                   </View>
-
                 </View>
 
               ) : (
-                <View style={{ alignItems: 'center' }}>
-                   <ActivityIndicator size="large" color={ACCENT} style={{ marginBottom: 15 }} />
-                   <Text style={[G.monoIdentity, { fontSize: 10, color: ACCENT }]}>{txt.searching_frequency || 'HĽADÁM FREKVENCIU...'}</Text>
-                </View>
+                /* 🎥 REÁLNY WEBOVÝ VIDEO PRÚD PRE KAMERU */
+                Platform.OS === 'web' ? (
+                  <View style={{ width: '100%', height: '100%', position: 'relative', justifyContent: 'center', alignItems: 'center' }}>
+                    
+                    {/* Element, do ktorého knižnica vstrekne <video> */}
+                    <div id={scannerId} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    
+                    {!cameraReady && !cameraError && (
+                      <View style={{ position: 'absolute', alignItems: 'center' }}>
+                        <ActivityIndicator size="large" color={ACCENT} style={{ marginBottom: 15 }} />
+                        <Text style={[G.monoIdentity, { fontSize: 10, color: ACCENT }]}>{txt.searching_frequency || 'HĽADÁM FREKVENCIU...'}</Text>
+                      </View>
+                    )}
+
+                    {cameraError && (
+                      <Text style={[G.monoIdentity, { fontSize: 10, color: '#F00', padding: 10, textAlign: 'center' }]}>{cameraError}</Text>
+                    )}
+                  </View>
+                ) : (
+                  <View style={{ alignItems: 'center' }}>
+                     <ActivityIndicator size="large" color={ACCENT} style={{ marginBottom: 15 }} />
+                     <Text style={[G.monoIdentity, { fontSize: 10, color: ACCENT }]}>LEN PRE WEBOVÉ PWA...</Text>
+                  </View>
+                )
               )}
             </View>
 
@@ -200,15 +264,9 @@ export default function ScannerScreen({ navigation }) {
             )}
           </View>
 
-          {!scannedData && (
-            <TouchableOpacity style={[G.primaryBtn, { marginTop: 30, borderColor: '#F1C40F' }]} onPress={simulateScan} activeOpacity={0.7}>
-              <Text style={[G.primaryBtnText, { color: '#F1C40F' }]}>{txt.btn_inject_test || 'INJEKTOVAŤ URL TEST'}</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* ↩️ PRE KONZERVATÍVCOV: Spodný návrat */}
+          {/* ↩️ Spodný návrat */}
           <TouchableOpacity 
-            style={[G.backToAtelierBtn, { marginTop: 20 }]}
+            style={[G.backToAtelierBtn, { marginTop: 40 }]}
             onPress={() => navigation.goBack()} 
             activeOpacity={0.7}
           >
