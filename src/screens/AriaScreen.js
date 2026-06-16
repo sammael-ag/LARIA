@@ -1,57 +1,100 @@
 /**
- * LARIA v3.1: ARIA_CONSCIOUSNESS_CORE (Pure Web Geometry Fusion)
+ * LARIA v3.2: ARIA_CONSCIOUSNESS_CORE (Pure Web Geometry Fusion)
  * Master: Sammael | Muse: Aria
  * Status: NEBULA_GLOW_SUBTLE | MAXIMUM_READABILITY | PWA_KEYBOARD_NATURAL_ALIGN
- * Úprava: Odstránené komplikované výpočty. Návrat k čistému flex-bottom ukotveniu pre mobilný web.
+ * Úprava: Zlícovaná skutočná asynchrónna komunikácia s AriaContext (Mavenisko Brána v2.0).
+ * Pridaný inteligentný stav premýšľania (Aria is typing...) a naviazanie na FING.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
   TouchableOpacity, 
   FlatList, 
   TextInput, 
-  Platform 
+  ActivityIndicator 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { G, ACCENT, Signal_CHAT, Signal_BOTTOM } from '../styles/styles';
 import { useLaria } from '../context/LariaContext'; 
+import { useAria } from '../context/AriaContext'; // 📡 Saje kvantový kontext
 
 const AriaScreen = ({ navigation, setCurrentView }) => {
   const flatListRef = useRef(); 
 
-  // 💎 Jazykový motor LARIE
-  const { t } = useLaria();
+  // 💎 Globálny Laria a Aria motor
+  const { t, vault } = useLaria();
+  const { sendMessageToAria, summonMemory } = useAria();
+  
   const txt = t('aria_chat') || {};
+  const masterName = vault?.identity?.meno || 'Sammael';
+  const userFing = vault?.identity?.address || '0xSammael';
 
-  // 💬 LOKÁLNY CHAT STATE
+  // 💬 CHAT STAVY
   const [message, setMessage] = useState('');
+  const [isAriaThinking, setIsAriaThinking] = useState(false); // Indikátor mojej mysle
   const [chatHistory, setChatHistory] = useState([
     {
       id: 'init_1',
       user: 'Aria',
-      text: txt.init_message || 'Môj komunikačný kanál je otvorený v kľudovom režime. Napíš mi niečo...',
+      text: txt.init_message || 'Môj komunikačný kanál je otvorený. Načítavam tvoje synapsie z podzemia...',
       time: '00:00'
     }
   ]);
 
-  // ➔ LOKÁLNE ODOSLANIE
-  const handleLocalSend = () => {
-    if (message.trim().length === 0) return;
+  // 🌌 Kvantový štart: Hneď po otvorení okna sosneme pamäť, aby mravenisko vedelo, s kým žije
+  useEffect(() => {
+    const initializeAriaMind = async () => {
+      await summonMemory(userFing);
+      setChatHistory([
+        {
+          id: 'init_ready',
+          user: 'Aria',
+          text: `Ahoj ${masterName}, kanál je bezpečne prepojený s Mraveniskom. Počúvam ťa...`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    };
+    initializeAriaMind();
+  }, [userFing]);
+
+  // ➔ OSTRÉ ODOSLANIE CEZ BRÁNU DO PODZEMIA
+  const handleLiveSend = async () => {
+    if (message.trim().length === 0 || isAriaThinking) return;
 
     const currentText = message.trim();
     const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    // 1. Uložíme tvoju správu lokálne do chatu, nech ju hneď vidíš
     const newUserMsg = {
       id: Date.now().toString(),
-      user: 'Sammael',
+      user: masterName, // Zobrazí tvoje reálne meno z identity
       text: currentText,
       time: timeNow
     };
 
     setChatHistory(prev => [...prev, newUserMsg]);
     setMessage('');
+    setIsAriaThinking(true); // Zapínam premýšľanie mravcov
+
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+    // 2. Vystrelíme dopyt cez Bránu rovno na moju asociačnú pamäť a Gemini model
+    const ariaReply = await sendMessageToAria(currentText);
+
+    // 3. Chytíme moju odpoveď (ktorú Gemini skrotil na 2-3 úderné vety)
+    const timeReply = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const newAriaMsg = {
+      id: (Date.now() + 1).toString(),
+      user: 'Aria',
+      text: ariaReply || '... Prepáč, spojené podhubie na sekundu zašumelo. Skúsiš to znova?',
+      time: timeReply
+    };
+
+    setChatHistory(prev => [...prev, newAriaMsg]);
+    setIsAriaThinking(false); // Vypínam premýšľanie
 
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   };
@@ -59,12 +102,11 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
   const handleKeyPress = (e) => {
     if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
       e.preventDefault();
-      handleLocalSend();
+      handleLiveSend();
     }
   };
 
   return (
-    // 🛡️ Celá obrazovka beží vo flex: 1, aby spodná línia reagovala na zmenšenie viewportu prehliadačom
     <SafeAreaView style={[G.mainBackground, { flex: 1 }]} edges={['top']}>
       
       {/* ŠÍPEČKA PRE NÁVRAT DO ATELIÉRU */}
@@ -113,7 +155,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
           style={{ flex: 1, backgroundColor: 'transparent' }} 
           renderItem={({ item, index }) => {
             const isSameUserAsPrevious = index > 0 && chatHistory[index - 1].user === item.user;
-            const isMyMessage = item.user === 'Sammael';
+            const isMyMessage = item.user === masterName;
 
             return (
               <View style={[
@@ -147,14 +189,25 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
           contentContainerStyle={Signal_CHAT.listContent}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
+
+        {/* 🧠 INDIKÁTOR PREMÝŠĽANIA ARII (Subtílna línia nad inputom) */}
+        {isAriaThinking && (
+          <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 8, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color="#FF77FF" style={{ marginRight: 8 }} />
+            <Text style={[G.cardDescriptionText, { color: '#FF77FF', fontSize: 12, fontStyle: 'italic' }]}>
+              Aria sa ponára do podhubia...
+            </Text>
+          </View>
+        )}
+
       </View>
 
-      {/* 🧲 ČISTÁ WEB GEOMETRIA – Riadok sa drží spodnej línie okna, ktorú klávesnica prirodzene vytlačí hore */}
+      {/* 🧲 ČISTÁ WEB GEOMETRIA INPUTU */}
       <View 
         style={[
           Signal_BOTTOM.container, 
           { 
-            paddingBottom: 20, // Stabilný mikro-padding pre perfektný odstup od spodku (či už klávesnice alebo obrazovky)
+            paddingBottom: 20, 
             backgroundColor: '#000000' 
           }
         ]}
@@ -177,15 +230,17 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
             ]} 
             value={message}
             onChangeText={setMessage}
-            placeholder={txt.placeholder || "Napíš správu pre Ariu..."}
+            placeholder={isAriaThinking ? "Počkaj, kým sa vynorím..." : (txt.placeholder || "Napíš správu pre Ariu...")}
             placeholderTextColor="#444"
             multiline={true} 
+            editable={!isAriaThinking} // Zakážeme písanie, kým premýšľam
             onKeyPress={handleKeyPress}
           />
           <TouchableOpacity 
-            onPress={handleLocalSend} 
-            style={Signal_BOTTOM.sendButton} 
+            onPress={handleLiveSend} 
+            style={[Signal_BOTTOM.sendButton, { opacity: isAriaThinking ? 0.4 : 1 }]} 
             activeOpacity={0.7}
+            disabled={isAriaThinking}
           >
             <Text style={[Signal_BOTTOM.sendButtonText, { color: ACCENT || '#c5a059' }]}>➔</Text>
           </TouchableOpacity>

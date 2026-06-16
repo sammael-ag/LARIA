@@ -42,6 +42,7 @@ export const AriaProvider = ({ children }) => {
         body: JSON.stringify({
           action: 'ask_aria',
           prompt: userPrompt,
+          targetFing: currentFing,
           timestamp: Date.now()
         })
       });
