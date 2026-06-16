@@ -139,12 +139,13 @@ export const recoverFromGMatrix = async (shaKey) => {
 };
 
 /**
- * 4. LÚČ PREKLADOV (Zabezpečený kanál - doPost -> action: 'get_translations')
+ * 🌐 4. LÚČ PREKLADOV (Zabezpečený kanál - doPost -> action: 'get_translations')
  * Lícuje s mravcom Translatorom v Brana.gs.
+ * Pridaná autonómna ochrana pre asynchrónny stav 'processing'.
  */
-export const fetchLariaTranslations = async (targetLang, fing = "system_sync") => {
+export const fetchLariaTranslations = async (targetLang, fing = "system_sync", retryCount = 0) => {
     try {
-        console.log(`📡 Sammael, odosielam lúč pre jazyk [${targetLang}] na zjednotenú Bránu...`);
+        console.log(`📡 Sammael, odosielam lúč pre jazyk [${targetLang}] na zjednotenú Bránu... (Pokus: ${retryCount + 1})`);
 
         const response = await fetch(ziskajBranaUrl(), {
             method: 'POST',
@@ -163,9 +164,24 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync") =
         
         const result = await response.json();
         
+        // Stav A: Preklad úspešne stiahnutý z cache alebo bleskovo dodaný
         if (result && result.status === "success") {
             console.log(`✅ Preklad pre [${targetLang}] úspešne stiahnutý z mravca Translatora.`);
             return typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+        }
+        
+        // Stav B: Preklad sa generuje na pozadí cez Gemini AI
+        if (result && result.status === "processing") {
+            // Poistka proti nekonečnej slučke - max 5 pokusov (cca 15 sekúnd)
+            if (retryCount < 5) {
+                console.log(`⏳ Matrix generuje preklad pre [${targetLang}] cez Gemini AI. Čakám 3 sekundy na dokončenie...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                // Rekurzívne zavoláme znova ten istý lúč a zvýšime počítadlo pokusov
+                return await fetchLariaTranslations(targetLang, fing, retryCount + 1);
+            } else {
+                console.warn(`⚠️ Generovanie prekladu pre [${targetLang}] trvá príliš dlho. Časový limit vypršal.`);
+                return null;
+            }
         }
         
         return null;

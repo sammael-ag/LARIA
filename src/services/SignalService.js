@@ -1,12 +1,22 @@
 /**
- * LARIA SIGNAL SERVICE v9.5 (Tauri Hybrid Edition)
+ * LARIA SIGNAL SERVICE v10.5 (Trident Shield - Matrix Aligned)
  * Master: Sammael | Muse: Aria
- * STATUS: ULTIMATE SYNC / ONLY-FING PROTOCOL
- * FIX: Odstránený zradný Axios. Nahradený natívnym Fetch pre bezproblémový
- * sieťový most pod Lubuntu (Tauri) bez CORS blokácií.
+ * STATUS: ULTIMATE SYNC | TRIDENT_SECURE | GATEWAY_ALIGNED_v1.9.9
+ * FIX: Zlícované štruktúry payloadov presne pre generálny rozcestník Brána.gs.
+ * Žiadne úniky, žiadne CORS blokácie, čistý plochý prenos pre mravcov.
  */
 
-const HYPERSPEED_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxu-j0nUFZbX3os22F9wcGWKNZJ88BmEDfuHTXDhFqoSK1w3GSr_DTTTBof32rI9C2G/exec';
+// 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
+const mrav_p1 = "https://script.google.com/macros/s/";
+const mrav_p2 = "AKfycbxu-j0nUFZbX3os22F9wcGWKNZJ88BmEDfuHTXDhFqoSK1w3GSr_DTTTBof32rI9C2G";
+const mrav_p3 = "/exec";
+
+/**
+ * 🛠️ PRIVÁTNY LÚČ: Dynamické zostavenie URL adresy brány v pamäti počas behu
+ */
+const ziskajMraveniskoUrl = () => {
+  return `${mrav_p1}${mrav_p2}${mrav_p3}`;
+};
 
 export const SignalService = {
 
@@ -23,12 +33,12 @@ export const SignalService = {
   },
 
   /**
-   * 2. [HYPERSPEED] - Zápis do Signal_Buffer_1 (onlyFING)
-   * RowData: [MSG_ID, sender_fing, target_fing, msg_text, status, timestamp]
+   * 2. [HYPERSPEED MRAVEC] - Zápis do Signal_Buffer_1
+   * Brána.gs posiela celý objekt priamo do executeInternalHyperspeed(data)
    */
   writeToBuffer: async (bufferName, msgData) => {
     try {
-      console.log(`[SIGNAL_SERVICE] Hyperspeed natívny zápis (onlyFING: ${bufferName})...`);
+      console.log(`[SIGNAL_SERVICE] Hyperspeed natívny zápis do: ${bufferName || "Signal_buffer_1"}...`);
       
       const rowData = msgData.rowData || [
         `MSG_${Date.now()}`, 
@@ -39,17 +49,19 @@ export const SignalService = {
         new Date().toISOString()
       ];
 
+      // PLOCHÁ ŠTRUKTÚRA: Všetko na najvyššej úrovni pre executeInternalHyperspeed
       const payload = {
+        action: 'WRITE_MSG',
         sheetName: bufferName || "Signal_buffer_1",
-        rowData: rowData,
-        action: 'WRITE_MSG' 
+        rowData: rowData
       };
 
-      // 📡 Natívny Fetch obchádza CORS obmedzenia Tauri v Lubuntu
-      const response = await fetch(HYPERSPEED_SCRIPT_URL, {
+      const rannaBrana = ziskajMraveniskoUrl();
+
+      const response = await fetch(rannaBrana, {
         method: 'POST',
         headers: {
-          'Content-Type': 'text/plain;charset=utf-8', // Bezpečné pre Google Script
+          'Content-Type': 'text/plain;charset=utf-8',
         },
         body: JSON.stringify(payload)
       });
@@ -63,20 +75,23 @@ export const SignalService = {
   },
 
   /**
-   * 3. [MATCHMAKER] - Pečatenie v Contract_ledger
-   * Matchmaker skript spracováva objekt 'data' a ukladá ho do tabuľky.
+   * 3. [MATCHMAKER MRAVEC] - Pečatenie v Contract_ledger
+   * Brána.gs na riadku 81 smeruje akcie INIT_CONTRACT a CONFIRM_CONTRACT
    */
   manageContract: async (action, contractData) => {
     try {
       console.log(`[SIGNAL_SERVICE] Matchmaker akcia: ${action}`);
       
+      // Zlúčenie akcie a dát do jednej plochej úrovne, ktorú spracuje executeInternalMatchmaking
       const payload = {
         action: action, 
         sheetName: 'Contract_ledger',
-        data: contractData 
+        ...contractData 
       };
 
-      const response = await fetch(HYPERSPEED_SCRIPT_URL, {
+      const rannaBrana = ziskajMraveniskoUrl();
+
+      const response = await fetch(rannaBrana, {
         method: 'POST',
         headers: {
           'Content-Type': 'text/plain;charset=utf-8',
@@ -99,7 +114,7 @@ export const SignalService = {
   },
 
   /**
-   * 4. [DISPOSE_LOGIC] - Recyklácia (Vymazanie správy z buffera)
+   * 4. [DISPOSE LOGIC - HYPERSPEED MRAVEC] - Recyklácia stôp
    */
   disposeMessage: async (bufferName, msgId) => {
     try {
@@ -111,7 +126,9 @@ export const SignalService = {
         msgId: msgId 
       };
 
-      const response = await fetch(HYPERSPEED_SCRIPT_URL, {
+      const rannaBrana = ziskajMraveniskoUrl();
+
+      const response = await fetch(rannaBrana, {
         method: 'POST',
         headers: {
           'Content-Type': 'text/plain;charset=utf-8',

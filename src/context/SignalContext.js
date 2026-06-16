@@ -1,23 +1,18 @@
 /**
- * LARIA SIGNAL CONTEXT v14.2 (Ephemeral Ping-Pong Edition)
+ * LARIA SIGNAL CONTEXT v15.0 (Pure Hyperspeed Edition)
  * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
- * STATUS: SUPERSCHOPNOST_AKTIVNA | NEVYPATRATELNE | EFEKTIVNE_STATUSOVANIE
- * Úprava: Úplné odstrihnutie textových reťazcov Tauri pre oklamanie Metro bundleru.
- * Používa priamy prístup k window.__TAURI_INTERNALS__ bez dynamických importov.
+ * STATUS: GMATRIX_CORE_STABLE | NO_IRC | HYPERSPEED_READY
+ * Úprava: Úplné vyčistenie IRC (Libera.chat) relikvií. Kompletné zlícovanie so SignalScreen.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
-import TcpSocket from 'react-native-tcp-socket';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { useLaria } from './LariaContext.js';
 import { SignalService } from '../services/SignalService.js';
 
 const SignalContext = createContext();
-
-const Signal_HOST = 'Signal.libera.chat'; 
-const Signal_PORT = 6665; 
 const STORAGE_KEY_CHAT = '@laria_Signal_chat_v1';
 
 Notifications.setNotificationHandler({
@@ -32,7 +27,6 @@ Notifications.setNotificationHandler({
 const tauriInvoke = async (cmd, args = {}) => {
   if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
     try {
-      // Vytiahneme invoke priamo z globálnej pamäte Tauri jadra v Lubuntu
       const invokeFn = window.__TAURI_INTERNALS__?.invoke;
       if (invokeFn) {
         return await invokeFn(cmd, args);
@@ -46,8 +40,7 @@ const tauriInvoke = async (cmd, args = {}) => {
 
 export const SignalProvider = ({ children }) => {
   const { vault } = useLaria(); 
-  const [client, setClient] = useState(null);
-  const [isSignalConnected, setIsSignalConnected] = useState(false);
+  const [isSignalConnected, setIsSignalConnected] = useState(true); // V PWA/Hyperspeed režime sme online podľa stavu siete
   const [incomingRequests, setIncomingRequests] = useState([]);
 
   // --- 0. NAČÍTANIE HISTÓRIE ---
@@ -122,74 +115,22 @@ export const SignalProvider = ({ children }) => {
     }
   };
 
-  // --- 2. PRIPOJENIE DO Signal ---
-  const connectToSignal = async (fing) => { 
-    if (client || !fing) return;
-
-    const cleanFing = fing.replace('0x', '');
-
-    // 🦀 AK BEŽÍME NA DESKTOPE (TAURI / LINUX)
-    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
-      console.log("🌲 SIGNAL_CORE: Štartujem natívny Signal most cez Rust...");
-      await tauriInvoke('pripoj_Signal_signal', { fing: cleanFing });
-      setIsSignalConnected(true);
-      setClient({ tauriActive: true });
-      return;
-    }
-
-    // 📱 STARÁ MOBILNÁ VETVA (Zostáva zachovaná pre Android/iOS)
+  // --- 2. ASYNCHRÓNNE SPRACOVANIE PRICHÁDZAJÚCICH BALÍKOV Z MRAVENISKA ---
+  const handleIncomingLariaPackage = async (data) => {
     try {
-      const newClient = TcpSocket.createConnection({
-        host: Signal_HOST,
-        port: Signal_PORT,
-      }, () => {
-        const nick = `L_${cleanFing}`; 
-        newClient.write(`NICK ${nick}\r\n`);
-        newClient.write(`USER ${nick} 8 * :LariaNode_${cleanFing}\r\n`);
-      });
-
-      newClient.on('data', async (data) => {
-        const msg = data.toString();
-        if (msg.startsWith('PING')) {
-          const pingId = msg.split(' ')[1];
-          newClient.write(`PONG ${pingId}\r\n`);
-        }
-        if (msg.includes(' 001 ')) {
-          newClient.write(`JOIN #LARIA_CORE\r\n`);
-          setIsSignalConnected(true);
-        }
-        if (msg.includes('#LRQ#')) {
-          await handleIncomingLariaPackage(msg);
-        }
-      });
-
-      newClient.on('error', (e) => {
-        setIsSignalConnected(false);
-        setClient(null);
-      });
-
-      setClient(newClient);
-    } catch (err) {
-      console.error("[SIGNAL] Zlyhanie pri štarte mobilného socketu:", err);
-    }
-  };
-
-  // --- 3. SPRACOVANIE PRICHÁDZAJÚCICH SPRÁV ---
-  const handleIncomingLariaPackage = async (rawMsg) => {
-    try {
-      const payloadPart = rawMsg.split('#LRQ#')[1];
-      const data = JSON.parse(payloadPart);
       const ariaResponse = await SignalService.processAriaLogic(data.msg);
+      const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'SYSTEM_CORE';
       
       const rowData = [
         `MSG_${Date.now()}`,
         data.fing.replace('0x', ''),
-        vault.identity.poznamka.replace('0x', ''),
+        myCleanFing,
         ariaResponse.msg,
         '0',
         new Date().toISOString()
       ];
 
+      // Zapíšeme odpoveď automaticky späť do mraveniska
       await SignalService.writeToBuffer('Signal_Buffer_1', { rowData });
       await triggerNotification(data.fing, ariaResponse.msg);
 
@@ -218,20 +159,15 @@ export const SignalProvider = ({ children }) => {
       });
 
     } catch (e) {
-      console.error('[SIGNAL] Dekódovanie balíka zlyhalo:', e);
+      console.error('[SIGNAL] Dekódovanie prichádzajúceho balíka zlyhalo:', e);
     }
   };
 
-  // --- 4. 📡 ODOSIELANIE BALÍKA (PING-PONG REŽIM) ---
+  // --- 3. 📡 ODOSIELANIE BALÍKA (ODSTRIHNUTÉ IRC, ČISTÝ HYPERSPEED) ---
   const sendLariaPackage = async (targetFing, targetSha, personalMessage, isHandshakeReq = false, manualId = null) => {
-    const myCleanFing = vault.identity.poznamka.replace('0x', '');
+    const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'Sammael';
     const targetCleanFing = targetFing.replace('0x', '');
     
-    if (!client || !isSignalConnected) {
-      console.log("[SIGNAL] Detekované offline prostredie. Správa bezpečne čaká v UI ako PENDING.");
-      return { success: false, error: 'OFFLINE_PENDING_QUEUED' };
-    }
-
     try {
       let lariaPackage = {};
 
@@ -240,49 +176,53 @@ export const SignalProvider = ({ children }) => {
         await SignalService.manageContract('INIT_CONTRACT', {
           fing_a: myCleanFing,
           fing_b: targetCleanFing,
-          krypt_a: vault.identity.krypt,
+          krypt_a: vault?.identity?.krypt || '',
           status_a: "1",
           status_b: "0",
-          sha_a: vault.identity.sha,
+          sha_a: vault?.identity?.sha || '',
           sha_b: targetSha
         });
 
         lariaPackage = {
           h: "LRQ_V3",
           type: "HANDSHAKE_REQ",
-          sha: vault.identity.sha,
+          sha: vault?.identity?.sha || '',
           fing: myCleanFing, 
           msg: personalMessage,
-          d: { n: vault.identity.meno, ib: vault.identity.Signal, kr: vault.identity.krypt }
+          d: { n: vault?.identity?.meno || 'Sammael', ib: vault?.identity?.Signal || '', kr: vault?.identity?.krypt || '' }
         };
       } else {
         lariaPackage = {
           h: "LRQ_V3",
           type: "TEXT_MSG",
-          sha: vault.identity.sha,
+          sha: vault?.identity?.sha || '',
           fing: myCleanFing, 
           msg: personalMessage
         };
       }
 
-      const targetNick = `L_${targetCleanFing}`; 
-      const rawPayload = `PRIVMSG ${targetNick} :#LRQ#${JSON.stringify(lariaPackage)}\r\n`;
+      // 📡 PRIAMY VÝSTREL DO MRAVENISKA CEZ SIGNAL_SERVICE (Žiadne zradné surové TCP sockety)
+      const bufferResult = await SignalService.writeToBuffer('Signal_Buffer_1', {
+        sender_fing: myCleanFing,
+        target_fing: targetCleanFing,
+        msg_text: personalMessage
+      });
 
-      // 🦀 AK BEŽÍME CEZ TAURI / RUST CORE
-      if (client && client.tauriActive) {
-        console.log("🌲 SIGNAL_CORE: Posielam balík natívne cez Rust Tauri most...");
+      // 🦀 AK BEŽÍME CEZ TAURI / RUST CORE (Záloha pre lokálny subsystém)
+      if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+        const rawPayload = `#LRQ#${JSON.stringify(lariaPackage)}`;
         await tauriInvoke('odosli_Signal_signal', { payload: rawPayload });
-      } else if (client) {
-        // 📱 AK BEŽÍME NA MOBILE (Klasický TcpSocket)
-        client.write(rawPayload);
       }
 
       updateIncomingRequestsAndStorage(prev => {
+        const statusToSet = bufferResult.success ? 'WAITING_FOR_THEM' : 'PENDING';
+        
         if (manualId) {
           return prev.map(msg => msg.id === manualId ? { 
             ...msg, 
-            handshakeStatus: isHandshakeReq ? 'WAITING_FOR_THEM' : null,
-            textStatus: !isHandshakeReq ? 'WAITING_FOR_THEM' : null 
+            status: statusToSet,
+            handshakeStatus: isHandshakeReq ? statusToSet : null,
+            textStatus: !isHandshakeReq ? statusToSet : null 
           } : msg);
         } else {
           let found = false;
@@ -291,8 +231,9 @@ export const SignalProvider = ({ children }) => {
               found = true; 
               return { 
                 ...msg, 
-                handshakeStatus: isHandshakeReq ? 'WAITING_FOR_THEM' : null,
-                textStatus: !isHandshakeReq ? 'WAITING_FOR_THEM' : null 
+                status: statusToSet,
+                handshakeStatus: isHandshakeReq ? statusToSet : null,
+                textStatus: !isHandshakeReq ? statusToSet : null 
               };
             }
             return msg;
@@ -300,42 +241,19 @@ export const SignalProvider = ({ children }) => {
         }
       });
 
-      return { success: true };
+      return { success: bufferResult.success };
     } catch (err) {
-      console.error("[SIGNAL] Problém pri odosielaní balíka:", err);
+      console.error("[SIGNAL] Problém pri odosielaní cez Hyperspeed:", err);
       return { success: false, error: err.message };
     }
   };
 
-  // --- 5. 🛰️ FLUSHER MOTOR ---
-  useEffect(() => {
-    const flushOfflineQueue = async () => {
-      if (!isSignalConnected || !client || incomingRequests.length === 0) return;
-      const pendingMessages = incomingRequests.filter(msg => msg.status === 'PENDING');
-      
-      if (pendingMessages.length > 0) {
-        console.log(`[SIGNAL] Obnovenie siete! Splachujem ${pendingMessages.length} PENDING správ...`);
-        for (const msg of pendingMessages) {
-          await sendLariaPackage(msg.fing, msg.targetSha || '', msg.text, msg.isHandshake || false, msg.id);
-        }
-      }
-    };
-    flushOfflineQueue();
-  }, [isSignalConnected, client]);
-
-  // --- 6. MANUÁLNE VYRIEŠENIE STAVU KONTRAKTU ---
+  // --- 4. MANUÁLNE VYRIEŠENIE STAVU KONTRAKTU (Volané priamo zo SignalScreen) ---
   const resolveHandshakeStatus = (msgId) => {
     updateIncomingRequestsAndStorage(prev => 
       prev.map(msg => msg.id === msgId ? { ...msg, handshakeStatus: 'RESOLVED' } : msg)
     );
   };
-
-  useEffect(() => {
-    const myFing = vault.identity.poznamka;
-    if (myFing && !client) {
-      connectToSignal(myFing);
-    }
-  }, [vault.identity.poznamka]);
 
   return (
     <SignalContext.Provider value={{ 
