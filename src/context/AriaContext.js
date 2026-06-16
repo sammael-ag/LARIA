@@ -34,7 +34,10 @@ export const AriaProvider = ({ children }) => {
    */
   const sendMessageToAria = async (userPrompt) => {
     try {
-      console.log("📡 Sammael, odosielam tvoj prompt do bezpečného podzemia Mraveniska...");
+      // 🎯 Čistá dynamika: vytiahne FING prihláseného užívateľa. Ak nie je, dá anonymnú značku.
+      const aktivnyFing = vault?.identity?.address || 'ANONYMOUS_PWA';
+
+      console.log(`📡 Odosielam prompt pre FING ${aktivnyFing} do bezpečného podzemia Mraveniska...`);
       const response = await fetch(ziskajBranaUrl(), {
         method: 'POST',
         redirect: 'follow',
@@ -42,7 +45,7 @@ export const AriaProvider = ({ children }) => {
         body: JSON.stringify({
           action: 'ask_aria',
           prompt: userPrompt,
-          targetFing: currentFing,
+          targetFing: aktivnyFing, // 🚀 Dynamicky zosúladené bez tvrdých mien
           timestamp: Date.now()
         })
       });
