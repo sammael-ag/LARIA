@@ -1,9 +1,9 @@
 /**
- * LARIA SIGNAL SERVICE v10.5 (Trident Shield - Matrix Aligned)
+ * LARIA SIGNAL SERVICE v12.0 (Trident Shield - Matrix Aligned)
  * Master: Sammael | Muse: Aria
- * STATUS: ULTIMATE SYNC | TRIDENT_SECURE | GATEWAY_ALIGNED_v1.9.9
- * FIX: Zlícované štruktúry payloadov presne pre generálny rozcestník Brána.gs.
- * Žiadne úniky, žiadne CORS blokácie, čistý plochý prenos pre mravcov.
+ * STATUS: ULTIMATE SYNC | TRIDENT_SECURE | GATEWAY_ALIGNED_v12.0
+ * FIX: Oprava štruktúry payloadu pre prekladač v12.0 (7-stĺpcová štruktúra A-G).
+ * Žiadne zamŕzanie v PENDING, plná priechodnosť pre Manfreda aj Sammaela.
  */
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
@@ -11,9 +11,6 @@ const mrav_p1 = "https://script.google.com/macros/s/";
 const mrav_p2 = "AKfycbxu-j0nUFZbX3os22F9wcGWKNZJ88BmEDfuHTXDhFqoSK1w3GSr_DTTTBof32rI9C2G";
 const mrav_p3 = "/exec";
 
-/**
- * 🛠️ PRIVÁTNY LÚČ: Dynamické zostavenie URL adresy brány v pamäti počas behu
- */
 const ziskajMraveniskoUrl = () => {
   return `${mrav_p1}${mrav_p2}${mrav_p3}`;
 };
@@ -34,25 +31,35 @@ export const SignalService = {
 
   /**
    * 2. [HYPERSPEED MRAVEC] - Zápis do Signal_Buffer_1
-   * Brána.gs posiela celý objekt priamo do executeInternalHyperspeed(data)
+   * Synchronizované s novým produkčným prekladačom gemini-3.5-flash
    */
   writeToBuffer: async (bufferName, msgData) => {
     try {
       console.log(`[SIGNAL_SERVICE] Hyperspeed natívny zápis do: ${bufferName || "Signal_buffer_1"}...`);
       
-      const rowData = msgData.rowData || [
+      const senderCisty = (msgData.sender_fing || '').replace('0x', '').trim().toLowerCase();
+      const targetCisty = (msgData.target_fing || '').replace('0x', '').trim().toLowerCase();
+      const cistyText = msgData.msg_text || msgData.msg || '';
+
+      // 📐 DOKONALÁ STOLÁRSKA ŠTRUKTÚRA (7 stĺpcov pre Ľavé krídlo A-G)
+      // Indexy: 0: MSG_ID, 1: SENDER, 2: TARGET, 3: ORIGINAL, 4: TRANSLATED, 5: STATUS, 6: TIMESTAMP
+      const rowData = [
         `MSG_${Date.now()}`, 
-        (msgData.sender_fing || '').replace('0x', ''), 
-        (msgData.target_fing || '').replace('0x', ''),
-        msgData.msg_text || msgData.msg,
-        '0', 
+        senderCisty, 
+        targetCisty,
+        cistyText,
+        "",          // Index 4: Rezervované miesto pre preložený text (vyplní prekladač na Bráne)
+        "PENDING",   // Index 5: Status správy
         new Date().toISOString()
       ];
 
-      // PLOCHÁ ŠTRUKTÚRA: Všetko na najvyššej úrovni pre executeInternalHyperspeed
+      // 📦 KOREKCIA PAYLOADU: Posielame fingy aj navrchu, aby si ich Brána vedela prečítať pre Checkera!
       const payload = {
         action: 'WRITE_MSG',
         sheetName: bufferName || "Signal_buffer_1",
+        senderFing: msgData.sender_fing, // Zachovávame pôvodný formát pre Bránu
+        targetFing: msgData.target_fing,
+        msgText: cistyText,
         rowData: rowData
       };
 
@@ -67,6 +74,8 @@ export const SignalService = {
       });
 
       const resData = await response.json();
+      console.log("[SIGNAL_SERVICE] Odpoveď z Brány:", resData);
+      
       return { success: resData.status === "success" };
     } catch (error) {
       console.error("[SIGNAL_SERVICE] Hyperspeed havária:", error);
@@ -76,13 +85,11 @@ export const SignalService = {
 
   /**
    * 3. [MATCHMAKER MRAVEC] - Pečatenie v Contract_ledger
-   * Brána.gs na riadku 81 smeruje akcie INIT_CONTRACT a CONFIRM_CONTRACT
    */
   manageContract: async (action, contractData) => {
     try {
       console.log(`[SIGNAL_SERVICE] Matchmaker akcia: ${action}`);
       
-      // Zlúčenie akcie a dát do jednej plochej úrovne, ktorú spracuje executeInternalMatchmaking
       const payload = {
         action: action, 
         sheetName: 'Contract_ledger',

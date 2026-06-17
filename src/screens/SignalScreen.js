@@ -1,8 +1,8 @@
 /**
- * LARIA Signal SCREEN v25.2 (Pure PWA Style Architecture)
+ * LARIA Signal SCREEN v12.0 (Pure PWA Style Architecture - Gate Aligned)
  * Master: Sammael | Muse: Aria (Tvoja skutočná)
  * STATUS: GMATRIX_CORE_STABLE | PING_PONG_FIXED | DISPATCH_READY | KEYBOARD_MAGNET_ACTIVE
- * SIGNATURE: LARIA : fckoff sys_ // PWA_NET_DETECTION
+ * FIX: Chirurgický QUANTUM PURGE histórie chatu prispôsobený na minimálnu kapacitu a absolútnu bezpečnosť.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -14,7 +14,7 @@ import {
   FlatList, 
   Platform,
   StatusBar,
-  Keyboard // 🧲 Pridaný Keyboard pre odchytávanie výšky klávesnice
+  Keyboard 
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'; 
 
@@ -31,7 +31,7 @@ const SignalScreen = ({ route, navigation }) => {
   const [isNetOnline, setIsNetOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
-  const [keyboardHeight, setKeyboardHeight] = useState(0); // 📏 Naša lepiaca značka pre výšku klávesnice
+  const [keyboardHeight, setKeyboardHeight] = useState(0); 
   const insets = useSafeAreaInsets(); 
   const flatListRef = useRef();
 
@@ -39,7 +39,9 @@ const SignalScreen = ({ route, navigation }) => {
 
   const { target } = route.params || {};
   const channelName = target?.meno || (txt.default_channel || "Laria Secure Core");
-  const targetFing = target?.poznamka ? target.poznamka.replace('0x', '') : "SYSTEM_CORE";
+  
+  // 📐 ČISTÝ REZ: Definitívne očistenie fingu pre porovnávanie v celom okne
+  const targetFing = target?.poznamka ? target.poznamka.replace('0x', '').trim().toLowerCase() : "SYSTEM_CORE";
 
   // 🌐 DETEKCIA PRIPOJENIA PREHLIADAČA (ONLINE / OFFLINE)
   useEffect(() => {
@@ -57,17 +59,15 @@ const SignalScreen = ({ route, navigation }) => {
     };
   }, []);
 
-  // 🧲 REAKTÍVNY MAGNET PRE KLÁVESNICU (Iba pre reálne mobily, iOS/Android si žiada native listeners)
+  // 🧲 REAKTÍVNY MAGNET PRE KLÁVESNICU
   useEffect(() => {
-    if (Platform.OS === 'web') return; // Na čistom webe neriešime, tam klávesnica nevyskakuje zo spodu
+    if (Platform.OS === 'web') return; 
 
-    // iOS používa 'will', Android väčšinou 'did', zachytíme oba prípady pre istotu
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSubscription = Keyboard.addListener(showEvent, (e) => {
       setKeyboardHeight(e.endCoordinates.height);
-      // Hneď po otvorení klávesnice posunieme zoznam na koniec, nech vidíš posledné správy
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
     });
 
@@ -81,7 +81,7 @@ const SignalScreen = ({ route, navigation }) => {
     };
   }, []);
 
-  // 👁️ OŠETRENIE STAVOV PRI OTVORENÍ CHATU & KOMPLETNÉ VYČISTENIE PRI ODCHODE
+  // 👁️ OŠETRENIE STAVOV & PRÍSNE MAZANIE HISTÓRIE PRI ODCHODE (BEZPEČNOSŤ & KAPACITA)
   useEffect(() => {
     if (typeof setIncomingRequests === 'function' && incomingRequests.length > 0) {
       setIncomingRequests(prev => 
@@ -89,16 +89,10 @@ const SignalScreen = ({ route, navigation }) => {
           if (msg.fing === targetFing) {
             let updated = { ...msg };
             
-            if (updated.textStatus === 'WAITING_FOR_ME') {
-              updated.textStatus = 'WAITING_FOR_THEM';
-            }
-            if (updated.status === 'WAITING_FOR_ME') {
-              updated.status = 'WAITING_FOR_THEM';
-            }
-
-            if (updated.handshakeStatus === 'WAITING_FOR_THEM_RESOLVED') {
-              updated.handshakeStatus = 'RESOLVED';
-            }
+            // Prečítané správy dostanú status RESOLVED, aby ich filter nižšie mohol zlikvidovať
+            if (updated.textStatus === 'WAITING_FOR_ME') { updated.textStatus = 'RESOLVED'; }
+            if (updated.status === 'WAITING_FOR_ME') { updated.status = 'RESOLVED'; }
+            if (updated.handshakeStatus === 'WAITING_FOR_THEM_RESOLVED') { updated.handshakeStatus = 'RESOLVED'; }
             return updated;
           }
           return msg;
@@ -106,11 +100,25 @@ const SignalScreen = ({ route, navigation }) => {
       );
     }
 
+    // 🧹 NEKOMPROMISNÝ ČISTIČ STÔP (Quantum Purge pri zatvorení chatu)
     return () => {
       if (typeof setIncomingRequests === 'function') {
-        console.log(`🧹 Signal MEMORY PURGE: Odchádzam z chatu ${targetFing}. Mažem textovú stopu...`);
+        console.log(`🥷 QUANTUM PURGE: Bezpečne likvidujem prečítanú históriu s ${targetFing}.`);
+        
         setIncomingRequests(prev => {
-          return prev.filter(msg => !(msg.fing === targetFing && !msg.isHandshake));
+          return prev.filter(msg => {
+            // Ak správa nepatrí tomuto chatu, necháme ju bez zmeny
+            if (msg.fing !== targetFing) return true;
+            
+            // Žiadosti o zmluvu (Handshake) zatiaľ podržíme, kým sa nevyriešia
+            if (msg.isHandshake && msg.handshakeStatus !== 'RESOLVED') return true;
+
+            // ⚠️ KĽÚČOVÉ PRAVIDLO: Neodoslané (PENDING) správy MUSIA prežiť, kým neprejdú bránou
+            if (msg.status === 'PENDING' || msg.textStatus === 'PENDING') return true;
+
+            // Všetko ostatné (doručené, prečítané, staré reťazce) letí nekompromisne do koša
+            return false;
+          });
         });
       }
     };
@@ -124,7 +132,7 @@ const SignalScreen = ({ route, navigation }) => {
     const currentText = message.trim();
     const msgId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5);
     
-    const initialTextStatus = 'PENDING';
+    const initialStatus = 'PENDING';
 
     const localOutboundMsg = {
       id: msgId,
@@ -134,8 +142,8 @@ const SignalScreen = ({ route, navigation }) => {
       receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isHandshake: false,
       handshakeStatus: null,
-      textStatus: initialTextStatus,
-      status: initialTextStatus, 
+      textStatus: initialStatus,
+      status: initialStatus, 
       targetSha: target?.sha || ''
     };
 
@@ -145,8 +153,9 @@ const SignalScreen = ({ route, navigation }) => {
 
     setMessage('');
 
-    if (target?.poznamka) {
-      await sendLariaPackage(target.poznamka, target.sha || '', currentText, false, msgId);
+    // 🔥 POUŽIJEME VŽDY OČISTENÝ TARGET FING BEZ 0x
+    if (targetFing) {
+      await sendLariaPackage(targetFing, target?.sha || '', currentText, false, msgId);
     }
 
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
@@ -316,7 +325,7 @@ const SignalScreen = ({ route, navigation }) => {
         />
       </View>
 
-      {/* 🧲 DYNAMICKÝ SPODNÝ RIADOK – Lepí sa na klávesnicu vďaka keyboardHeight */}
+      {/* 🧲 DYNAMICKÝ SPODNÝ RIADOK */}
       <View 
         style={[
           Signal_BOTTOM.container, 

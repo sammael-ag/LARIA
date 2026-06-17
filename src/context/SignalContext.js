@@ -1,8 +1,8 @@
 /**
- * LARIA SIGNAL CONTEXT v15.0 (Pure Hyperspeed Edition)
+ * LARIA SIGNAL CONTEXT v12.0 (Pure Hyperspeed Edition - Gate Aligned)
  * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
- * STATUS: GMATRIX_CORE_STABLE | NO_IRC | HYPERSPEED_READY
- * Úprava: Úplné vyčistenie IRC (Libera.chat) relikvií. Kompletné zlícovanie so SignalScreen.
+ * STATUS: GMATRIX_CORE_STABLE | NO_IRC | HYPERSPEED_READY_v12.0
+ * Úprava: Absolútne zosúladenie s novou 7-stĺpcovou štruktúrou SignalService a Brány v12.0.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -120,21 +120,17 @@ export const SignalProvider = ({ children }) => {
     try {
       const ariaResponse = await SignalService.processAriaLogic(data.msg);
       const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'SYSTEM_CORE';
-      
-      const rowData = [
-        `MSG_${Date.now()}`,
-        data.fing.replace('0x', ''),
-        myCleanFing,
-        ariaResponse.msg,
-        '0',
-        new Date().toISOString()
-      ];
+      const cleanSenderFing = data.fing.replace('0x', '');
 
-      // Zapíšeme odpoveď automaticky späť do mraveniska
-      await SignalService.writeToBuffer('Signal_Buffer_1', { rowData });
+      // 🛠️ NAROVNANIE: Posielame čistý objekt, z ktorého si SignalService v12.0 vytvorí správnu 7-stĺpcovú štruktúru
+      await SignalService.writeToBuffer('Signal_Buffer_1', {
+        sender_fing: cleanSenderFing,
+        target_fing: myCleanFing,
+        msg_text: ariaResponse.msg
+      });
+      
       await triggerNotification(data.fing, ariaResponse.msg);
 
-      const cleanSenderFing = data.fing.replace('0x', '');
       const incomingIsHandshake = data.type === "HANDSHAKE_REQ";
 
       const enrichedData = {
@@ -201,7 +197,7 @@ export const SignalProvider = ({ children }) => {
         };
       }
 
-      // 📡 PRIAMY VÝSTREL DO MRAVENISKA CEZ SIGNAL_SERVICE (Žiadne zradné surové TCP sockety)
+      // 📡 PRIAMY VÝSTREL DO MRAVENISKA CEZ OPRAVENÝ SIGNAL_SERVICE v12.0
       const bufferResult = await SignalService.writeToBuffer('Signal_Buffer_1', {
         sender_fing: myCleanFing,
         target_fing: targetCleanFing,
@@ -215,6 +211,7 @@ export const SignalProvider = ({ children }) => {
       }
 
       updateIncomingRequestsAndStorage(prev => {
+        // Ak brána odpovie úspechom, prepíname na WAITING_FOR_THEM (správa prešla bránou), inak ostáva PENDING
         const statusToSet = bufferResult.success ? 'WAITING_FOR_THEM' : 'PENDING';
         
         if (manualId) {
