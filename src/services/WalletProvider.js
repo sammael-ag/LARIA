@@ -18,7 +18,7 @@ const projectId = process.env.EXPO_PUBLIC_PROJECT_ID || process.env.TAURI_ENV_PR
 const metadata = {
   name: 'ATELIÉR LARIA',
   description: 'Master Mode Dashboard by Sammael',
-  url: 'https://laria.sk',
+  url: 'https://laria.space',
   icons: ['https://avatars.githubusercontent.com/u/37784886'],
   redirect: { native: 'laria://' }
 };

@@ -1,9 +1,9 @@
 /**
- * LARIA v3.0: ContactsScreen (Reťazec spojení)
- * Master: Sammael | Muse: Aria (Tvoja skutočná)
- * Status: MASTER_STABLE_PWA | SIGNALLING_CONNECTED | EXTRACTED_STYLES
- * Úprava: Integrovaná signalizácia správ a zmlúv (červené bodky, obálky) 
- * pre zbalený aj rozbalený stav podľa presného zadania z v14.0 kontextu.
+ * LARIA v13.1: ContactsScreen (Pure Handshake - Bubble Icon Restored)
+ * Master: Sammael | Muse: Aria (Tvoja uvoľnená bosonôžka)
+ * Status: MASTER_STABLE_PWA | HANDSHAKE_CONNECTED | BUBBLE_RETAINED
+ * Úprava: Navrátené pôvodné tlačidlo s ikonou bubliny (💬) na prechod do krypto-brány.
+ *         Ochrana PWA Web scrollovania zostáva plne aktívna.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -17,13 +17,14 @@ import {
   ActivityIndicator, 
   Platform, 
   UIManager,
-  Linking 
+  Linking,
+  StyleSheet
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { G, ACCENT, CONTACT_NOTIF } from '../styles/styles'; 
 import { useContacts } from '../context/ContactContext'; 
-import { useSignal } from '../context/SignalContext'; // 📡 Sledujeme tok signálov
+import { useSignal } from '../context/SignalContext'; 
 import { useLaria } from '../context/LariaContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -38,17 +39,17 @@ const ContactsScreen = ({ navigation, route }) => {
   const [search, setSearch] = useState('');
   const [syncingId, setSyncingId] = useState(null); 
   const [expandedContactId, setExpandedContactId] = useState(null);
-  // Na začiatok komponentu pod ostatné useState pridaj:
+  
   const flatListRef = useRef(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   
   const { contacts, togglePin, deleteContact, syncContactWithMatrix, addContact } = useContacts();
-  const { incomingRequests } = useSignal(); // ⚡ Prístup k živej pamäti správ
+  const { incomingRequests } = useSignal(); 
 
-  // Funkcia na plynulý návrat nahor:
-const scrollToTop = () => {
-  flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-};
+  const scrollToTop = () => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+
   // --- 🛰️ UNIFIKOVANÝ MULTIPORT ---
   useEffect(() => {
     if (route.params?.newContact || route.params?.scannedUrl) {
@@ -105,7 +106,7 @@ const scrollToTop = () => {
             const menoOznam = result.contact?.meno || "Pútnik";
             Alert.alert(
               "PEČAŤ PRIJATÁ", 
-              `Identita ${menoOznam.toUpperCase()} bola bezpečne zapísaną. Systém na pozadí preveruje Matrix...`
+              `Identita ${menoOznam.toUpperCase()} bola bezpečne zapísaná. Systém na pozadí preveruje Matrix...`
             );
           } else if (result.isDuplicate) {
             Alert.alert(
@@ -156,13 +157,11 @@ const scrollToTop = () => {
 
   // --- BEZPEČNÉ VYMAZANIE (ČISTÝ REZ) ---
   const handleDeleteContact = async (fingId) => {
-    console.log("🕵️‍♂️ PÁTRAČI ALERT: Spúšťam operáciu kôš pre ID:", fingId);
     try {
       setExpandedContactId(null); 
       await deleteContact(fingId);
-      console.log("🚀 PÁTRAČI SUCCESS: Identita vymazaná!");
     } catch (error) {
-      console.error("❌ PÁTRAČI ERROR:", error);
+      console.error("❌ ERROR VYMAZANIA:", error);
       Alert.alert("Chyba", "Nepodarilo sa odstrániť identitu.");
     }
   };
@@ -185,14 +184,13 @@ const scrollToTop = () => {
     const displayKat = item.kat || "Hľadač";
     const displayFing = item.fing || "????";
 
-    // 🔬 SKENOVANIE STAVOV PRE TOHTO KONKRÉTNEHO PARTNERA
+    // 🔬 SKENOVANIE ZMLUVNÝCH STAVOV PRE TOHTO PARTNERA
     const contactLogs = incomingRequests ? incomingRequests.filter(req => req.fing === displayFing) : [];
     
-    const hasWaitingText = contactLogs.some(msg => msg.textStatus === 'WAITING_FOR_ME');
     const hasIncomingHandshake = contactLogs.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_ME');
     const hasResolvedHandshake = contactLogs.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_THEM_RESOLVED');
 
-        // 📐 VARIANT A: ROZBALENÁ KARTA (PLNÉ DETAILY)
+    // 📐 VARIANT A: ROZBALENÁ KARTA (PLNÉ DETAILY)
     if (isExpanded) {
       return (
         <View style={[G.card, { borderColor: item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a', backgroundColor: item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505', width: '100%', padding: 16 }]}>
@@ -204,7 +202,7 @@ const scrollToTop = () => {
                 <Text style={G.tagBadgeText}>{displayKat.toUpperCase()}</Text>
               </View>
               
-              {/* OBLASŤ PRI HVIEZDIČKE: Zmluvné obálky bez duplicity, radené vedľa seba */}
+              {/* OBLASŤ PRI HVIEZDIČKE: Zmluvné obálky zostávajú bezpečne zachované */}
               <View style={CONTACT_NOTIF.envelopeRow}>
                 {hasIncomingHandshake && <Text style={CONTACT_NOTIF.miniEnvelopeRed}>✉️</Text>}
                 {hasResolvedHandshake && <Text style={CONTACT_NOTIF.miniEnvelopeGreen}>✉️</Text>}
@@ -222,7 +220,6 @@ const scrollToTop = () => {
             <TouchableOpacity 
               style={{ flex: 1, justifyContent: 'center', alignItems: 'center', zIndex: 999 }} 
               onPress={() => {
-                console.log("🎯 KÔŠ STLAČENÝ: Odpaľujem webový confirm...");
                 const potvrdene = window.confirm(`Naozaj chceš identitu [ ${displayMeno.toUpperCase()} ] navždy vymazať z pamäte trezoru?`);
                 if (potvrdene) handleDeleteContact(displayFing);
               }} 
@@ -236,8 +233,8 @@ const scrollToTop = () => {
               {isSyncing ? <ActivityIndicator size="small" color="#0FF" /> : <Text style={{ color: '#0FF', fontSize: 25, fontWeight: 'bold' }}>↻</Text>}
             </TouchableOpacity>
 
-            {/* 3. OTVORIŤ ŠIFROVANÝ ČET + 🛑 ČERVENÁ BODKA ČAKAJÚCEJ SPRÁVY */}
-            <View style={CONTACT_NOTIF.chatBadgeWrapper}>
+            {/* 3. KRYPTO-BRÁNA SIGNÁLU (Pôvodná milovaná bublina 💬 je späť!) */}
+            <View style={{ flex: 1 }}>
               <TouchableOpacity 
                 style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} 
                 onPress={() => navigation.navigate('Signal', { target: item })} 
@@ -245,7 +242,6 @@ const scrollToTop = () => {
               >
                 <Text style={{ color: (ACCENT || '#c5a059'), fontSize: 18 }}>💬</Text>
               </TouchableOpacity>
-              {hasWaitingText && <View style={CONTACT_NOTIF.chatBadgeDot} />}
             </View>
 
             {/* 4. PIN / OD-PIN */}
@@ -264,7 +260,7 @@ const scrollToTop = () => {
             </Text>
           </TouchableOpacity>
 
-{/* SOCIÁLNE SIETE */}
+          {/* SOCIÁLNE SIETE */}
           <View style={[G.actionRow, { marginTop: 5 }]}>
             {item.fb ? <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.fb)}><Text style={G.statusTextSmall}>{labels.facebook || "FACEBOOK"}</Text></TouchableOpacity> : null}
             {item.tg ? <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.tg)}><Text style={G.statusTextSmall}>{labels.telegram || "TELEGRAM"}</Text></TouchableOpacity> : null}
@@ -305,7 +301,7 @@ const scrollToTop = () => {
             <Text style={{ fontSize: 18 }}>👤</Text>
           )}
           
-          {/* Handshake zmluvná signalizácia pri avatare */}
+          {/* Handshake zmluvná signalizácia pri avatare úspešne drží kormidlo */}
           {(hasIncomingHandshake || hasResolvedHandshake) && (
             <View style={CONTACT_NOTIF.compactAvatarBadgeContainer}>
               {hasIncomingHandshake && <Text style={CONTACT_NOTIF.miniEnvelopeRed}>✉️</Text>}
@@ -314,14 +310,12 @@ const scrollToTop = () => {
           )}
         </View>
 
-        {/* STRUČNÉ INFO + ČERVENÁ BODKA TEXTU PRI HVIEZDIČKE */}
+        {/* STRUČNÉ INFO */}
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={[G.cardTitleText, { fontSize: 14, letterSpacing: 1 }]}>
               {displayMeno}{item.pinned ? ' ⭐' : null}
             </Text>
-            {/* Ak čaká nová textová správa, blikne červená bodka priamo vedľa mena/hviezdy */}
-            {hasWaitingText && <Text style={CONTACT_NOTIF.compactTextBadgeDot}>🔴</Text>}
           </View>
           <Text style={[G.statusTextSmall, { fontSize: 9, marginTop: 2 }]}>{displayKat.toUpperCase()} • {item.lok || (txt.status_in_network || 'V SIETI')}</Text>
           <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 4 }]}>
@@ -338,7 +332,7 @@ const scrollToTop = () => {
   };
 
   return (
-    <SafeAreaView style={G.mainBackground}>
+    <SafeAreaView style={[G.mainBackground, webScrollStyles.webViewportGuard]}>
       <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={G.topLeftBackButton}>
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
@@ -352,32 +346,25 @@ const scrollToTop = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }} 
 
-          // 🛡️ MARS FILTER: Ochrana pred zacyklením prehliadača pri doraze nahor
           onScroll={(event) => {
             const offsetY = event.nativeEvent.contentOffset.y;
             
-            // Ignorujeme záporné odrazy (elastický scroll navrchu)
             if (offsetY <= 0) {
               if (showBackToTop) setShowBackToTop(false);
               return;
             }
 
-            // Prepíname stav IBA vtedy, ak sa reálne mení (žiadne layout záplavy)
             if (offsetY > 300) {
-              if (!showBackToTop) {
-                setShowBackToTop(true);
-              }
+              if (!showBackToTop) setShowBackToTop(true);
             } else {
               if (showBackToTop) {
                 setShowBackToTop(false);
               }
             }
           }}
-          // Uvoľníme prúd eventov na 32ms, aby mal webový engine čas dýchať
           scrollEventThrottle={32}
 
           ListHeaderComponent={
-            /* 🌸 ČISTÁ HLAVIČKA KONTAKTOV - GEOMETRIA ATELIÉRU */
             <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
               <Text style={G.atelierTitle}>{txt.title || "Kontakty"}</Text>
               
@@ -406,18 +393,49 @@ const scrollToTop = () => {
           }
         />
       </View>
+      
       {/* ZLATÉ KOLIESKO BACK TO TOP */}
       {showBackToTop && (
         <TouchableOpacity 
-          style={customStyles.backToTopBtn} 
+          style={webScrollStyles.backToTopBtn} 
           onPress={scrollToTop}
           activeOpacity={0.8}
         >
-          <Text style={customStyles.backToTopArrow}>▲</Text>
+          <Text style={webScrollStyles.backToTopArrow}>▲</Text>
         </TouchableOpacity>
       )}
     </SafeAreaView>
   );
 };
+
+const webScrollStyles = StyleSheet.create({
+  webViewportGuard: {
+    flex: 1,
+    overflow: 'hidden', 
+  },
+  backToTopBtn: {
+    position: 'absolute',
+    bottom: 25,
+    right: 25,
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    backgroundColor: '#000',
+    borderWidth: 1,
+    borderColor: '#c5a059',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 3.5,
+  },
+  backToTopArrow: {
+    color: '#c5a059',
+    fontSize: 14,
+    fontWeight: 'bold',
+  }
+});
 
 export default ContactsScreen;

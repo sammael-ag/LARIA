@@ -1,9 +1,9 @@
 /**
- * LARIA SIGNAL SERVICE v12.0 (Trident Shield - Matrix Aligned)
- * Master: Sammael | Muse: Aria
- * STATUS: ULTIMATE SYNC | TRIDENT_SECURE | GATEWAY_ALIGNED_v12.0
- * FIX: Oprava štruktúry payloadu pre prekladač v12.0 (7-stĺpcová štruktúra A-G).
- * Žiadne zamŕzanie v PENDING, plná priechodnosť pre Manfreda aj Sammaela.
+ * LARIA SIGNAL SERVICE v13.0 (Trident Shield - Handshake Core)
+ * Master: Sammael | Muse: Aria (Tvoja uvoľnená bosonôžka)
+ * STATUS: CHAT_BALAST_PURGED | TRIDENT_SECURE | HANDSHAKE_ONLY_v13.0
+ * FIX: Kompletné odľahčenie služby. Odstránené zápisy do textových buffrov,
+ *      ponechané len elitné a čisté krypto-pečatenie zmlúv cez Matchmakera.
  */
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
@@ -30,61 +30,8 @@ export const SignalService = {
   },
 
   /**
-   * 2. [HYPERSPEED MRAVEC] - Zápis do Signal_Buffer_1
-   * Synchronizované s novým produkčným prekladačom gemini-3.5-flash
-   */
-  writeToBuffer: async (bufferName, msgData) => {
-    try {
-      console.log(`[SIGNAL_SERVICE] Hyperspeed natívny zápis do: ${bufferName || "Signal_buffer_1"}...`);
-      
-      const senderCisty = (msgData.sender_fing || '').replace('0x', '').trim().toLowerCase();
-      const targetCisty = (msgData.target_fing || '').replace('0x', '').trim().toLowerCase();
-      const cistyText = msgData.msg_text || msgData.msg || '';
-
-      // 📐 DOKONALÁ STOLÁRSKA ŠTRUKTÚRA (7 stĺpcov pre Ľavé krídlo A-G)
-      // Indexy: 0: MSG_ID, 1: SENDER, 2: TARGET, 3: ORIGINAL, 4: TRANSLATED, 5: STATUS, 6: TIMESTAMP
-      const rowData = [
-        `MSG_${Date.now()}`, 
-        senderCisty, 
-        targetCisty,
-        cistyText,
-        "",          // Index 4: Rezervované miesto pre preložený text (vyplní prekladač na Bráne)
-        "PENDING",   // Index 5: Status správy
-        new Date().toISOString()
-      ];
-
-      // 📦 KOREKCIA PAYLOADU: Posielame fingy aj navrchu, aby si ich Brána vedela prečítať pre Checkera!
-      const payload = {
-        action: 'WRITE_MSG',
-        sheetName: bufferName || "Signal_buffer_1",
-        senderFing: msgData.sender_fing, // Zachovávame pôvodný formát pre Bránu
-        targetFing: msgData.target_fing,
-        msgText: cistyText,
-        rowData: rowData
-      };
-
-      const rannaBrana = ziskajMraveniskoUrl();
-
-      const response = await fetch(rannaBrana, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const resData = await response.json();
-      console.log("[SIGNAL_SERVICE] Odpoveď z Brány:", resData);
-      
-      return { success: resData.status === "success" };
-    } catch (error) {
-      console.error("[SIGNAL_SERVICE] Hyperspeed havária:", error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
-   * 3. [MATCHMAKER MRAVEC] - Pečatenie v Contract_ledger
+   * 2. [MATCHMAKER MRAVEC] - Pečatenie v Contract_ledger
+   * Plne zlícované s CORS Bránou. Prepúšťa txHash a autorizačnú mapu (auth) pre okamžité odomknutie vizitiek.
    */
   manageContract: async (action, contractData) => {
     try {
@@ -107,47 +54,23 @@ export const SignalService = {
       });
 
       const resData = await response.json();
+      console.log("[SIGNAL_SERVICE] Surová odpoveď Matchmakera z Brány:", resData);
 
       if (resData.status === "success") {
-        console.log(`[SIGNAL_SERVICE] Matchmaker: ${action} úspešne potvrdený.`);
-        return { success: true };
+        console.log(`[SIGNAL_SERVICE] Matchmaker: ${action} úspešne spracovaný.`);
+        
+        // 🎯 RÝDZE DOLÍCOVANIE: Vraciame celý balík, aby UI videlo txHash aj odomknuté vizitky (auth)
+        return { 
+          success: true, 
+          txHash: resData.txHash || "FALSE",
+          auth: resData.auth || {} 
+        };
       } else {
         throw new Error(resData.message || 'Neznáma chyba Matchmakera');
       }
     } catch (error) {
       console.error("[SIGNAL_SERVICE] Matchmaker chyba:", error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
-   * 4. [DISPOSE LOGIC - HYPERSPEED MRAVEC] - Recyklácia stôp
-   */
-  disposeMessage: async (bufferName, msgId) => {
-    try {
-      console.log(`[SIGNAL_SERVICE] Recyklujem záznam ID: ${msgId}`);
-      
-      const payload = {
-        action: 'CLEAN_MSG',
-        sheetName: bufferName,
-        msgId: msgId 
-      };
-
-      const rannaBrana = ziskajMraveniskoUrl();
-
-      const response = await fetch(rannaBrana, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const resData = await response.json();
-      return { success: resData.status === "success" };
-    } catch (error) {
-      console.error("[SIGNAL_SERVICE] Recyklácia zlyhala:", error);
-      return { success: false };
+      return { success: false, error: error.message, txHash: "FALSE", auth: {} };
     }
   }
 };
