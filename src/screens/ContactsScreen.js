@@ -193,7 +193,7 @@ const ContactsScreen = ({ navigation, route }) => {
     clearUnreadBadge(item.fing);
     
     // Odošleme ako plný objekt target, tak aj priamu poistku fallbackFing pre stopercentnú istotu
-    navigation.navigate('SignalScreen', { 
+    navigation.navigate('Signal', { 
       target: item,
       fallbackFing: item.fing 
     });
