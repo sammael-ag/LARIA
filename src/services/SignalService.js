@@ -1,14 +1,14 @@
 /**
- * LARIA SIGNAL SERVICE v13.0 (Trident Shield - Handshake Core)
+ * LARIA SIGNAL SERVICE v13.1 (Trident Shield - Handshake Core)
  * Master: Sammael | Muse: Aria (Tvoja uvoľnená bosonôžka)
- * STATUS: CHAT_BALAST_PURGED | TRIDENT_SECURE | HANDSHAKE_ONLY_v13.0
- * FIX: Kompletné odľahčenie služby. Odstránené zápisy do textových buffrov,
- *      ponechané len elitné a čisté krypto-pečatenie zmlúv cez Matchmakera.
+ * STATUS: CHAT_BALAST_PURGED | TRIDENT_SECURE | HANDSHAKE_ONLY_v13.1
+ * FIX: Vrátená a prekabátená funkcia writeToBuffer. Slúži ako elitný lapač chýb
+ *      a zachytávač kokotín z Trojzubcov, aby sa zabránilo kolapsu relácie (Quantum Purge).
  */
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
 const mrav_p1 = "https://script.google.com/macros/s/";
-const mrav_p2 = "AKfycbxu-j0nUFZbX3os22F9wcGWKNZJ88BmEDfuHTXDhFqoSK1w3GSr_DTTTBof32rI9C2G";
+const mrav_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ";
 const mrav_p3 = "/exec";
 
 const ziskajMraveniskoUrl = () => {
@@ -70,7 +70,39 @@ export const SignalService = {
       }
     } catch (error) {
       console.error("[SIGNAL_SERVICE] Matchmaker chyba:", error);
+      
+      // 🚨 POISTKA PRE SEND_LARIA_PACKAGE:
+      // Ak kód v pozadí (sendLariaPackage) očakáva zlyhanie cez throw, aby mohol aktivovať writeToBuffer,
+      // musíme zabezpečiť, aby táto funkcia v prípade mŕtvej siete existovala a zachytila to.
       return { success: false, error: error.message, txHash: "FALSE", auth: {} };
+    }
+  },
+
+  /**
+   * 🪓 3. [EMERGENCY ZACHYTÁVAČ KOKOTÍN] - writeToBuffer
+   * Volaný zo záhrobia, keď zlyhá primárna sieť na Trojzubcoch.
+   * Chráni frontend pred fatálnym zhodením relácie (TOTAL QUANTUM PURGE).
+   */
+  writeToBuffer: function(failedPackage) {
+    console.warn("📥 [SIGNAL_SERVICE] EMERGENCY BUFFER AKTIVOVANÝ!");
+    console.warn("⚠️ Detegované zlyhanie siete na Trojzubci. Spúšťam záchranu balíka:");
+    console.log(JSON.stringify(failedPackage, null, 2));
+
+    try {
+      // Zabalíme spadnuté dáta z handshakeu do localStorage prehliadača, aby sme o ne neprišli
+      const emergencyQueue = JSON.parse(localStorage.getItem('laria_emergency_buffer') || '[]');
+      emergencyQueue.push({
+        timestamp: Date.now(),
+        payload: failedPackage
+      });
+      localStorage.setItem('laria_emergency_buffer', JSON.stringify(emergencyQueue));
+      
+      console.log("🛡️ [BUFFER] Kokotiny úspešne zachytené a zapečatené lokálne. Žiadna likvidácia relácie sa nekoná!");
+      return { status: "buffered", message: "Dáta zachránené v lokálnom mravenisku." };
+
+    } catch (err) {
+      console.error("🚨 [BUFFER CRITICAL] Lokálny záchranný zápis zlyhal:", err);
+      return { status: "error", message: err.toString() };
     }
   }
 };
