@@ -1,12 +1,13 @@
 /**
- * LARIA v2.2: ContactContext (Trezor identít)
+ * LARIA v2.5: ContactContext (Trezor identít s Radarovým prepojením)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
- * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | GATEWAY_SECURED
- * Úprava: Odstránená stará READ_URL, nahradená unifikovaným trojzubcom Brány.
+ * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | GATEWAY_SECURED | RADAR_ALIGNED
+ * Úprava: Zlícované so SignalContextom. Pridaná detekcia stavov pre rozsvietenie obálok a čistenie bleskových správ.
  */
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSignal } from './SignalContext.js'; // 🛰️ Prepojenie na náš bleskový radar
 
 const ContactContext = createContext();
 
@@ -25,6 +26,9 @@ const ziskajBranaUrl = () => {
 export const ContactProvider = ({ children }) => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // 🛰️ Odoberáme zmluvy a správy priamo z prebudeného radaru
+  const { incomingRequests, setIncomingRequests } = useSignal();
 
   // --- 1. NAČÍTANIE TREZORU PRI ŠTARTE ---
   useEffect(() => {
@@ -40,6 +44,48 @@ export const ContactProvider = ({ children }) => {
     };
     loadContacts();
   }, []);
+
+  // --- 🛠️ RADAR BADGE INTERACTION (Zlícovanie pre ContactScreen) ---
+  
+  /**
+   * Zistí, či pre daný kontakt svieti nevyriešená zmluva alebo nová blesková správa.
+   * Vráti 'CONTRACT_PENDING', 'NEW_MESSAGE' alebo null.
+   */
+  const getContactBadgeStatus = (contactFing) => {
+    if (!contactFing) return null;
+    const cleanFing = contactFing.replace('0x', '').trim().toLowerCase();
+
+    // Prebehneme balíky na radare, ktoré matchujú fing tohto partnera
+    const match = incomingRequests.find(req => req.fing?.replace('0x', '').trim().toLowerCase() === cleanFing);
+
+    if (match) {
+      if (match.isHandshake && match.status === 'WAITING_FOR_ME') {
+        return 'CONTRACT_PENDING'; // ✉️ Čaká podpis vizitky (Ľavé krídlo)
+      }
+      if (!match.isHandshake && match.status === 'UNREAD') {
+        return 'NEW_MESSAGE'; // 💬 Čaká neprečítaná bleskovka (Pravé krídlo)
+      }
+    }
+    return null;
+  };
+
+  /**
+   * Vyčistí stav bleskovej správy (prepne na READ), keď skočíš s chlapíkom do chatu.
+   */
+  const clearUnreadBadge = (contactFing) => {
+    if (!contactFing) return;
+    const cleanFing = contactFing.replace('0x', '').trim().toLowerCase();
+
+    setIncomingRequests(prev => 
+      prev.map(req => {
+        const reqFing = req.fing?.replace('0x', '').trim().toLowerCase();
+        if (reqFing === cleanFing && !req.isHandshake && req.status === 'UNREAD') {
+          return { ...req, status: 'READ' }; // Zhasneme obálku chatu
+        }
+        return req;
+      })
+    );
+  };
 
   // --- 2. UNIVERZÁLNY ZÁPIS PEČATE (v9.9.9) ---
   const addContact = async (rawData) => {
@@ -93,7 +139,7 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- 📡 TELEPATICKÝ LOKÁLNY NERVOVÝ MOST (Tauri + PWA Symbióza) ---
+  // --- 3. 📡 TELEPATICKÝ LOKÁLNY NERVOVÝ MOST (Tauri + PWA Symbióza) ---
   useEffect(() => {
     let unsubscribeTauriFn = null;
 
@@ -157,14 +203,13 @@ export const ContactProvider = ({ children }) => {
     try {
       console.log(`📡 Re-sync: Hľadám majstra ${fingId} v Matrixe cez Bránu...`);
       
-      // Voláme našu unifikovanú Bránu, smerujeme požiadavku na akciu 'recover'
       const response = await fetch(ziskajBranaUrl(), {
         method: 'POST',
         redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'recover',
-          sha: fingId // Mravec Writer hľadá podľa kľúča
+          sha: fingId
         })
       });
 
@@ -236,7 +281,14 @@ export const ContactProvider = ({ children }) => {
 
   return (
     <ContactContext.Provider value={{ 
-      contacts, loading, addContact, deleteContact, togglePin, syncContactWithMatrix
+      contacts, 
+      loading, 
+      addContact, 
+      deleteContact, 
+      togglePin, 
+      syncContactWithMatrix,
+      getContactBadgeStatus,  // 💡 Exportované pre ikony obálok v UI
+      clearUnreadBadge        // 💡 Exportované pre vynulovanie po kliknutí na kontakt
     }}>
       {children}
     </ContactContext.Provider>

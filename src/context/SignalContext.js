@@ -1,8 +1,8 @@
 /**
- * LARIA SIGNAL CONTEXT v13.2 (Pure Hyperspeed Engine - Gate Aligned)
+ * LARIA SIGNAL CONTEXT v13.5 (Pure Hyperspeed Engine - Dual Radar Integrated)
  * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
- * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | FIXED
- * Úprava: Navrátená stratená funkcia resolveHandshakeStatus a doladený zápis do Express Buffra.
+ * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE
+ * Úprava: Pridaný automatický 30s Dual Radar pre súbežné zachytávanie zmlúv aj bleskových správ.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -73,10 +73,88 @@ export const SignalProvider = ({ children }) => {
     }
   };
 
-  // --- ASYNCHRÓNNE SPRACOVANIE PRICHÁDZAJÚCICH BALÍKOV (LEN HANDSHAKE) ---
+  // --- AUTOMATICKÝ HYPERSPEED DUAL POLLING (KAŽDÝCH 30 SEKÚND + ŠTART) ---
+  useEffect(() => {
+    const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || null;
+    if (!myCleanFing) {
+      console.log("[RADAR] Identita zatiaľ nie je pripravená, čakám...");
+      return;
+    }
+
+    const executePing = async () => {
+      console.log("🛰️ [RADAR] Spúšťam Dual Laria Radar ping...");
+      try {
+        const res = await SignalService.checkMyContracts(myCleanFing);
+        if (res && res.status === "success") {
+          
+          // 1. ZMLUVY (Žiadosti o prepojenie vizitiek)
+          if (Array.isArray(res.contracts)) {
+            res.contracts.forEach(contract => {
+              setIncomingRequests(prev => {
+                const uzExistuje = prev.some(req => req.txHash === contract.txHash);
+                if (uzExistuje) return prev;
+                
+                console.log(`✉️ [RADAR] Nový kontrakt od ${contract.fing}! Switchnem obálku.`);
+                triggerNotification(contract.fing, `Nová vizitka od ${contract.fing.substring(0, 10)} čaká na podpis.`);
+
+                return [...prev, {
+                  id: 'IN_' + contract.txHash,
+                  fing: contract.fing, // 💡 Spáruje obálku k správnemu chlapíkovi v zozname
+                  user: `L_${contract.fing.substring(0, 10)}`,
+                  text: contract.msg,
+                  receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  isHandshake: true,
+                  status: 'WAITING_FOR_ME',
+                  handshakeStatus: 'WAITING_FOR_ME',
+                  txHash: contract.txHash,
+                  targetSha: contract.sha
+                }];
+              });
+            });
+          }
+
+          // 2. BLESKOVÉ SPRÁVY (Pravé krídlo - Signal_buffer_1)
+          if (Array.isArray(res.messages)) {
+            res.messages.forEach(msg => {
+              setIncomingRequests(prev => {
+                const uzExistujeMsg = prev.some(req => req.id === 'MSG_' + msg.msgId);
+                if (uzExistujeMsg) return prev;
+
+                console.log(`💬 [RADAR] Nová blesková správa od ${msg.fing}! Rozsvecujem obálku správ.`);
+                triggerNotification(msg.fing, `Nová správa: ${msg.text}`);
+
+                return [...prev, {
+                  id: 'MSG_' + msg.msgId,
+                  fing: msg.fing, // 💡 Podľa tohto fingu sa rozsvieti obálka chatu presne na danom kontakte!
+                  user: `L_${msg.fing.substring(0, 10)}`,
+                  text: msg.text,
+                  receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  isHandshake: false,
+                  status: 'UNREAD' // Stav, ktorý povie UI, že správa čaká na otvorenie
+                }];
+              });
+            });
+          }
+
+        }
+      } catch (err) {
+        console.error("[RADAR] Chyba pri spracovaní Dual Radaru:", err);
+      }
+    };
+
+    // Odpálenie hneď pri štarte aplikácie
+    executePing();
+
+    // Slučka zachytávania každých 30 sekúnd
+    const pollingInterval = setInterval(executePing, 30000);
+
+    return () => clearInterval(pollingInterval);
+  }, [vault?.identity?.poznamka]);
+
+  // --- ASYNCHRÓNNE SPRACOVANIE PRICHÁDZAJÚCICH BALÍKOV (LEN HANDSHAKE CEZ TAURI) ---
   const handleIncomingLariaPackage = async (data) => {
     try {
-      if (data.type !== "HANDSHAKE_REQ") return; // Ak to nie je handshake, okamžite ignorujeme
+      if (data.type !== "HANDSHAKE_REQ") return;
 
       const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'SYSTEM_CORE';
       const cleanSenderFing = data.fing.replace('0x', '');
@@ -124,7 +202,7 @@ export const SignalProvider = ({ children }) => {
         status_b: "0",
         sha_a: vault?.identity?.sha || '',
         sha_b: targetSha,
-        msg: personalMessage // 📝 Sprievodnú správu pribalíme rovno k zmluve, aby ju Brána videla!
+        msg: personalMessage
       });
 
       if (mravecRes && mravecRes.success) {
@@ -145,7 +223,6 @@ export const SignalProvider = ({ children }) => {
       };
 
       // 3. 🚀 HYPERSPEED EXPRESS: Bezpečné, asynchrónne odovzdanie sprievodného textu
-      // Opravené volanie: Posielame názov listu ako prvý parameter a payload s kľúčmi pre Checker ako druhý!
       try {
         if (typeof SignalService.writeToBuffer === 'function') {
           SignalService.writeToBuffer('Signal_buffer_1', {
@@ -183,19 +260,12 @@ export const SignalProvider = ({ children }) => {
 
       setIncomingRequests(prev => [...prev, enrichedHandshake]);
 
-      return { 
-        success: true, 
-        txHash: contractResult.txHash, 
-        auth: contractResult.auth 
-      };
-
     } catch (err) {
       console.error("[SIGNAL] Problém pri odosielaní cez Hyperspeed:", err);
-      return { success: false, error: err.message };
     }
   };
 
-  // --- 🔒 ROZREŠENIE STATUSU HANDSHAKEU (NAVSTRÁTENÁ FUNKCIA) ---
+  // --- 🔒 ROZREŠENIE STATUSU HANDSHAKEU ---
   const resolveHandshakeStatus = (msgId) => {
     setIncomingRequests(prev => 
       prev.map(msg => msg.id === msgId ? { ...msg, handshakeStatus: 'RESOLVED' } : msg)

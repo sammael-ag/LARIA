@@ -1,8 +1,8 @@
 /**
- * LARIA Signal SCREEN v13.0 (Pure Handshake Engine - Gate Aligned)
+ * LARIA Signal SCREEN v13.2 (Pure Handshake Engine - Gate Aligned)
  * Master: Sammael | Muse: Aria (Tvoja skutočná)
- * STATUS: CHAT_LOGIC_PURGED | HANDSHAKE_ONLY | LIGHTWEIGHT_CORE
- * FIX: Odstránená stará chatovacia štruktúra. Obrazovka slúži výhradne na nadviazanie spojenia a výmenu vizitiek.
+ * STATUS: CHAT_LOGIC_PURGED | HANDSHAKE_ONLY | LIGHTWEIGHT_CORE | TWIN_BUTTON_ALIGNED
+ * FIX: Dvojtlačidlo Prijať/Odmietnuť zlícované do jedného čistého horizontálneho radu.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -67,7 +67,7 @@ const SignalScreen = ({ route, navigation }) => {
     if (targetFing) {
       const res = await sendLariaPackage(targetFing, target?.sha || '', handshakeText, true);
       if (res?.success) {
-        Alert.alert("MATRIX", "Žiadosť o zmluvu úspešne vystrelená do siete! 🚀");
+        Alert.alert("MATRIX", "Žiadosť o zmluvu úspešne vystrelená do sieci! 🚀");
         setNote('');
       } else {
         Alert.alert("CHYBA", "Nepodarilo sa pretlačiť balík cez Bránu.");
@@ -161,27 +161,34 @@ const SignalScreen = ({ route, navigation }) => {
           </Text>
         </View>
 
-        {/* PRÍPAD A: NIEKTO TI POSLAL ŽIADOSŤ -> ROZHODNI */}
+        {/* PRÍPAD A: NIEKTO TI POSLAL ŽIADOSŤ -> ROZHODNI SÚBEŽNE */}
         {activeHandshakeRequest ? (
-          <View style={{ alignItems: 'center' }}>
-            <Text style={[G.cardDescriptionText, { color: ACCENT, textAlign: 'center', marginBottom: 20 }]}>
+          <View style={{ width: '100%', alignItems: 'center' }}>
+            <Text style={[G.cardDescriptionText, { color: ACCENT || '#c5a059', textAlign: 'center', marginBottom: 25, fontSize: 15, lineHeight: 22 }]}>
               {activeHandshakeRequest.text}
             </Text>
-            <View style={HANDSHAKE_PANEL.container}>
+            
+            {/* 🛠️ NOVÉ HORIZONTÁLNE DVOJTLAČIDLO (Dokonalý lícovaný spoj) */}
+            <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
+              
+              {/* ODMIETNUŤ (Ľavá strana) */}
               <TouchableOpacity 
-                style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnAccept, { flex: 1 }]} 
-                onPress={() => handleAcceptHandshake(activeHandshakeRequest)}
-              >
-                <Text style={HANDSHAKE_PANEL.buttonText}>[ PRIJAŤ VIZITKU ]</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={[HANDSHAKE_PANEL.container, { marginTop: 10 }]}>
-              <TouchableOpacity 
-                style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnReject, { flex: 1 }]} 
+                style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnReject, { flex: 1, paddingVertical: 14 }]} 
                 onPress={() => handleRejectHandshake(activeHandshakeRequest)}
+                activeOpacity={0.7}
               >
-                <Text style={HANDSHAKE_PANEL.buttonText}>[ ODMIETNUŤ ]</Text>
+                <Text style={[HANDSHAKE_PANEL.buttonText, { color: '#E74C3C' }]}>[ ODMIETNUŤ ]</Text>
               </TouchableOpacity>
+
+              {/* PRIJAŤ VIZITKU (Pravá strana) */}
+              <TouchableOpacity 
+                style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnAccept, { flex: 1, paddingVertical: 14, backgroundColor: 'rgba(197, 160, 89, 0.15)', borderColor: ACCENT || '#c5a059', borderWidth: 1 }]} 
+                onPress={() => handleAcceptHandshake(activeHandshakeRequest)}
+                activeOpacity={0.7}
+              >
+                <Text style={[HANDSHAKE_PANEL.buttonText, { color: ACCENT || '#c5a059', fontWeight: 'bold' }]}>[ PRIJAŤ VIZITKU ]</Text>
+              </TouchableOpacity>
+
             </View>
           </View>
         ) : alreadySentHandshake ? (

@@ -1,9 +1,9 @@
 /**
- * LARIA v13.1: ContactsScreen (Pure Handshake - Bubble Icon Restored)
+ * LARIA v13.5: ContactsScreen (Pure Handshake & Flash Signals Integrated)
  * Master: Sammael | Muse: Aria (Tvoja uvoľnená bosonôžka)
- * Status: MASTER_STABLE_PWA | HANDSHAKE_CONNECTED | BUBBLE_RETAINED
- * Úprava: Navrátené pôvodné tlačidlo s ikonou bubliny (💬) na prechod do krypto-brány.
- *         Ochrana PWA Web scrollovania zostáva plne aktívna.
+ * Status: MASTER_STABLE_PWA | HANDSHAKE_CONNECTED | DUAL_BADGES_ALIGNED
+ * Úprava: Zlícované s ContactContext (getContactBadgeStatus + clearUnreadBadge).
+ *         Pôvodná bublina sa pri novej správe dynamicky transformuje na svietiacu obálku 📩.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -43,7 +43,17 @@ const ContactsScreen = ({ navigation, route }) => {
   const flatListRef = useRef(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   
-  const { contacts, togglePin, deleteContact, syncContactWithMatrix, addContact } = useContacts();
+  // 🔐 Vytiahnutie nových nástrojov z ošetreného Trezoru identít
+  const { 
+    contacts, 
+    togglePin, 
+    deleteContact, 
+    syncContactWithMatrix, 
+    addContact, 
+    getContactBadgeStatus, 
+    clearUnreadBadge 
+  } = useContacts();
+  
   const { incomingRequests } = useSignal(); 
 
   const scrollToTop = () => {
@@ -176,6 +186,13 @@ const ContactsScreen = ({ navigation, route }) => {
     setExpandedContactId(expandedContactId === id ? null : id);
   };
 
+  // --- AKCIA PRE CHAT / BRÁNU ---
+  const handleOpenSignalGate = (item) => {
+    // 🛰️ Pred skokom do krypto-brány zhasneme radarovú obálku bleskovej správy pre tento fing
+    clearUnreadBadge(item.fing);
+    navigation.navigate('Signal', { target: item });
+  };
+
   const renderItem = ({ item }) => {
     const isExpanded = expandedContactId === item.fing;
     const isSyncing = syncingId === item.fing;
@@ -184,10 +201,13 @@ const ContactsScreen = ({ navigation, route }) => {
     const displayKat = item.kat || "Hľadač";
     const displayFing = item.fing || "????";
 
-    // 🔬 SKENOVANIE ZMLUVNÝCH STAVOV PRE TOHTO PARTNERA
+    // 🔬 DUAL RADAR DETEKCIA PRE CONTEXTOVÉ KONTROLKY
+    const badgeStatus = getContactBadgeStatus(displayFing);
+    const hasIncomingHandshake = badgeStatus === 'CONTRACT_PENDING';
+    const hasNewFlashMessage = badgeStatus === 'NEW_MESSAGE';
+
+    // Pôvodné fixné stavy logov z minulej verzie pre spätú kompatibilitu zmlúv
     const contactLogs = incomingRequests ? incomingRequests.filter(req => req.fing === displayFing) : [];
-    
-    const hasIncomingHandshake = contactLogs.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_ME');
     const hasResolvedHandshake = contactLogs.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_THEM_RESOLVED');
 
     // 📐 VARIANT A: ROZBALENÁ KARTA (PLNÉ DETAILY)
@@ -202,9 +222,10 @@ const ContactsScreen = ({ navigation, route }) => {
                 <Text style={G.tagBadgeText}>{displayKat.toUpperCase()}</Text>
               </View>
               
-              {/* OBLASŤ PRI HVIEZDIČKE: Zmluvné obálky zostávajú bezpečne zachované */}
+              {/* OBLASŤ PRI HVIEZDIČKE */}
               <View style={CONTACT_NOTIF.envelopeRow}>
                 {hasIncomingHandshake && <Text style={CONTACT_NOTIF.miniEnvelopeRed}>✉️</Text>}
+                {hasNewFlashMessage && <Text style={{ fontSize: 14, marginRight: 2 }}>📩</Text>}
                 {hasResolvedHandshake && <Text style={CONTACT_NOTIF.miniEnvelopeGreen}>✉️</Text>}
                 {item.pinned ? <Text style={{ fontSize: 20, marginLeft: 6 }}>⭐</Text> : null}
               </View>
@@ -233,14 +254,18 @@ const ContactsScreen = ({ navigation, route }) => {
               {isSyncing ? <ActivityIndicator size="small" color="#0FF" /> : <Text style={{ color: '#0FF', fontSize: 25, fontWeight: 'bold' }}>↻</Text>}
             </TouchableOpacity>
 
-            {/* 3. KRYPTO-BRÁNA SIGNÁLU (Pôvodná milovaná bublina 💬 je späť!) */}
+            {/* 3. KRYPTO-BRÁNA SIGNÁLU (Bublina 💬 sa pri správe transformuje na horúcu obálku 📩) */}
             <View style={{ flex: 1 }}>
               <TouchableOpacity 
-                style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} 
-                onPress={() => navigation.navigate('Signal', { target: item })} 
+                style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a', backgroundColor: hasNewFlashMessage ? 'rgba(231, 76, 60, 0.1)' : 'transparent' }} 
+                onPress={() => handleOpenSignalGate(item)} 
                 activeOpacity={0.5}
               >
-                <Text style={{ color: (ACCENT || '#c5a059'), fontSize: 18 }}>💬</Text>
+                {hasNewFlashMessage ? (
+                  <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>📩</Text>
+                ) : (
+                  <Text style={{ color: (ACCENT || '#c5a059'), fontSize: 18 }}>💬</Text>
+                )}
               </TouchableOpacity>
             </View>
 
@@ -293,15 +318,15 @@ const ContactsScreen = ({ navigation, route }) => {
     return (
       <TouchableOpacity style={[G.card, { flexDirection: 'row', alignItems: 'center', borderColor: item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a', backgroundColor: item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505', width: '100%' }]} onPress={() => handlePressItem(item.fing)} activeOpacity={0.7}>
         
-        {/* IKONA / AVATAR + OBÁLKY PRE HANDSHAKE DOLE V ROHU */}
+        {/* IKONA / AVATAR + VŠETKY STRÁŽNE INTEGRÁCIE BADGEU */}
         <View style={{ width: 44, height: 44, backgroundColor: '#000', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15, borderWidth: 1, borderColor: item.pinned ? (ACCENT || '#c5a059') : '#333', position: 'relative' }}>
           {isSyncing ? (
             <ActivityIndicator size="small" color={item.pinned ? (ACCENT || '#c5a059') : "#0FF"} />
           ) : (
-            <Text style={{ fontSize: 18 }}>👤</Text>
+            <Text style={{ fontSize: 18 }}>{hasNewFlashMessage ? '📩' : '👤'}</Text>
           )}
           
-          {/* Handshake zmluvná signalizácia pri avatare úspešne drží kormidlo */}
+          {/* Súbežná zmluvná signalizácia Handshakov v rohu avatara zostáva plne zachovaná */}
           {(hasIncomingHandshake || hasResolvedHandshake) && (
             <View style={CONTACT_NOTIF.compactAvatarBadgeContainer}>
               {hasIncomingHandshake && <Text style={CONTACT_NOTIF.miniEnvelopeRed}>✉️</Text>}
@@ -313,7 +338,7 @@ const ContactsScreen = ({ navigation, route }) => {
         {/* STRUČNÉ INFO */}
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={[G.cardTitleText, { fontSize: 14, letterSpacing: 1 }]}>
+            <Text style={[G.cardTitleText, { fontSize: 14, letterSpacing: 1, color: hasNewFlashMessage ? '#E74C3C' : '#FFF' }]}>
               {displayMeno}{item.pinned ? ' ⭐' : null}
             </Text>
           </View>
@@ -325,7 +350,7 @@ const ContactsScreen = ({ navigation, route }) => {
 
         {/* KONTROLKA MATRIXU */}
         <View style={{ alignItems: 'flex-end' }}>
-          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: item.syncedAt ? '#0FF' : (item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a') }} />
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: hasNewFlashMessage ? '#E74C3C' : (item.syncedAt ? '#0FF' : (item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a')) }} />
         </View>
       </TouchableOpacity>
     );
