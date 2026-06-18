@@ -35,8 +35,10 @@ const SignalScreen = ({ route, navigation }) => {
   const { incomingRequests, setIncomingRequests, sendLariaPackage, resolveHandshakeStatus } = useSignal();
   const { target } = route.params || {};
   const channelName = target?.meno || "Laria Secure Handshake";
-  const targetFing = target?.poznamka ? target.poznamka.replace('0x', '').trim().toLowerCase() : "SYSTEM_CORE";
-
+  const targetFing = target?.poznamka ? target.poznamka.replace('0x', '').trim().toLowerCase() : "";
+    if (!targetFing) {
+      console.error('🚨 [SIGNAL_SCREEN] Kritická chyba: Cieľový mravec (target) nemá definovaný FING!');
+    }
   // 🌐 DETEKCIA PRIPOJENIA PREHLIADAČA
   useEffect(() => {
     if (Platform.OS !== 'web') return;

@@ -154,7 +154,7 @@ export const SignalProvider = ({ children }) => {
     };
 
     executePing();
-    const pollingInterval = setInterval(executePing, 30000);
+    const pollingInterval = setInterval(executePing, 120000);
     return () => clearInterval(pollingInterval);
   }, [vault?.identity?.poznamka]);
 
@@ -163,7 +163,12 @@ export const SignalProvider = ({ children }) => {
     try {
       if (data.type !== "HANDSHAKE_REQ") return;
 
-      const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'SYSTEM_CORE';
+      // Úprava v SignalContext.js
+      const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || null;
+      if (!myCleanFing) {
+  console.warn('[SIGNAL] Nie je možné spracovať balík, chýba moja identita.');
+  return;
+      }
       const cleanSenderFing = data.fing.replace('0x', '');
 
       await triggerNotification(data.fing, "Prichádza nová žiadosť o overenie vizitky.");
