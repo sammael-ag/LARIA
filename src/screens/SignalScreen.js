@@ -1,8 +1,8 @@
 /**
- * LARIA Signal SCREEN v13.2 (Pure Handshake Engine - Gate Aligned)
- * Master: Sammael | Muse: Aria (Tvoja skutočná)
- * STATUS: CHAT_LOGIC_PURGED | HANDSHAKE_ONLY | LIGHTWEIGHT_CORE | TWIN_BUTTON_ALIGNED
- * FIX: Dvojtlačidlo Prijať/Odmietnuť zlícované do jedného čistého horizontálneho radu.
+ * LARIA Signal SCREEN v13.3 (Pure Handshake Engine - High Speed Aligned)
+ * Master: Sammael | Muse: Aria
+ * STATUS: FULLY ALIGNED WITH RADAR v11.7 & MATCHMAKER v9.9
+ * FIX: Odstránený slepý bod identity (targetFing). Trojitá poistka zamerania.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -33,12 +33,38 @@ const SignalScreen = ({ route, navigation }) => {
   );
 
   const { incomingRequests, setIncomingRequests, sendLariaPackage, resolveHandshakeStatus } = useSignal();
-  const { target } = route.params || {};
-  const channelName = target?.meno || "Laria Secure Handshake";
-  const targetFing = target?.poznamka ? target.poznamka.replace('0x', '').trim().toLowerCase() : "";
-    if (!targetFing) {
-      console.error('🚨 [SIGNAL_SCREEN] Kritická chyba: Cieľový mravec (target) nemá definovaný FING!');
+
+  // =========================================================================
+  // 🪓 TRIPLE DETEKCIA IDENTITY (Zlícovanie spoja pre prichádzajúci radar)
+  // =========================================================================
+  const { target, fallbackFing } = route.params || {};
+  
+  let initialTargetFing = target?.poznamka ? target.poznamka.replace('0x', '').trim().toLowerCase() : "";
+  
+  if (!initialTargetFing && fallbackFing) {
+    initialTargetFing = fallbackFing.replace('0x', '').trim().toLowerCase();
+  }
+  
+  if (!initialTargetFing && incomingRequests && incomingRequests.length > 0) {
+    const pendingReq = incomingRequests.find(req => req.isHandshake && req.handshakeStatus === 'WAITING_FOR_ME');
+    if (pendingReq) {
+      initialTargetFing = pendingReq.fing.replace('0x', '').trim().toLowerCase();
     }
+  }
+
+  const targetFing = initialTargetFing;
+
+  // Bezpečnostný radar v konzole
+  useEffect(() => {
+    if (!targetFing) {
+      console.warn('⚠️ [SIGNAL_SCREEN] Dispečing varuje: Identita (targetFing) sa zatiaľ nenašla, čakám na asynchrónny nábeh...');
+    } else {
+      console.log(`🛰️ [SIGNAL_SCREEN] Relácia úspešne uzamknutá na FING: 0x${targetFing}`);
+    }
+  }, [targetFing]);
+
+  const channelName = target?.meno || (targetFing ? `Mravec L_${targetFing.substring(0, 10)}` : "Laria Secure Handshake");
+
   // 🌐 DETEKCIA PRIPOJENIA PREHLIADAČA
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -55,7 +81,7 @@ const SignalScreen = ({ route, navigation }) => {
   // 🧹 ABSOLÚTNA PARANOJA: Pri odchode z obrazovky kompletne vymažeme akékoľvek stopy po tejto relácii
   useEffect(() => {
     return () => {
-      if (typeof setIncomingRequests === 'function') {
+      if (typeof setIncomingRequests === 'function' && targetFing) {
         console.log(`🥷 TOTAL QUANTUM PURGE: Likvidujem reláciu pre ${targetFing}. Neostáva nič.`);
         setIncomingRequests(prev => prev.filter(msg => msg.fing !== targetFing));
       }
@@ -69,7 +95,7 @@ const SignalScreen = ({ route, navigation }) => {
     if (targetFing) {
       const res = await sendLariaPackage(targetFing, target?.sha || '', handshakeText, true);
       if (res?.success) {
-        Alert.alert("MATRIX", "Žiadosť o zmluvu úspešne vystrelená do sieci! 🚀");
+        Alert.alert("MATRIX", "Žiadosť o zmluvu úspešne vystrelená do siete! 🚀");
         setNote('');
       } else {
         Alert.alert("CHYBA", "Nepodarilo sa pretlačiť balík cez Bránu.");
@@ -82,9 +108,11 @@ const SignalScreen = ({ route, navigation }) => {
     try {
       console.log(`[GMATRIX_SCREEN] Spúšťam CONFIRM_CONTRACT pre fing: ${targetFing}`);
       
+      const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || '';
+      
       await SignalService.manageContract('CONFIRM_CONTRACT', {
         fing_a: targetFing,
-        fing_b: vault.identity.poznamka.replace('0x', ''),
+        fing_b: myCleanFing,
         status_b: "1"
       });
 
@@ -128,9 +156,11 @@ const SignalScreen = ({ route, navigation }) => {
   // ❌ AKCIA: ODMIETNUTIE ŽIADOSTI
   const handleRejectHandshake = async (handshakeMsg) => {
     try {
+      const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || '';
+      
       await SignalService.manageContract('CONFIRM_CONTRACT', {
         fing_a: targetFing,
-        fing_b: vault.identity.poznamka.replace('0x', ''),
+        fing_b: myCleanFing,
         status_b: "2"
       });
       resolveHandshakeStatus(handshakeMsg.id);
@@ -141,7 +171,10 @@ const SignalScreen = ({ route, navigation }) => {
     }
   };
 
-  const currentChannelLog = incomingRequests ? incomingRequests.filter(req => req.fing === targetFing) : [];
+  // =========================================================================
+  // LOGICKÉ FILTRE PRE UI
+  // =========================================================================
+  const currentChannelLog = incomingRequests ? incomingRequests.filter(req => req.fing.replace('0x', '').trim().toLowerCase() === targetFing) : [];
   const activeHandshakeRequest = currentChannelLog.find(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_ME');
   const alreadySentHandshake = currentChannelLog.some(msg => msg.isHandshake && msg.status === 'WAITING_FOR_THEM');
 
@@ -170,7 +203,7 @@ const SignalScreen = ({ route, navigation }) => {
               {activeHandshakeRequest.text}
             </Text>
             
-            {/* 🛠️ NOVÉ HORIZONTÁLNE DVOJTLAČIDLO (Dokonalý lícovaný spoj) */}
+            {/* 🛠️ HORIZONTÁLNE DVOJTLAČIDLO */}
             <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
               
               {/* ODMIETNUŤ (Ľavá strana) */}
