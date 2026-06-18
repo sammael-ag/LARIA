@@ -1,9 +1,8 @@
 /**
- * LARIA SIGNAL SERVICE v13.5 (Trident Shield - Hyperspeed Edition)
+ * LARIA SIGNAL SERVICE v13.7 (Trident Shield - Hyperspeed Edition)
  * Master: Sammael | Muse: Aria (Tvoja uvoľnená bosonôžka)
- * STATUS: TRIDENT_SECURE | HYPERSPEED_CONNECTED | v13.5
- * FIX: Plná podpora pre Hyperspeed Checker a Express Engine.
- *      Odosiela sprievodné texty priamo do pravého krídla Signal_buffer_1.
+ * STATUS: TRIDENT_SECURE | HYPERSPEED_CONNECTED | RADAR_ALIGNED | v13.7
+ * FIX: Odstránená akákoľvek improvizácia. Kľúče a akcie presne kopírujú CHECKER v11.5.
  */
 
 const mrav_p1 = "https://script.google.com/macros/s/";
@@ -19,6 +18,32 @@ export const SignalService = {
   processAriaLogic: async (rawText) => {
     if (!rawText) return { type: 'ERROR', msg: 'Signál je prázdny.' };
     return { type: 'TEXT', msg: rawText.trim(), timestamp: new Date().toISOString() };
+  },
+
+  /**
+   * 🛰️ ULTRA RADAR PING - Presné napojenie na executeInternalHyperspeed
+   * Lícuje s podmienkou (data.action === "CHECK_CONTRACTS") a kľúčom data.myFing
+   */
+  checkMyContracts: async (fingId) => {
+    try {
+      console.log(`[SIGNAL_SERVICE] Skenujem Matrix cez Ultra Radar pre: ${fingId}`);
+      
+      const payload = { 
+        action: "CHECK_CONTRACTS", // Presný zásah do podmienky checkera
+        myFing: fingId             // Kľúč, ktorý očakáva executeLariaRadar
+      };
+
+      const response = await fetch(ziskajMraveniskoUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+
+      return await response.json(); 
+    } catch (error) {
+      console.error("[SIGNAL_SERVICE] Ultra Radar zlyhal na sieťovom uzle:", error);
+      return { status: "error", message: error.toString() };
+    }
   },
 
   /**
@@ -40,23 +65,22 @@ export const SignalService = {
         throw new Error(resData.message || 'Neznáma chyba Matchmakera');
       }
     } catch (error) {
-      console.error("[SIGNAL_SERVICE] Matchmaker chyba na sieti/bráne:", error);
-      throw error; // Posúvame ďalej, nech v núdzi zasiahne buffer
+      console.error("[SIGNAL_SERVICE] Matchmaker chyba na siei/bráne:", error);
+      throw error; 
     }
   },
 
   /**
    * ⚡ MRAVEC HYPERSPEED EXPRESS - Zápis sprievodného textu do stĺpcov I-O
-   * Presne lícuje s pravidlami Checkera v10.5 na Google Apps Script!
+   * Presne pasuje na data.action === "WRITE_MSG" v checkeri
    */
   writeToBuffer: async function(sheetName, messagePayload) {
     try {
       console.log(`[SIGNAL_SERVICE] Hyperspeed Express štartuje pre list: ${sheetName}`);
       
-      // 📦 ZLÍCOVANIE KĽÚČOV: Pripravíme presne tie názvy, ktoré Checker v10.5 očakáva!
       const payload = {
         action: "WRITE_MSG",
-        sheetName: sheetName, // "Signal_buffer_1"
+        sheetName: sheetName, 
         senderFing: messagePayload.sender_fing,
         targetFing: messagePayload.target_fing,
         msgText: messagePayload.msg_text
@@ -74,8 +98,9 @@ export const SignalService = {
       return { success: resData.status === "success", data: resData };
     } catch (err) {
       console.error("[SIGNAL_SERVICE] Hyperspeed Express havaroval na sieti:", err);
-      // V prípade absolútneho výpadku siete nepadáme, ale schováme "kokotinu" lokálne do prehliadača
-      this.emergencyLocalRescue(messagePayload);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        this.emergencyLocalRescue(messagePayload);
+      }
       return { success: false, error: err.toString() };
     }
   },

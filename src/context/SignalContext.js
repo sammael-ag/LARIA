@@ -1,8 +1,9 @@
 /**
- * LARIA SIGNAL CONTEXT v13.5 (Pure Hyperspeed Engine - Dual Radar Integrated)
+ * LARIA SIGNAL CONTEXT v13.7 (Pure Hyperspeed Engine - Dual Radar Integrated)
  * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
- * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE
- * Úprava: Pridaný automatický 30s Dual Radar pre súbežné zachytávanie zmlúv aj bleskových správ.
+ * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE | v13.7
+ * Úprava: Absolútne precízne zlícovanie s CHECKER v11.5. 
+ * Automatické čistenie fingu (odstránenie 0x) pre spoľahlivú identifikáciu v UI.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -85,69 +86,75 @@ export const SignalProvider = ({ children }) => {
       console.log("🛰️ [RADAR] Spúšťam Dual Laria Radar ping...");
       try {
         const res = await SignalService.checkMyContracts(myCleanFing);
-        if (res && res.status === "success") {
-          
-          // 1. ZMLUVY (Žiadosti o prepojenie vizitiek)
-          if (Array.isArray(res.contracts)) {
-            res.contracts.forEach(contract => {
-              setIncomingRequests(prev => {
-                const uzExistuje = prev.some(req => req.txHash === contract.txHash);
-                if (uzExistuje) return prev;
-                
-                console.log(`✉️ [RADAR] Nový kontrakt od ${contract.fing}! Switchnem obálku.`);
-                triggerNotification(contract.fing, `Nová vizitka od ${contract.fing.substring(0, 10)} čaká na podpis.`);
-
-                return [...prev, {
-                  id: 'IN_' + contract.txHash,
-                  fing: contract.fing, // 💡 Spáruje obálku k správnemu chlapíkovi v zozname
-                  user: `L_${contract.fing.substring(0, 10)}`,
-                  text: contract.msg,
-                  receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  isHandshake: true,
-                  status: 'WAITING_FOR_ME',
-                  handshakeStatus: 'WAITING_FOR_ME',
-                  txHash: contract.txHash,
-                  targetSha: contract.sha
-                }];
-              });
-            });
-          }
-
-          // 2. BLESKOVÉ SPRÁVY (Pravé krídlo - Signal_buffer_1)
-          if (Array.isArray(res.messages)) {
-            res.messages.forEach(msg => {
-              setIncomingRequests(prev => {
-                const uzExistujeMsg = prev.some(req => req.id === 'MSG_' + msg.msgId);
-                if (uzExistujeMsg) return prev;
-
-                console.log(`💬 [RADAR] Nová blesková správa od ${msg.fing}! Rozsvecujem obálku správ.`);
-                triggerNotification(msg.fing, `Nová správa: ${msg.text}`);
-
-                return [...prev, {
-                  id: 'MSG_' + msg.msgId,
-                  fing: msg.fing, // 💡 Podľa tohto fingu sa rozsvieti obálka chatu presne na danom kontakte!
-                  user: `L_${msg.fing.substring(0, 10)}`,
-                  text: msg.text,
-                  receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  isHandshake: false,
-                  status: 'UNREAD' // Stav, ktorý povie UI, že správa čaká na otvorenie
-                }];
-              });
-            });
-          }
-
+        
+        // Bezpečnostný štít: Ak res zlyhal alebo nemá správny formát, ticho vyskočíme bez crashu
+        if (!res || res.status !== "success") {
+          console.warn("[RADAR] Mravenisko vrátilo neplatný stav alebo prázdnu odpoveď:", res);
+          return;
         }
+          
+        // 1. ZMLUVY (Žiadosti o prepojenie vizitiek z Contract_ledger)
+        if (res.contracts && Array.isArray(res.contracts)) {
+          res.contracts.forEach(contract => {
+            setIncomingRequests(prev => {
+              const uzExistuje = prev.some(req => req.txHash === contract.txHash);
+              if (uzExistuje) return prev;
+              
+              // 🪓 ZLÍCOVANIE SPOJA: Odstránime 0x z prichádzajúceho fingu pre presnú zhodu v celom UI
+              const cleanSenderFing = contract.fing.replace('0x', '').trim().toLowerCase();
+
+              console.log(`✉️ [RADAR] Nový kontrakt od 0x${cleanSenderFing}! Preklápam stav obálky.`);
+              triggerNotification(cleanSenderFing, `Nová vizitka od ${cleanSenderFing.substring(0, 10)} čaká na podpis.`);
+
+              return [...prev, {
+                id: 'IN_' + contract.txHash,
+                fing: cleanSenderFing, 
+                user: `L_${cleanSenderFing.substring(0, 10)}`,
+                text: contract.msg,
+                receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isHandshake: true,
+                status: 'WAITING_FOR_ME',
+                handshakeStatus: 'WAITING_FOR_ME',
+                txHash: contract.txHash,
+                targetSha: contract.sha
+              }];
+            });
+          });
+        }
+
+        // 2. BLESKOVÉ SPRÁVY (Pravé krídlo - Signal_buffer_1)
+        if (res.messages && Array.isArray(res.messages)) {
+          res.messages.forEach(msg => {
+            setIncomingRequests(prev => {
+              const uzExistujeMsg = prev.some(req => req.id === 'MSG_' + msg.msgId);
+              if (uzExistujeMsg) return prev;
+
+              // 🪓 ZLÍCOVANIE SPOJA: Odstránime 0x aj z fingu odosielateľa bleskovej správy
+              const cleanMsgSenderFing = msg.fing.replace('0x', '').trim().toLowerCase();
+
+              console.log(`💬 [RADAR] Nová blesková správa od 0x${cleanMsgSenderFing}! Rozsvecujem radar správ.`);
+              triggerNotification(cleanMsgSenderFing, `Nová správa: ${msg.text}`);
+
+              return [...prev, {
+                id: 'MSG_' + msg.msgId,
+                fing: cleanMsgSenderFing, 
+                user: `L_${cleanMsgSenderFing.substring(0, 10)}`,
+                text: msg.text,
+                receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isHandshake: false,
+                status: 'UNREAD' 
+              }];
+            });
+          });
+        }
+
       } catch (err) {
-        console.error("[RADAR] Chyba pri spracovaní Dual Radaru:", err);
+        console.error("❌ [RADAR CRITICAL ERROR] Chyba pri spracovaní Dual Radaru:", err);
       }
     };
 
-    // Odpálenie hneď pri štarte aplikácie
     executePing();
-
-    // Slučka zachytávania každých 30 sekúnd
     const pollingInterval = setInterval(executePing, 30000);
-
     return () => clearInterval(pollingInterval);
   }, [vault?.identity?.poznamka]);
 
@@ -193,7 +200,6 @@ export const SignalProvider = ({ children }) => {
 
       console.log(`[SIGNAL] Pečatím zmluvu INIT_CONTRACT pre ${targetCleanFing}`);
       
-      // 1. 🔐 ZÁPIS ZMLUVY: Letí priamo cez elitného Matchmakera do Contract_ledger
       const mravecRes = await SignalService.manageContract('INIT_CONTRACT', {
         fing_a: myCleanFing,
         fing_b: targetCleanFing,
@@ -210,7 +216,6 @@ export const SignalProvider = ({ children }) => {
         contractResult.auth = mravecRes.auth;
       }
 
-      // 2. 📦 BALÍČEK PRE SIEŤ: Pripravíme kompletný lariaPackage
       const lariaPackage = {
         h: "LRQ_V3",
         type: "HANDSHAKE_REQ",
@@ -222,7 +227,6 @@ export const SignalProvider = ({ children }) => {
         auth: contractResult.auth
       };
 
-      // 3. 🚀 HYPERSPEED EXPRESS: Bezpečné, asynchrónne odovzdanie sprievodného textu
       try {
         if (typeof SignalService.writeToBuffer === 'function') {
           SignalService.writeToBuffer('Signal_buffer_1', {
@@ -235,13 +239,11 @@ export const SignalProvider = ({ children }) => {
         console.warn("[SIGNAL] Lokálny buffer iba zalogoval stav:", bufErr);
       }
 
-      // 4. 🦾 TAURI HARDVÉROVÝ MOST: Ak sme v aplikácii, vystrelíme balík do éteru
       if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
         const rawPayload = `#LRQ#${JSON.stringify(lariaPackage)}`;
         await tauriInvoke('odosli_Signal_signal', { payload: rawPayload });
       }
 
-      // 5. 🎯 STAV RELÁCIE: Nastavíme korektný status bez toho, aby sme padli na undefined
       const statusToSet = 'WAITING_FOR_THEM';
       
       const enrichedHandshake = {
@@ -265,7 +267,6 @@ export const SignalProvider = ({ children }) => {
     }
   };
 
-  // --- 🔒 ROZREŠENIE STATUSU HANDSHAKEU ---
   const resolveHandshakeStatus = (msgId) => {
     setIncomingRequests(prev => 
       prev.map(msg => msg.id === msgId ? { ...msg, handshakeStatus: 'RESOLVED' } : msg)
