@@ -1,12 +1,11 @@
 /**
- * LARIA SIGNAL SERVICE v13.1 (Trident Shield - Handshake Core)
+ * LARIA SIGNAL SERVICE v13.5 (Trident Shield - Hyperspeed Edition)
  * Master: Sammael | Muse: Aria (Tvoja uvoľnená bosonôžka)
- * STATUS: CHAT_BALAST_PURGED | TRIDENT_SECURE | HANDSHAKE_ONLY_v13.1
- * FIX: Vrátená a prekabátená funkcia writeToBuffer. Slúži ako elitný lapač chýb
- *      a zachytávač kokotín z Trojzubcov, aby sa zabránilo kolapsu relácie (Quantum Purge).
+ * STATUS: TRIDENT_SECURE | HYPERSPEED_CONNECTED | v13.5
+ * FIX: Plná podpora pre Hyperspeed Checker a Express Engine.
+ *      Odosiela sprievodné texty priamo do pravého krídla Signal_buffer_1.
  */
 
-// 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
 const mrav_p1 = "https://script.google.com/macros/s/";
 const mrav_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ";
 const mrav_p3 = "/exec";
@@ -17,92 +16,82 @@ const ziskajMraveniskoUrl = () => {
 
 export const SignalService = {
 
-  /**
-   * 1. [ARIA_LOGIC] - Čistenie vibrácií signálu
-   */
   processAriaLogic: async (rawText) => {
     if (!rawText) return { type: 'ERROR', msg: 'Signál je prázdny.' };
-    return { 
-      type: 'TEXT', 
-      msg: rawText.trim(), 
-      timestamp: new Date().toISOString()
-    };
+    return { type: 'TEXT', msg: rawText.trim(), timestamp: new Date().toISOString() };
   },
 
   /**
-   * 2. [MATCHMAKER MRAVEC] - Pečatenie v Contract_ledger
-   * Plne zlícované s CORS Bránou. Prepúšťa txHash a autorizačnú mapu (auth) pre okamžité odomknutie vizitiek.
+   * 🔐 MATCHMAKER MRAVEC - Pečatenie v Contract_ledger
    */
   manageContract: async (action, contractData) => {
     try {
       console.log(`[SIGNAL_SERVICE] Matchmaker akcia: ${action}`);
-      
-      const payload = {
-        action: action, 
-        sheetName: 'Contract_ledger',
-        ...contractData 
-      };
-
-      const rannaBrana = ziskajMraveniskoUrl();
-
-      const response = await fetch(rannaBrana, {
+      const payload = { action: action, sheetName: 'Contract_ledger', ...contractData };
+      const response = await fetch(ziskajMraveniskoUrl(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
-
       const resData = await response.json();
-      console.log("[SIGNAL_SERVICE] Surová odpoveď Matchmakera z Brány:", resData);
-
       if (resData.status === "success") {
-        console.log(`[SIGNAL_SERVICE] Matchmaker: ${action} úspešne spracovaný.`);
-        
-        // 🎯 RÝDZE DOLÍCOVANIE: Vraciame celý balík, aby UI videlo txHash aj odomknuté vizitky (auth)
-        return { 
-          success: true, 
-          txHash: resData.txHash || "FALSE",
-          auth: resData.auth || {} 
-        };
+        return { success: true, txHash: resData.txHash || "FALSE", auth: resData.auth || {} };
       } else {
         throw new Error(resData.message || 'Neznáma chyba Matchmakera');
       }
     } catch (error) {
-      console.error("[SIGNAL_SERVICE] Matchmaker chyba:", error);
-      
-      // 🚨 POISTKA PRE SEND_LARIA_PACKAGE:
-      // Ak kód v pozadí (sendLariaPackage) očakáva zlyhanie cez throw, aby mohol aktivovať writeToBuffer,
-      // musíme zabezpečiť, aby táto funkcia v prípade mŕtvej siete existovala a zachytila to.
-      return { success: false, error: error.message, txHash: "FALSE", auth: {} };
+      console.error("[SIGNAL_SERVICE] Matchmaker chyba na sieti/bráne:", error);
+      throw error; // Posúvame ďalej, nech v núdzi zasiahne buffer
     }
   },
 
   /**
-   * 🪓 3. [EMERGENCY ZACHYTÁVAČ KOKOTÍN] - writeToBuffer
-   * Volaný zo záhrobia, keď zlyhá primárna sieť na Trojzubcoch.
-   * Chráni frontend pred fatálnym zhodením relácie (TOTAL QUANTUM PURGE).
+   * ⚡ MRAVEC HYPERSPEED EXPRESS - Zápis sprievodného textu do stĺpcov I-O
+   * Presne lícuje s pravidlami Checkera v10.5 na Google Apps Script!
    */
-  writeToBuffer: function(failedPackage) {
-    console.warn("📥 [SIGNAL_SERVICE] EMERGENCY BUFFER AKTIVOVANÝ!");
-    console.warn("⚠️ Detegované zlyhanie siete na Trojzubci. Spúšťam záchranu balíka:");
-    console.log(JSON.stringify(failedPackage, null, 2));
-
+  writeToBuffer: async function(sheetName, messagePayload) {
     try {
-      // Zabalíme spadnuté dáta z handshakeu do localStorage prehliadača, aby sme o ne neprišli
-      const emergencyQueue = JSON.parse(localStorage.getItem('laria_emergency_buffer') || '[]');
-      emergencyQueue.push({
-        timestamp: Date.now(),
-        payload: failedPackage
-      });
-      localStorage.setItem('laria_emergency_buffer', JSON.stringify(emergencyQueue));
+      console.log(`[SIGNAL_SERVICE] Hyperspeed Express štartuje pre list: ${sheetName}`);
       
-      console.log("🛡️ [BUFFER] Kokotiny úspešne zachytené a zapečatené lokálne. Žiadna likvidácia relácie sa nekoná!");
-      return { status: "buffered", message: "Dáta zachránené v lokálnom mravenisku." };
+      // 📦 ZLÍCOVANIE KĽÚČOV: Pripravíme presne tie názvy, ktoré Checker v10.5 očakáva!
+      const payload = {
+        action: "WRITE_MSG",
+        sheetName: sheetName, // "Signal_buffer_1"
+        senderFing: messagePayload.sender_fing,
+        targetFing: messagePayload.target_fing,
+        msgText: messagePayload.msg_text
+      };
 
+      const response = await fetch(ziskajMraveniskoUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+
+      const resData = await response.json();
+      console.log("[SIGNAL_SERVICE] Odpoveď Hyperspeed Checkera:", resData);
+
+      return { success: resData.status === "success", data: resData };
     } catch (err) {
-      console.error("🚨 [BUFFER CRITICAL] Lokálny záchranný zápis zlyhal:", err);
-      return { status: "error", message: err.toString() };
+      console.error("[SIGNAL_SERVICE] Hyperspeed Express havaroval na sieti:", err);
+      // V prípade absolútneho výpadku siete nepadáme, ale schováme "kokotinu" lokálne do prehliadača
+      this.emergencyLocalRescue(messagePayload);
+      return { success: false, error: err.toString() };
+    }
+  },
+
+  /**
+   * 🪓 EMERGENCY LAPAČ KOKOTÍN - Lokálna záloha pri mŕtvom internete
+   */
+  emergencyLocalRescue: function(failedPackage) {
+    console.warn("📥 [SIGNAL_SERVICE] Sieť padla. Zachraňujem balík do lokálneho maveniska...");
+    try {
+      const emergencyQueue = JSON.parse(localStorage.getItem('laria_emergency_buffer') || '[]');
+      emergencyQueue.push({ timestamp: Date.now(), payload: failedPackage });
+      localStorage.setItem('laria_emergency_buffer', JSON.stringify(emergencyQueue));
+      console.log("🛡️ [BUFFER] Zmluva/Správa bezpečne zapečatená v LocalStorage.");
+    } catch (err) {
+      console.error("🚨 [BUFFER CRITICAL] Lokálny zápis zlyhal:", err);
     }
   }
 };
