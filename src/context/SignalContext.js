@@ -1,8 +1,8 @@
 /**
- * LARIA SIGNAL CONTEXT v13.0 (Pure Hyperspeed Engine - Gate Aligned)
+ * LARIA SIGNAL CONTEXT v13.2 (Pure Hyperspeed Engine - Gate Aligned)
  * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
- * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY
- * Úprava: Vyčistená stará história správ, ponechaný iba stav prebiehajúcich Handshake zmlúv.
+ * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | FIXED
+ * Úprava: Navrátená stratená funkcia resolveHandshakeStatus a doladený zápis do Express Buffra.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -106,99 +106,101 @@ export const SignalProvider = ({ children }) => {
   };
 
   // --- 📡 ODOSIELANIE HANDSHAKE BALÍKA (ČISTÝ HYPERSPEED v13.2) ---
-const sendLariaPackage = async (targetFing, targetSha, personalMessage, isHandshakeReq = true) => {
-  const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'Sammael';
-  const targetCleanFing = targetFing.replace('0x', '');
-  
-  try {
-    let contractResult = { txHash: "FALSE", auth: {} }; 
-
-    console.log(`[SIGNAL] Pečatím zmluvu INIT_CONTRACT pre ${targetCleanFing}`);
+  const sendLariaPackage = async (targetFing, targetSha, personalMessage, isHandshakeReq = true) => {
+    const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'Sammael';
+    const targetCleanFing = targetFing.replace('0x', '');
     
-    // 1. 🔐 ZÁPIS ZMLUVY: Letí priamo cez elitného Matchmakera do Contract_ledger
-    const mravecRes = await SignalService.manageContract('INIT_CONTRACT', {
-      fing_a: myCleanFing,
-      fing_b: targetCleanFing,
-      krypt_a: vault?.identity?.krypt || '',
-      status_a: "1",
-      status_b: "0",
-      sha_a: vault?.identity?.sha || '',
-      sha_b: targetSha,
-      msg: personalMessage // 📝 Sprievodnú správu pribalíme rovno k zmluve, aby ju Brána videla!
-    });
-
-    if (mravecRes && mravecRes.success) {
-      contractResult.txHash = mravecRes.txHash;
-      contractResult.auth = mravecRes.auth;
-    }
-
-    // 2. 📦 BALÍČEK PRE SIEŤ: Pripravíme kompletný lariaPackage
-    const lariaPackage = {
-      h: "LRQ_V3",
-      type: "HANDSHAKE_REQ",
-      sha: vault?.identity?.sha || '',
-      fing: myCleanFing, 
-      msg: personalMessage,
-      d: { n: vault?.identity?.meno || 'Sammael', ib: vault?.identity?.Signal || '', kr: vault?.identity?.krypt || '' },
-      txHash: contractResult.txHash,
-      auth: contractResult.auth
-    };
-
-    // 3. 🚀 HYPERSPEED EXPRESS: Bezpečné, asynchrónne odovzdanie sprievodného textu
-    // Ak by sme chceli starý buffer, tak iba asynchrónne, ale náš zachytávač kokotín to istí lokálne:
-    let bufferSuccess = true;
     try {
-      if (typeof SignalService.writeToBuffer === 'function') {
-        // Zavoláme náš nový zachytávač s jedným čistým objektom
-        SignalService.writeToBuffer({
-          target_sheet: 'Signal_Buffer_1',
-          sender_fing: myCleanFing,
-          target_fing: targetCleanFing,
-          msg_text: personalMessage,
-          txHash: contractResult.txHash
-        });
+      let contractResult = { txHash: "FALSE", auth: {} }; 
+
+      console.log(`[SIGNAL] Pečatím zmluvu INIT_CONTRACT pre ${targetCleanFing}`);
+      
+      // 1. 🔐 ZÁPIS ZMLUVY: Letí priamo cez elitného Matchmakera do Contract_ledger
+      const mravecRes = await SignalService.manageContract('INIT_CONTRACT', {
+        fing_a: myCleanFing,
+        fing_b: targetCleanFing,
+        krypt_a: vault?.identity?.krypt || '',
+        status_a: "1",
+        status_b: "0",
+        sha_a: vault?.identity?.sha || '',
+        sha_b: targetSha,
+        msg: personalMessage // 📝 Sprievodnú správu pribalíme rovno k zmluve, aby ju Brána videla!
+      });
+
+      if (mravecRes && mravecRes.success) {
+        contractResult.txHash = mravecRes.txHash;
+        contractResult.auth = mravecRes.auth;
       }
-    } catch (bufErr) {
-      console.warn("[SIGNAL] Lokálny buffer iba zalogoval stav:", bufErr);
-      bufferSuccess = false;
+
+      // 2. 📦 BALÍČEK PRE SIEŤ: Pripravíme kompletný lariaPackage
+      const lariaPackage = {
+        h: "LRQ_V3",
+        type: "HANDSHAKE_REQ",
+        sha: vault?.identity?.sha || '',
+        fing: myCleanFing, 
+        msg: personalMessage,
+        d: { n: vault?.identity?.meno || 'Sammael', ib: vault?.identity?.Signal || '', kr: vault?.identity?.krypt || '' },
+        txHash: contractResult.txHash,
+        auth: contractResult.auth
+      };
+
+      // 3. 🚀 HYPERSPEED EXPRESS: Bezpečné, asynchrónne odovzdanie sprievodného textu
+      // Opravené volanie: Posielame názov listu ako prvý parameter a payload s kľúčmi pre Checker ako druhý!
+      try {
+        if (typeof SignalService.writeToBuffer === 'function') {
+          SignalService.writeToBuffer('Signal_buffer_1', {
+            sender_fing: myCleanFing,
+            target_fing: targetCleanFing,
+            msg_text: personalMessage
+          });
+        }
+      } catch (bufErr) {
+        console.warn("[SIGNAL] Lokálny buffer iba zalogoval stav:", bufErr);
+      }
+
+      // 4. 🦾 TAURI HARDVÉROVÝ MOST: Ak sme v aplikácii, vystrelíme balík do éteru
+      if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+        const rawPayload = `#LRQ#${JSON.stringify(lariaPackage)}`;
+        await tauriInvoke('odosli_Signal_signal', { payload: rawPayload });
+      }
+
+      // 5. 🎯 STAV RELÁCIE: Nastavíme korektný status bez toho, aby sme padli na undefined
+      const statusToSet = 'WAITING_FOR_THEM';
+      
+      const enrichedHandshake = {
+        id: 'TX_' + Date.now().toString(),
+        fing: targetCleanFing,
+        user: `L_${targetCleanFing.substring(0, 10)}`,
+        text: personalMessage,
+        receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isHandshake: true,
+        status: statusToSet,
+        handshakeStatus: statusToSet,
+        txHash: contractResult.txHash, 
+        authMap: contractResult.auth,  
+        targetSha: targetSha
+      };
+
+      setIncomingRequests(prev => [...prev, enrichedHandshake]);
+
+      return { 
+        success: true, 
+        txHash: contractResult.txHash, 
+        auth: contractResult.auth 
+      };
+
+    } catch (err) {
+      console.error("[SIGNAL] Problém pri odosielaní cez Hyperspeed:", err);
+      return { success: false, error: err.message };
     }
+  };
 
-    // 4. 🦾 TAURI HARDVÉROVÝ MOST: Ak sme v aplikácii, vystrelíme balík do éteru
-    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
-      const rawPayload = `#LRQ#${JSON.stringify(lariaPackage)}`;
-      await tauriInvoke('odosli_Signal_signal', { payload: rawPayload });
-    }
-
-    // 5. 🎯 STAV RELÁCIE: Nastavíme korektný status bez toho, aby sme padli na undefined
-    const statusToSet = 'WAITING_FOR_THEM';
-    
-    const enrichedHandshake = {
-      id: 'TX_' + Date.now().toString(),
-      fing: targetCleanFing,
-      user: `L_${targetCleanFing.substring(0, 10)}`,
-      text: personalMessage,
-      receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isHandshake: true,
-      status: statusToSet,
-      handshakeStatus: statusToSet,
-      txHash: contractResult.txHash, 
-      authMap: contractResult.auth,  
-      targetSha: targetSha
-    };
-
-    setIncomingRequests(prev => [...prev, enrichedHandshake]);
-
-    return { 
-      success: true, 
-      txHash: contractResult.txHash, 
-      auth: contractResult.auth 
-    };
-
-  } catch (err) {
-    console.error("[SIGNAL] Problém pri odosielaní cez Hyperspeed:", err);
-    return { success: false, error: err.message };
-  }
-};
+  // --- 🔒 ROZREŠENIE STATUSU HANDSHAKEU (NAVSTRÁTENÁ FUNKCIA) ---
+  const resolveHandshakeStatus = (msgId) => {
+    setIncomingRequests(prev => 
+      prev.map(msg => msg.id === msgId ? { ...msg, handshakeStatus: 'RESOLVED' } : msg)
+    );
+  };
 
   return (
     <SignalContext.Provider value={{ 
