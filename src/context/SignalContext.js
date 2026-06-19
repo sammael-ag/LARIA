@@ -1,9 +1,8 @@
 /**
- * LARIA SIGNAL CONTEXT v14.1 (Pure Hyperspeed Engine - Dual Radar Integrated)
+ * LARIA SIGNAL CONTEXT v14.2 (Pure Hyperspeed Engine - Dual Radar Integrated)
  * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
- * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE | v14.1
- * Úprava: Striktné oddelenie Notifikácií. Handshake drží stav nezávisle na perzistencii Mraveniska.
- * Správy z bufferu sa po otvorení preklápajú na READ, kontrakty čakajú na ALLOW/ABORT.
+ * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE | v14.2
+ * FIX: Opravená fatálna chyba so zátvorkami a roztrhnutým try-catch blokom pri executePing.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -119,14 +118,29 @@ export const SignalProvider = ({ children }) => {
       try {
         const res = await SignalService.checkMyContracts(myCleanFing);
         
-        if (!res || res.status !== "success") return;
+        // 🔍 [DETEKTÍVKA BACKEND] Logujeme kompletnú odpoveď, aby sme videli, čo presne lezie z Mraveniska
+        console.log("🔍 [DETEKTÍVKA BACKEND] Odpoveď pre fing:", myCleanFing, "-> res:", res);
+        
+        if (!res || res.status !== "success") {
+          console.log("⚠️ [DETEKTÍVKA] Odpoveď nebola úspešná alebo je prázdna (res.status !== 'success')");
+          return;
+        }
           
         // 🛰️ OSOBITNÁ SUB-SEKCIA: PRICHÁDZAJÚCE KONTRAKTY (Zmluva v Contract_Ledger)
         if (res.contracts && Array.isArray(res.contracts)) {
+          // 🗂️ [DETEKTÍVKA KONTRAKTY] Logujeme koľko zmlúv reálne systém našiel pred filtrovaním duplicity
+          console.log(`🗂️ [DETEKTÍVKA KONTRAKTY] Našiel som celkovo ${res.contracts.length} kontraktov.`);
+          
           res.contracts.forEach(contract => {
+            console.log("📄 [DETEKTÍVKA DETAIL] Spracovávam kontrakt:", contract);
+
             setIncomingRequests(prev => {
               const uzExistuje = prev.some(req => req.txHash === contract.txHash || req.id === 'IN_' + contract.txHash);
-              if (uzExistuje) return prev;
+              
+              if (uzExistuje) {
+                console.log(`♻️ [DETEKTÍVKA] Kontrakt s txHash ${contract.txHash} už v prev stave existuje, preskakujem duplicitný zápis.`);
+                return prev;
+              }
               
               const cleanSenderFing = contract.fing.replace('0x', '').trim().toLowerCase();
               console.log(`✉️ [RADAR] Detekovaný prichádzajúci kontrakt od 0x${cleanSenderFing}!`);
@@ -149,10 +163,14 @@ export const SignalProvider = ({ children }) => {
               }];
             });
           });
+        } else {
+          console.log("ℹ️ [DETEKTÍVKA KONTRAKTY] Pole res.contracts buď chýba, alebo nie je Array.");
         }
 
         // 💬 OSOBITNÁ SUB-SEKCIA: BLESKOVÉ SPRÁVY (Buffer pre chat)
         if (res.messages && Array.isArray(res.messages)) {
+          console.log(`💬 [DETEKTÍVKA BUFFER] Našiel som celkovo ${res.messages.length} bleskových správ.`);
+          
           res.messages.forEach(msg => {
             setIncomingRequests(prev => {
               const uzExistujeMsg = prev.some(req => req.id === 'MSG_' + msg.msgId);
@@ -175,10 +193,12 @@ export const SignalProvider = ({ children }) => {
               }];
             });
           });
+        } else {
+          console.log("ℹ️ [DETEKTÍVKA BUFFER] Pole res.messages chýba alebo nie je Array.");
         }
 
       } catch (err) {
-        console.error("❌ [RADAR ERROR]", err);
+        console.error("❌ [RADAR ERROR] Vnútro executePing zlyhalo:", err);
       }
     };
 
@@ -278,7 +298,7 @@ export const SignalProvider = ({ children }) => {
       incomingRequests, 
       setIncomingRequests, 
       sendLariaPackage,
-      sendChatMessage, // 🌟 Nový export pre priamu komunikáciu chatu
+      sendChatMessage,
       resolveHandshakeStatus,
       purgeSessionForFing,
       markAsRead
