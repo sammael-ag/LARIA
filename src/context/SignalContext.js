@@ -1,9 +1,9 @@
 /**
- * LARIA SIGNAL CONTEXT v13.9 (Pure Hyperspeed Engine - Dual Radar Integrated)
+ * LARIA SIGNAL CONTEXT v14.0 (Pure Hyperspeed Engine - Dual Radar Integrated)
  * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
- * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE | v13.9
- * Úprava: Implementovaná inteligentná očista prečítaných správ (purgeSessionForFing).
- * Pridaná funkcia markAsRead pre presnú filtráciu zobrazených dát. LARIA správy neuchováva!
+ * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE | v14.0
+ * Úprava: Zjednotenie stavových vlajok pri prichádzajúcich zmluvách z radaru.
+ * LARIA správy neuchováva!
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -47,13 +47,8 @@ export const SignalProvider = ({ children }) => {
     console.log(`🥷 [SIGNAL CORE] Spúšťam očistu prečítaných správ pre reláciu: 0x${cleanTargetFing}`);
     
     setIncomingRequests(prev => prev.filter(msg => {
-      // Správy iných majstrov si nevšímame
       if (msg.fing !== cleanTargetFing) return true;
-      
-      // Ak je správa v stave UNREAD (nová bleskovka z radaru), NECHÁME JU ŽIŤ
       if (!msg.isHandshake && msg.status === 'UNREAD') return true;
-      
-      // Všetko ostatné (vybavené handshake-y alebo zobrazené/prečítané správy) nekompromisne mažeme
       return false;
     }));
   };
@@ -70,7 +65,7 @@ export const SignalProvider = ({ children }) => {
     ));
   };
 
-  // Globálny prijímač signálov pre očistu z vonkajšieho prostredia (napr. pri zmene TABov na webe)
+  // Globálny prijímač signálov pre očistu z vonkajšieho prostredia
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -120,7 +115,7 @@ export const SignalProvider = ({ children }) => {
     }
   };
 
-  // --- AUTOMATICKÝ HYPERSPEED DUAL POLLING (KAŽDÝCH 30 SEKÚND + ŠTART) ---
+  // --- AUTOMATICKÝ HYPERSPEED DUAL POLLING ---
   useEffect(() => {
     const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || null;
     if (!myCleanFing) {
@@ -138,10 +133,11 @@ export const SignalProvider = ({ children }) => {
           return;
         }
           
+        // 🤝 SPRACOVANIE ZMLÚV (Handshake žiadosti, presne ako poslal Manfred)
         if (res.contracts && Array.isArray(res.contracts)) {
           res.contracts.forEach(contract => {
             setIncomingRequests(prev => {
-              const uzExistuje = prev.some(req => req.txHash === contract.txHash);
+              const uzExistuje = prev.some(req => req.txHash === contract.txHash || req.id === 'IN_' + contract.txHash);
               if (uzExistuje) return prev;
               
               const cleanSenderFing = contract.fing.replace('0x', '').trim().toLowerCase();
@@ -153,18 +149,20 @@ export const SignalProvider = ({ children }) => {
                 id: 'IN_' + contract.txHash,
                 fing: cleanSenderFing, 
                 user: `L_${cleanSenderFing.substring(0, 10)}`,
-                text: contract.msg,
+                text: contract.msg || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky.",
                 receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 isHandshake: true,
                 status: 'WAITING_FOR_ME',
-                handshakeStatus: 'WAITING_FOR_ME',
+                handshakeStatus: 'WAITING_FOR_ME', // 🌟 Garantujeme, že UI to uvidí
                 txHash: contract.txHash,
-                targetSha: contract.sha
+                targetSha: contract.sha,
+                d: { n: `L_${cleanSenderFing.substring(0, 10)}`, ib: '', kr: '' } // Základný fallback pre štruktúru
               }];
             });
           });
         }
 
+        // 💬 SPRACOVANIE BLESKOVÝCH SPRÁV
         if (res.messages && Array.isArray(res.messages)) {
           res.messages.forEach(msg => {
             setIncomingRequests(prev => {
@@ -204,16 +202,13 @@ export const SignalProvider = ({ children }) => {
       if (data.type !== "HANDSHAKE_REQ") return;
 
       const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || null;
-      if (!myCleanFing) {
-        console.warn('[SIGNAL] Nie je možné spracovať balík, chýba moja identita.');
-        return;
-      }
-      const cleanSenderFing = data.fing.replace('0x', '');
-
+      if (!myCleanFing) return;
+      
+      const cleanSenderFing = data.fing.replace('0x', '').trim().toLowerCase();
       await triggerNotification(data.fing, "Prichádza nová žiadosť o overenie vizitky.");
 
       const enrichedData = {
-        id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
+        id: 'IN_' + (data.txHash || Date.now().toString()),
         fing: cleanSenderFing,
         user: data.d?.n || `L_${cleanSenderFing.substring(0, 10)}`,
         text: data.msg || "Žiadosť o prepojenie.",
@@ -228,7 +223,6 @@ export const SignalProvider = ({ children }) => {
       };
 
       setIncomingRequests(prev => [...prev, enrichedData]);
-
     } catch (e) {
       console.error('[SIGNAL] Chyba spracovania Handshake balíka:', e);
     }
@@ -236,11 +230,10 @@ export const SignalProvider = ({ children }) => {
 
   const sendLariaPackage = async (targetFing, targetSha, personalMessage, isHandshakeReq = true) => {
     const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'Sammael';
-    const targetCleanFing = targetFing.replace('0x', '');
+    const targetCleanFing = targetFing.replace('0x', '').trim().toLowerCase();
     
     try {
       let contractResult = { txHash: "FALSE", auth: {} }; 
-
       console.log(`[SIGNAL] Pečatím zmluvu INIT_CONTRACT pre ${targetCleanFing}`);
       
       const mravecRes = await SignalService.manageContract('INIT_CONTRACT', {
@@ -270,18 +263,6 @@ export const SignalProvider = ({ children }) => {
         auth: contractResult.auth
       };
 
-      try {
-        if (typeof SignalService.writeToBuffer === 'function') {
-          SignalService.writeToBuffer('Signal_buffer_1', {
-            sender_fing: myCleanFing,
-            target_fing: targetCleanFing,
-            msg_text: personalMessage
-          });
-        }
-      } catch (bufErr) {
-        console.warn("[SIGNAL] Lokálny buffer iba zalogoval stav:", bufErr);
-      }
-
       if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
         const rawPayload = `#LRQ#${JSON.stringify(lariaPackage)}`;
         await tauriInvoke('odosli_Signal_signal', { payload: rawPayload });
@@ -304,7 +285,6 @@ export const SignalProvider = ({ children }) => {
       };
 
       setIncomingRequests(prev => [...prev, enrichedHandshake]);
-
     } catch (err) {
       console.error("[SIGNAL] Problém pri odosielaní cez Hyperspeed:", err);
     }
@@ -324,7 +304,7 @@ export const SignalProvider = ({ children }) => {
       sendLariaPackage,
       resolveHandshakeStatus,
       purgeSessionForFing,
-      markAsRead // 🌟 Poskytnuté pre bezpečné preklopenie stavu v UI
+      markAsRead
     }}>
       {children}
     </SignalContext.Provider>
