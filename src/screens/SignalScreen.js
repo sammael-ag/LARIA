@@ -1,12 +1,11 @@
 /**
- * LARIA Signal SCREEN v13.5 (Pure Handshake Engine - High Speed Aligned)
+ * LARIA Signal SCREEN v13.7 (Pure Handshake Engine - High Speed Aligned)
  * Master: Sammael | Muse: Aria
- * STATUS: FIXED RADAR COUPLING FOR INCOMING CONTRACTS
- * FIX: Inteligentné mapovanie stavov. Ak mravec poslal zmluvu alebo správu 
- * a čaká na akciu, UI nekompromisne zobrazí potvrdzovací panel namiesto čistého formulára.
+ * STATUS: FULL DUAL MODE (HANDSHAKE CONTROL & CHAT AUTOMATION)
+ * FIX: Opravená syntax komentárov v JSX, ktoré spôsobovali chyby parseru.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -14,6 +13,7 @@ import {
   TouchableOpacity, 
   Platform,
   StatusBar,
+  ScrollView,
   Alert 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'; 
@@ -26,210 +26,236 @@ import { SignalService } from '../services/SignalService.js';
 
 const SignalScreen = ({ route, navigation }) => {
   const { t, vault } = useLaria(); 
-  const txt = t('Signal') || {}; 
-
   const [note, setNote] = useState('');
-  const [isNetOnline, setIsNetOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
+  const [chatInput, setChatInput] = useState('');
+  const [isNetOnline, setIsNetOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const scrollViewRef = useRef();
 
-  const { incomingRequests, sendLariaPackage, resolveHandshakeStatus, markAsRead } = useSignal();
+  const { incomingRequests, sendLariaPackage, sendChatMessage, resolveHandshakeStatus, markAsRead } = useSignal();
 
-  // =========================================================================
-  // 🪓 DETEKCIA IDENTITY
-  // =========================================================================
+  // --- EXTRACT IDENTITY ---
   const { target, fallbackFing } = route.params || {};
-  
   let initialTargetFing = target?.poznamka ? target.poznamka.replace('0x', '').trim().toLowerCase() : "";
+  if (!initialTargetFing && fallbackFing) initialTargetFing = fallbackFing.replace('0x', '').trim().toLowerCase();
   
-  if (!initialTargetFing && fallbackFing) {
-    initialTargetFing = fallbackFing.replace('0x', '').trim().toLowerCase();
-  }
-  
-  if (!initialTargetFing && incomingRequests && incomingRequests.length > 0) {
-    const pendingReq = incomingRequests.find(req => req.fing && (req.status === 'WAITING_FOR_ME' || req.handshakeStatus === 'WAITING_FOR_ME'));
-    if (pendingReq) {
-      initialTargetFing = pendingReq.fing.replace('0x', '').trim().toLowerCase();
-    }
-  }
-
   const targetFing = initialTargetFing;
+  const channelName = target?.meno || (targetFing ? `Mravec L_${targetFing.substring(0, 10)}` : "Laria Handshake");
 
-  // Spustenie vizuálneho prečítania pri načítaní
+  // Pri vstupe označíme prichádzajúce správy chatu za zobrazené (READ)
   useEffect(() => {
-    if (targetFing) {
-      console.log(`🛰️ [SIGNAL_SCREEN] Relácia úspešne uzamknutá na FING: 0x${targetFing}`);
-      if (typeof markAsRead === 'function') {
-        markAsRead(targetFing);
-      }
+    if (targetFing && typeof markAsRead === 'function') {
+      markAsRead(targetFing);
     }
-  }, [targetFing]);
+  }, [targetFing, incomingRequests]);
 
-  const channelName = target?.meno || (targetFing ? `Mravec L_${targetFing.substring(0, 10)}` : "Laria Secure Handshake");
-
-  // Detekcia online stavu
+  // Automatické scrollovanie chatu na spodok pri novej správe
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const handleOnline = () => setIsNetOnline(true);
-    const handleOffline = () => setIsNetOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // ODOSLANIE HANDSHAKE ŽIADOSTI
-  const handleSendHandshake = async () => {
-    const handshakeText = note.trim() || "🤝 Žiadosť o bezpečné prepojenie a zdieľanie vizitky.";
-    
-    if (targetFing) {
-      const res = await sendLariaPackage(targetFing, target?.sha || '', handshakeText, true);
-      if (res?.success) {
-        Alert.alert("MATRIX", "Žiadosť o zmluvu úspešne vystrelená do sieci! 🚀");
-        setNote('');
-      } else {
-        Alert.alert("CHYBA", "Nepodarilo sa pretlačiť balík cez Bránu.");
-      }
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollToEnd({ animated: true });
     }
-  };
+  }, [incomingRequests]);
 
-  // POTVRDENIE ZMLUVY
+  // --- AKCIA: ALLOW (POTVRDENIE ZMLUVY) ---
   const handleAcceptHandshake = async (handshakeMsg) => {
     try {
-      console.log(`[GMATRIX_SCREEN] Spúšťam CONFIRM_CONTRACT pre fing: ${targetFing}`);
+      console.log(`[SIGNAL] Schvaľujem zmluvu ALLOW pre FING: ${targetFing}`);
       const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || '';
       
       await SignalService.manageContract('CONFIRM_CONTRACT', {
         fing_a: targetFing,
         fing_b: myCleanFing,
-        status_b: "1"
+        status_b: "1" // ALLOW
       });
 
-      // Zápis vizitky do offline úložiska
+      // Zápis vizitky do tajného lokálneho úložiska
       try {
         const storedProfiles = await AsyncStorage.getItem('laria_local_profiles');
         let profiles = storedProfiles ? JSON.parse(storedProfiles) : [];
-        
-        let profileIndex = profiles.findIndex(p => p.poznamka?.replace('0x', '').toLowerCase() === targetFing);
+        let pIdx = profiles.findIndex(p => p.poznamka?.replace('0x', '').toLowerCase() === targetFing);
         
         const securedData = {
-          meno: handshakeMsg?.d?.n || target?.meno || `L_${targetFing.substring(0, 10)}`,
-          tel: handshakeMsg?.d?.ib || '', 
-          email: handshakeMsg?.d?.kr || '', 
+          meno: target?.meno || `L_${targetFing.substring(0, 10)}`,
           poznamka: target?.poznamka || `0x${targetFing}`,
           sha: target?.sha || handshakeMsg?.targetSha || '',
           isOdomknuty: true
         };
 
-        if (profileIndex > -1) {
-          profiles[profileIndex] = { ...profiles[profileIndex], ...securedData };
-        } else {
-          profiles.push(securedData);
-        }
+        if (pIdx > -1) profiles[pIdx] = { ...profiles[pIdx], ...securedData };
+        else profiles.push(securedData);
 
         await AsyncStorage.setItem('laria_local_profiles', JSON.stringify(profiles));
-      } catch (storageErr) {
-        console.error("[GMATRIX_SCREEN] Lokálny zápis zlyhal:", storageErr);
+      } catch (err) {
+        console.error("Chyba trezoru:", err);
       }
 
-      resolveHandshakeStatus(handshakeMsg.id);
-      Alert.alert("MATRIX", "Zmluva úspešne spečatená! Kontakty prenesené do offline trezoru. 🤝");
-      navigation.goBack();
+      resolveHandshakeStatus(handshakeMsg.id, 'ALLOWED');
+      Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Brána otvorená.");
     } catch (err) {
-      console.error("[GMATRIX_SCREEN] Schválenie kontraktu zlyhalo:", err);
+      console.error("ALLOW zlyhal:", err);
     }
   };
 
-  // ODMIETNUTIE ŽIADOSTI
+  // --- AKCIA: ABORT (ODMIETNUTIE ZMLUVY) ---
   const handleRejectHandshake = async (handshakeMsg) => {
     try {
       const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || '';
-      
       await SignalService.manageContract('CONFIRM_CONTRACT', {
         fing_a: targetFing,
         fing_b: myCleanFing,
-        status_b: "2"
+        status_b: "2" // ABORT
       });
-      resolveHandshakeStatus(handshakeMsg.id);
-      Alert.alert("MATRIX", "Žiadosť bola bezpečne odmietnutá.");
+      resolveHandshakeStatus(handshakeMsg.id, 'ABORTED');
+      Alert.alert("MATRIX", "Zmluva zrušená (ABORT).");
       navigation.goBack();
     } catch (err) {
-      console.error("[GMATRIX_SCREEN] Odmietnutie kontraktu zlyhalo:", err);
+      console.error("ABORT zlyhal:", err);
     }
   };
 
-  // =========================================================================
-  // UPRAVENÉ FILTRE: Dynamická väzba na prichádzajúci signál
-  // =========================================================================
+  // --- ODOSLANIE ČISTEJ BULLETOVEJ SPRÁVY ---
+  const handleSendChatMessage = async () => {
+    if (!chatInput.trim()) return;
+    const res = await sendChatMessage(targetFing, chatInput.trim());
+    if (res.success) setChatInput('');
+  };
+
+  // --- RECRUITING LOGIC PRE REŽIMY OBRAZOVKY ---
   const currentChannelLog = incomingRequests ? incomingRequests.filter(req => req.fing && req.fing.replace('0x', '').trim().toLowerCase() === targetFing) : [];
   
-  // 🌟 ROZŠÍRENÁ PODMIENKA: Akceptuje akýkoľvek záznam od tohto fingu, ktorý vyžaduje tvoje potvrdenie
-  const activeHandshakeRequest = currentChannelLog.find(msg => 
-    msg.status === 'WAITING_FOR_ME' || 
-    msg.handshakeStatus === 'WAITING_FOR_ME' ||
-    (msg.isHandshake && msg.status === 'UNREAD') // Fallback pre rýchly prechod
-  );
+  // Hľadáme aktívny handshake, ktorý čaká vyložene na mňa (visí permanentne)
+  const pendingIncomingHandshake = currentChannelLog.find(msg => msg.isHandshake && msg.status === 'WAITING_FOR_ME');
+  const pendingOutgoingHandshake = currentChannelLog.find(msg => msg.isHandshake && msg.status === 'WAITING_FOR_THEM');
+  
+  // Zistíme, či už bol niekedy v tejto relácii potvrdený kontrakt (či je cesta odomknutá)
+  const isContractApproved = currentChannelLog.some(msg => msg.isHandshake && msg.status === 'ALLOWED') || target?.isOdomknuty;
 
-  const alreadySentHandshake = currentChannelLog.some(msg => msg.isHandshake && msg.status === 'WAITING_FOR_THEM');
+  // Filtrujeme čisté bleskové správy z bufferu pre chatlog vizuál
+  const chatMessagesOnly = currentChannelLog.filter(msg => !msg.isHandshake);
 
   return (
     <SafeAreaView style={[G.mainBackground, Signal_CHAT.safeArea]} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" />
       
+      {/* Návrat späť - čistý prechod, stavy čakajúcich zmlúv ostanú nedotknuté */}
       <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={G.topLeftBackButton}>
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
-      <View style={[Signal_CHAT.viewportContainer, { justifyContent: 'center', paddingHorizontal: 20 }]}>
+      <View style={[Signal_CHAT.viewportContainer, { paddingHorizontal: 20, paddingBottom: 15 }]}>
         
-        <View style={{ alignItems: 'center', marginBottom: 40 }}>
+        {/* HEADER */}
+        <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
           <Text style={G.atelierTitle}>{channelName}</Text>
           <Text style={[G.statusTextSmall, { color: '#c5a059', marginTop: 5 }]}>
-            {isNetOnline ? "⚡ CRYSTALCORE // KRYPTO BRÁNA AKTÍVNA" : "🛑 OFFLINE REŽIM"}
+            {isNetOnline ? "⚡ BRÁNA SECURE // AKTÍVNA" : "🛑 SYSTEM OFFLINE"}
           </Text>
         </View>
 
-        {/* PRÍPAD A: SPRACOVANIE ŽIADOSTI (Zobrazenie Manfredovej správy z Mraveniska) */}
-        {activeHandshakeRequest ? (
-          <View style={{ width: '100%', alignItems: 'center' }}>
-            <Text style={[G.cardDescriptionText, { color: ACCENT || '#c5a059', textAlign: 'center', marginBottom: 25, fontSize: 15, lineHeight: 22 }]}>
-              {activeHandshakeRequest.text}
-            </Text>
-            
-            <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
+        {/* ----------------------------------------------------------------- */}
+        {/* REŽIM 1: ROZHRANIE POTVRDENIA (Čaká sa na tvoje ALLOW / ABORT)     */}
+        {/* ----------------------------------------------------------------- */}
+        {pendingIncomingHandshake ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', padding: 20, borderRadius: 6, width: '100%' }}>
+              <Text style={[G.statusTextSmall, { color: '#aaa', marginBottom: 10, textTransform: 'uppercase' }]}>⚠️ Prichádzajúca Pečať (Bunka H):</Text>
+              <Text style={[G.cardDescriptionText, { color: '#fff', marginBottom: 25, fontSize: 15, lineHeight: 22, textAlign: 'left' }]}>
+                {pendingIncomingHandshake.text}
+              </Text>
               
-              <TouchableOpacity 
-                style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnReject, { flex: 1, paddingVertical: 14 }]} 
-                onPress={() => handleRejectHandshake(activeHandshakeRequest)}
-                activeOpacity={0.7}
-              >
-                <Text style={[HANDSHAKE_PANEL.buttonText, { color: '#E74C3C' }]}>[ ODMIETNUŤ ]</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
+                <TouchableOpacity 
+                  style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnReject, { flex: 1, paddingVertical: 14 }]} 
+                  onPress={() => handleRejectHandshake(pendingIncomingHandshake)}
+                >
+                  <Text style={[HANDSHAKE_PANEL.buttonText, { color: '#E74C3C' }]}>[ ABORT ]</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnAccept, { flex: 1, paddingVertical: 14, backgroundColor: 'rgba(197, 160, 89, 0.15)', borderColor: ACCENT || '#c5a059', borderWidth: 1 }]} 
-                onPress={() => handleAcceptHandshake(activeHandshakeRequest)}
-                activeOpacity={0.7}
-              >
-                <Text style={[HANDSHAKE_PANEL.buttonText, { color: ACCENT || '#c5a059', fontWeight: 'bold' }]}>[ PRIJAŤ VIZITKU ]</Text>
-              </TouchableOpacity>
-
+                <TouchableOpacity 
+                  style={[HANDSHAKE_PANEL.button, { flex: 1, paddingVertical: 14, backgroundColor: 'rgba(197, 160, 89, 0.15)', borderColor: ACCENT || '#c5a059', borderWidth: 1, alignItems: 'center', borderRadius: 4 }]} 
+                  onPress={() => handleAcceptHandshake(pendingIncomingHandshake)}
+                >
+                  <Text style={[HANDSHAKE_PANEL.buttonText, { color: ACCENT || '#c5a059', fontWeight: 'bold' }]}>[ ALLOW ]</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        ) : alreadySentHandshake ? (
-          /* PRÍPAD B: UŽ SI ŽIADOSŤ ODOSLAL */
-          <View style={{ alignItems: 'center' }}>
+        ) : pendingOutgoingHandshake ? (
+          /* REŽIM 2: ODOSLANÝ KONTRAKT – ČAKÁ SA NA DRUHÚ STRANU */
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <Text style={[G.cardDescriptionText, { color: '#888', textAlign: 'center', fontSize: 16 }]}>
-              ⏳ Žiadosť bola odoslaná. Čaká sa na podpis a odovzdanie vizitky z druhej strany...
+              ⏳ Kontrakt odoslaný na schválenie. Čaká sa na akceptáciu (ALLOW) z druhej strany...
             </Text>
           </View>
+        ) : isContractApproved ? (
+          /* ----------------------------------------------------------------- */
+          /* REŽIM 3: AKTÍVNE CHAT ROZHRANIE (Cesta odomknutá, buffer v akcii) */
+          /* ----------------------------------------------------------------- */
+          <View style={{ flex: 1 }}>
+            {/* Výpis bleskových správ chatu */}
+            <ScrollView 
+              ref={scrollViewRef}
+              style={{ flex: 1, marginBottom: 15 }}
+              contentContainerStyle={{ paddingVertical: 10 }}
+            >
+              {chatMessagesOnly.length === 0 ? (
+                <Text style={[G.cardDescriptionText, { color: '#444', textAlign: 'center', marginTop: 40, fontStyle: 'italic' }]}>
+                  Kanál je čistý. Žiadne bleskové správy v pamäti.
+                </Text>
+              ) : (
+                chatMessagesOnly.map((msg) => (
+                  <View 
+                    key={msg.id} 
+                    style={{
+                      alignSelf: msg.isMe ? 'flex-end' : 'flex-start',
+                      backgroundColor: msg.isMe ? 'rgba(197, 160, 89, 0.1)' : '#0f0f0f',
+                      borderWidth: 1,
+                      borderColor: msg.isMe ? ACCENT || '#c5a059' : '#222',
+                      padding: 12,
+                      borderRadius: 6,
+                      marginBottom: 10,
+                      maxWidth: '85%'
+                    }}
+                  >
+                    <Text style={{ color: msg.isMe ? '#fff' : '#ccc', fontSize: 14 }}>{msg.text}</Text>
+                    <Text style={{ color: '#555', fontSize: 10, alignSelf: 'flex-end', marginTop: 4 }}>{msg.receivedAt}</Text>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+
+            {/* Vstupný riadok pre odosielanie správ */}
+            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+              <TextInput
+                style={{
+                  flex: 1,
+                  backgroundColor: '#0a0a0a',
+                  borderColor: '#333',
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  paddingHorizontal: 15,
+                  paddingVertical: 12,
+                  color: '#fff'
+                }}
+                value={chatInput}
+                onChangeText={setChatInput}
+                placeholder="Napíš bleskovú správu..."
+                placeholderTextColor="#444"
+              />
+              <TouchableOpacity 
+                style={{ backgroundColor: ACCENT || '#c5a059', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 4 }}
+                onPress={handleSendChatMessage}
+              >
+                <Text style={{ color: '#000', fontWeight: 'bold' }}>POSLAŤ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         ) : (
-          /* PRÍPAD C: ČISTÝ FORMULÁR */
+          /* ----------------------------------------------------------------- */
+          /* REŽIM 4: ČISTÝ ŠTART – INICIÁCIA PRVÉHO KONTRAKTU                   */
+          /* ----------------------------------------------------------------- */
           <View>
             <Text style={[G.cardDescriptionText, { color: '#aaa', marginBottom: 15, textAlign: 'center' }]}>
-              Zadaj sprievodnú správu pre bezpečné overenie (nepovinné):
+              Zadaj sprievodnú správu pre bezpečné overenie zmluvy (bunka H):
             </Text>
             
             <TextInput
@@ -249,7 +275,7 @@ const SignalScreen = ({ route, navigation }) => {
               ]}
               value={note}
               onChangeText={setNote}
-              placeholder="Napr. Sammael, stolár z Rákoša... Let's connect!"
+              placeholder="Napr. Sammael, stolár... Let's connect!"
               placeholderTextColor="#444"
               multiline={true}
             />
@@ -261,7 +287,7 @@ const SignalScreen = ({ route, navigation }) => {
                 borderRadius: 4,
                 alignItems: 'center'
               }} 
-              onPress={handleSendHandshake}
+              onPress={() => sendLariaPackage(targetFing, target?.sha || '', note)}
               activeOpacity={0.8}
             >
               <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 14 }}>
