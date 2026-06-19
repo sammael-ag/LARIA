@@ -13,7 +13,7 @@ import {
   TouchableOpacity, 
   Platform,
   StatusBar,
-  ScrollView,
+  FlatList,
   Alert 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'; 
@@ -29,7 +29,7 @@ const SignalScreen = ({ route, navigation }) => {
   const [note, setNote] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [isNetOnline, setIsNetOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
-  const scrollViewRef = useRef();
+  const flatListRef = useRef();
 
   const { incomingRequests, sendLariaPackage, sendChatMessage, resolveHandshakeStatus, markAsRead } = useSignal();
 
@@ -40,6 +40,7 @@ const SignalScreen = ({ route, navigation }) => {
   
   const targetFing = initialTargetFing;
   const channelName = target?.meno || (targetFing ? `Mravec L_${targetFing.substring(0, 10)}` : "Laria Handshake");
+  const masterName = vault?.identity?.meno || 'Sammael';
 
   // Pri vstupe označíme prichádzajúce správy chatu za zobrazené (READ)
   useEffect(() => {
@@ -47,13 +48,6 @@ const SignalScreen = ({ route, navigation }) => {
       markAsRead(targetFing);
     }
   }, [targetFing, incomingRequests]);
-
-  // Automatické scrollovanie chatu na spodok pri novej správe
-  useEffect(() => {
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollToEnd({ animated: true });
-    }
-  }, [incomingRequests]);
 
   // --- AKCIA: ALLOW (POTVRDENIE ZMLUVY) ---
   const handleAcceptHandshake = async (handshakeMsg) => {
@@ -113,10 +107,20 @@ const SignalScreen = ({ route, navigation }) => {
   };
 
   // --- ODOSLANIE ČISTEJ BULLETOVEJ SPRÁVY ---
-  const handleSendChatMessage = async () => {
+  const handleLiveSend = async () => {
     if (!chatInput.trim()) return;
     const res = await sendChatMessage(targetFing, chatInput.trim());
-    if (res.success) setChatInput('');
+    if (res.success) {
+      setChatInput('');
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+      e.preventDefault();
+      handleLiveSend();
+    }
   };
 
   // --- RECRUITING LOGIC PRE REŽIMY OBRAZOVKY ---
@@ -129,11 +133,18 @@ const SignalScreen = ({ route, navigation }) => {
   // Zistíme, či už bol niekedy v tejto relácii potvrdený kontrakt (či je cesta odomknutá)
   const isContractApproved = currentChannelLog.some(msg => msg.isHandshake && msg.status === 'ALLOWED') || target?.isOdomknuty;
 
-  // Filtrujeme čisté bleskové správy z bufferu pre chatlog vizuál
-  const chatMessagesOnly = currentChannelLog.filter(msg => !msg.isHandshake);
+  // Filtrujeme čisté bleskové správy z bufferu pre chatlog vizuál a mapujeme na jednotnú štruktúru
+  const chatMessagesOnly = currentChannelLog
+    .filter(msg => !msg.isHandshake)
+    .map(msg => ({
+      id: msg.id || Date.now().toString() + Math.random(),
+      user: msg.isMe ? masterName : channelName,
+      text: msg.text,
+      time: msg.receivedAt || ''
+    }));
 
   return (
-    <SafeAreaView style={[G.mainBackground, Signal_CHAT.safeArea]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[G.mainBackground, { flex: 1 }]} edges={['top']}>
       <StatusBar barStyle="light-content" />
       
       {/* Návrat späť - čistý prechod, stavy čakajúcich zmlúv ostanú nedotknuté */}
@@ -141,12 +152,34 @@ const SignalScreen = ({ route, navigation }) => {
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
-      <View style={[Signal_CHAT.viewportContainer, { paddingHorizontal: 20, paddingBottom: 15 }]}>
+      {/* HLAVNÝ KONTAJNER CHATU */}
+      <View style={[Signal_CHAT.viewportContainer, { flex: 1, position: 'relative' }]}>
         
+        {/* 💬 KLASICKÁ VODOTLAČ BUBLE */}
+        <View 
+          pointerEvents="none" 
+          style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: -1 
+          }}
+        >
+          <Text style={{ 
+            color: '#FF66FF',     
+            fontSize: 216,        
+            opacity: 0.035,       
+            textAlign: 'center'
+          }}>
+            💬
+          </Text>
+        </View>
+
         {/* HEADER */}
-        <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
+        <View style={{ alignItems: 'center', marginBottom: 20, marginTop: 10 }}>
           <Text style={G.atelierTitle}>{channelName}</Text>
-          <Text style={[G.statusTextSmall, { color: '#c5a059', marginTop: 5 }]}>
+          <Text style={[G.statusTextSmall, { color: ACCENT || '#c5a059', marginTop: 5 }]}>
             {isNetOnline ? "⚡ BRÁNA SECURE // AKTÍVNA" : "🛑 SYSTEM OFFLINE"}
           </Text>
         </View>
@@ -155,7 +188,7 @@ const SignalScreen = ({ route, navigation }) => {
         {/* REŽIM 1: ROZHRANIE POTVRDENIA (Čaká sa na tvoje ALLOW / ABORT)     */}
         {/* ----------------------------------------------------------------- */}
         {pendingIncomingHandshake ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
             <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', padding: 20, borderRadius: 6, width: '100%' }}>
               <Text style={[G.statusTextSmall, { color: '#aaa', marginBottom: 10, textTransform: 'uppercase' }]}>⚠️ Prichádzajúca Pečať (Bunka H):</Text>
               <Text style={[G.cardDescriptionText, { color: '#fff', marginBottom: 25, fontSize: 15, lineHeight: 22, textAlign: 'left' }]}>
@@ -181,7 +214,7 @@ const SignalScreen = ({ route, navigation }) => {
           </View>
         ) : pendingOutgoingHandshake ? (
           /* REŽIM 2: ODOSLANÝ KONTRAKT – ČAKÁ SA NA DRUHÚ STRANU */
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
             <Text style={[G.cardDescriptionText, { color: '#888', textAlign: 'center', fontSize: 16 }]}>
               ⏳ Kontrakt odoslaný na schválenie. Čaká sa na akceptáciu (ALLOW) z druhej strany...
             </Text>
@@ -190,70 +223,57 @@ const SignalScreen = ({ route, navigation }) => {
           /* ----------------------------------------------------------------- */
           /* REŽIM 3: AKTÍVNE CHAT ROZHRANIE (Cesta odomknutá, buffer v akcii) */
           /* ----------------------------------------------------------------- */
-          <View style={{ flex: 1 }}>
-            {/* Výpis bleskových správ chatu */}
-            <ScrollView 
-              ref={scrollViewRef}
-              style={{ flex: 1, marginBottom: 15 }}
-              contentContainerStyle={{ paddingVertical: 10 }}
-            >
-              {chatMessagesOnly.length === 0 ? (
-                <Text style={[G.cardDescriptionText, { color: '#444', textAlign: 'center', marginTop: 40, fontStyle: 'italic' }]}>
-                  Kanál je čistý. Žiadne bleskové správy v pamäti.
-                </Text>
-              ) : (
-                chatMessagesOnly.map((msg) => (
-                  <View 
-                    key={msg.id} 
-                    style={{
-                      alignSelf: msg.isMe ? 'flex-end' : 'flex-start',
-                      backgroundColor: msg.isMe ? 'rgba(197, 160, 89, 0.1)' : '#0f0f0f',
-                      borderWidth: 1,
-                      borderColor: msg.isMe ? ACCENT || '#c5a059' : '#222',
-                      padding: 12,
-                      borderRadius: 6,
-                      marginBottom: 10,
-                      maxWidth: '85%'
-                    }}
-                  >
-                    <Text style={{ color: msg.isMe ? '#fff' : '#ccc', fontSize: 14 }}>{msg.text}</Text>
-                    <Text style={{ color: '#555', fontSize: 10, alignSelf: 'flex-end', marginTop: 4 }}>{msg.receivedAt}</Text>
-                  </View>
-                ))
-              )}
-            </ScrollView>
+          <FlatList
+            ref={flatListRef}
+            data={chatMessagesOnly}
+            keyExtractor={(item) => item.id.toString()}
+            style={{ flex: 1, backgroundColor: 'transparent' }} 
+            ListEmptyComponent={() => (
+              <Text style={[G.cardDescriptionText, { color: '#444', textAlign: 'center', marginTop: 40, fontStyle: 'italic' }]}>
+                Kanál je čistý. Žiadne bleskové správy v pamäti.
+              </Text>
+            )}
+            renderItem={({ item, index }) => {
+              const isSameUserAsPrevious = index > 0 && chatMessagesOnly[index - 1].user === item.user;
+              const isMyMessage = item.user === masterName;
 
-            {/* Vstupný riadok pre odosielanie správ */}
-            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-              <TextInput
-                style={{
-                  flex: 1,
-                  backgroundColor: '#0a0a0a',
-                  borderColor: '#333',
-                  borderWidth: 1,
-                  borderRadius: 4,
-                  paddingHorizontal: 15,
-                  paddingVertical: 12,
-                  color: '#fff'
-                }}
-                value={chatInput}
-                onChangeText={setChatInput}
-                placeholder="Napíš bleskovú správu..."
-                placeholderTextColor="#444"
-              />
-              <TouchableOpacity 
-                style={{ backgroundColor: ACCENT || '#c5a059', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 4 }}
-                onPress={handleSendChatMessage}
-              >
-                <Text style={{ color: '#000', fontWeight: 'bold' }}>POSLAŤ</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+              return (
+                <View style={[
+                  Signal_CHAT.messageRow,
+                  isMyMessage ? Signal_CHAT.alignRight : Signal_CHAT.alignLeft,
+                  { marginTop: isSameUserAsPrevious ? 1 : 10 }
+                ]}>
+                  
+                  {!isSameUserAsPrevious && (
+                    <Text style={[
+                      G.cardDescriptionText, 
+                      Signal_CHAT.authorName,
+                      { color: isMyMessage ? (ACCENT || '#c5a059') : '#FF77FF' }
+                    ]}>
+                      {item.user}
+                    </Text>
+                  )}
+                  
+                  <View style={[
+                    Signal_CHAT.bubbleContainer,
+                    isMyMessage ? Signal_CHAT.bubbleRight : Signal_CHAT.bubbleLeft
+                  ]}>
+                    <Text style={[G.cardDescriptionText, Signal_CHAT.messageText]}>
+                      {item.text}
+                    </Text>
+                  </View>
+
+                </View>
+              );
+            }}
+            contentContainerStyle={Signal_CHAT.listContent}
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          />
         ) : (
           /* ----------------------------------------------------------------- */
           /* REŽIM 4: ČISTÝ ŠTART – INICIÁCIA PRVÉHO KONTRAKTU                   */
           /* ----------------------------------------------------------------- */
-          <View>
+          <View style={{ paddingHorizontal: 20 }}>
             <Text style={[G.cardDescriptionText, { color: '#aaa', marginBottom: 15, textAlign: 'center' }]}>
               Zadaj sprievodnú správu pre bezpečné overenie zmluvy (bunka H):
             </Text>
@@ -298,6 +318,52 @@ const SignalScreen = ({ route, navigation }) => {
         )}
 
       </View>
+
+      {/* 🧲 ČISTÁ WEB GEOMETRIA INPUTU (Zobrazí sa len v REŽIME 3 pri aktívnom chate) */}
+      {isContractApproved && !pendingIncomingHandshake && !pendingOutgoingHandshake && (
+        <View 
+          style={[
+            Signal_BOTTOM.container, 
+            { 
+              paddingBottom: 20, 
+              backgroundColor: '#000000' 
+            }
+          ]}
+        >
+          <View style={Signal_BOTTOM.innerWrapper}>
+            <TextInput
+              style={[
+                G.cardDescriptionText, 
+                Signal_BOTTOM.input,
+                { 
+                  backgroundColor: 'transparent', 
+                  outlineStyle: 'none', 
+                  borderStyle: 'none',
+                  boxShadow: 'none',
+                  marginTop: -1,          
+                  paddingTop: 7,         
+                  alignSelf: 'center',
+                  maxHeight: 100 
+                }
+              ]} 
+              value={chatInput}
+              onChangeText={setChatInput}
+              placeholder="Napíš bleskovú správu..."
+              placeholderTextColor="#444"
+              multiline={true} 
+              onKeyPress={handleKeyPress}
+            />
+            <TouchableOpacity 
+              onPress={handleLiveSend} 
+              style={Signal_BOTTOM.sendButton} 
+              activeOpacity={0.7}
+            >
+              <Text style={[Signal_BOTTOM.sendButtonText, { color: ACCENT || '#c5a059' }]}>➔</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
     </SafeAreaView>
   );
 };
