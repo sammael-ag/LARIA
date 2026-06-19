@@ -1,9 +1,9 @@
 /**
- * LARIA SIGNAL CONTEXT v13.7 (Pure Hyperspeed Engine - Dual Radar Integrated)
+ * LARIA SIGNAL CONTEXT v13.9 (Pure Hyperspeed Engine - Dual Radar Integrated)
  * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
- * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE | v13.7
- * Úprava: Absolútne precízne zlícovanie s CHECKER v11.5. 
- * Automatické čistenie fingu (odstránenie 0x) pre spoľahlivú identifikáciu v UI.
+ * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE | v13.9
+ * Úprava: Implementovaná inteligentná očista prečítaných správ (purgeSessionForFing).
+ * Pridaná funkcia markAsRead pre presnú filtráciu zobrazených dát. LARIA správy neuchováva!
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -38,6 +38,52 @@ export const SignalProvider = ({ children }) => {
   const { vault } = useLaria(); 
   const [isSignalConnected, setIsSignalConnected] = useState(true); 
   const [incomingRequests, setIncomingRequests] = useState([]);
+
+  // --- 🧹 INTELIGENTNÁ OČISTA: Likviduje iba to, čo už užívateľ reálne videl ---
+  const purgeSessionForFing = (targetFing) => {
+    if (!targetFing) return;
+    const cleanTargetFing = targetFing.replace('0x', '').trim().toLowerCase();
+    
+    console.log(`🥷 [SIGNAL CORE] Spúšťam očistu prečítaných správ pre reláciu: 0x${cleanTargetFing}`);
+    
+    setIncomingRequests(prev => prev.filter(msg => {
+      // Správy iných majstrov si nevšímame
+      if (msg.fing !== cleanTargetFing) return true;
+      
+      // Ak je správa v stave UNREAD (nová bleskovka z radaru), NECHÁME JU ŽIŤ
+      if (!msg.isHandshake && msg.status === 'UNREAD') return true;
+      
+      // Všetko ostatné (vybavené handshake-y alebo zobrazené/prečítané správy) nekompromisne mažeme
+      return false;
+    }));
+  };
+
+  // --- 👀 OZNAČENIE SPRÁV ZA PREČÍTANÉ/ZOBRAZENÉ ---
+  const markAsRead = (targetFing) => {
+    if (!targetFing) return;
+    const cleanTargetFing = targetFing.replace('0x', '').trim().toLowerCase();
+    
+    setIncomingRequests(prev => prev.map(msg => 
+      (msg.fing === cleanTargetFing && msg.status === 'UNREAD') 
+        ? { ...msg, status: 'READ' } 
+        : msg
+    ));
+  };
+
+  // Globálny prijímač signálov pre očistu z vonkajšieho prostredia (napr. pri zmene TABov na webe)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleGlobalPurgeSignal = (e) => {
+      if (e.detail && e.detail.targetFing) {
+        console.log("📡 [SIGNAL CORE] Zachytený globálny signál LARIA_PURGE_SESSION");
+        purgeSessionForFing(e.detail.targetFing);
+      }
+    };
+
+    window.addEventListener('LARIA_PURGE_SESSION', handleGlobalPurgeSignal);
+    return () => window.removeEventListener('LARIA_PURGE_SESSION', handleGlobalPurgeSignal);
+  }, []);
 
   // --- INICIALIZÁCIA NOTIFIKÁCIÍ ---
   useEffect(() => {
@@ -87,20 +133,17 @@ export const SignalProvider = ({ children }) => {
       try {
         const res = await SignalService.checkMyContracts(myCleanFing);
         
-        // Bezpečnostný štít: Ak res zlyhal alebo nemá správny formát, ticho vyskočíme bez crashu
         if (!res || res.status !== "success") {
           console.warn("[RADAR] Mravenisko vrátilo neplatný stav alebo prázdnu odpoveď:", res);
           return;
         }
           
-        // 1. ZMLUVY (Žiadosti o prepojenie vizitiek z Contract_ledger)
         if (res.contracts && Array.isArray(res.contracts)) {
           res.contracts.forEach(contract => {
             setIncomingRequests(prev => {
               const uzExistuje = prev.some(req => req.txHash === contract.txHash);
               if (uzExistuje) return prev;
               
-              // 🪓 ZLÍCOVANIE SPOJA: Odstránime 0x z prichádzajúceho fingu pre presnú zhodu v celom UI
               const cleanSenderFing = contract.fing.replace('0x', '').trim().toLowerCase();
 
               console.log(`✉️ [RADAR] Nový kontrakt od 0x${cleanSenderFing}! Preklápam stav obálky.`);
@@ -122,14 +165,12 @@ export const SignalProvider = ({ children }) => {
           });
         }
 
-        // 2. BLESKOVÉ SPRÁVY (Pravé krídlo - Signal_buffer_1)
         if (res.messages && Array.isArray(res.messages)) {
           res.messages.forEach(msg => {
             setIncomingRequests(prev => {
               const uzExistujeMsg = prev.some(req => req.id === 'MSG_' + msg.msgId);
               if (uzExistujeMsg) return prev;
 
-              // 🪓 ZLÍCOVANIE SPOJA: Odstránime 0x aj z fingu odosielateľa bleskovej správy
               const cleanMsgSenderFing = msg.fing.replace('0x', '').trim().toLowerCase();
 
               console.log(`💬 [RADAR] Nová blesková správa od 0x${cleanMsgSenderFing}! Rozsvecujem radar správ.`);
@@ -158,16 +199,14 @@ export const SignalProvider = ({ children }) => {
     return () => clearInterval(pollingInterval);
   }, [vault?.identity?.poznamka]);
 
-  // --- ASYNCHRÓNNE SPRACOVANIE PRICHÁDZAJÚCICH BALÍKOV (LEN HANDSHAKE CEZ TAURI) ---
   const handleIncomingLariaPackage = async (data) => {
     try {
       if (data.type !== "HANDSHAKE_REQ") return;
 
-      // Úprava v SignalContext.js
       const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || null;
       if (!myCleanFing) {
-  console.warn('[SIGNAL] Nie je možné spracovať balík, chýba moja identita.');
-  return;
+        console.warn('[SIGNAL] Nie je možné spracovať balík, chýba moja identita.');
+        return;
       }
       const cleanSenderFing = data.fing.replace('0x', '');
 
@@ -195,7 +234,6 @@ export const SignalProvider = ({ children }) => {
     }
   };
 
-  // --- 📡 ODOSIELANIE HANDSHAKE BALÍKA (ČISTÝ HYPERSPEED v13.2) ---
   const sendLariaPackage = async (targetFing, targetSha, personalMessage, isHandshakeReq = true) => {
     const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'Sammael';
     const targetCleanFing = targetFing.replace('0x', '');
@@ -284,7 +322,9 @@ export const SignalProvider = ({ children }) => {
       incomingRequests, 
       setIncomingRequests, 
       sendLariaPackage,
-      resolveHandshakeStatus 
+      resolveHandshakeStatus,
+      purgeSessionForFing,
+      markAsRead // 🌟 Poskytnuté pre bezpečné preklopenie stavu v UI
     }}>
       {children}
     </SignalContext.Provider>

@@ -1,8 +1,9 @@
 /**
- * LARIA Signal SCREEN v13.3 (Pure Handshake Engine - High Speed Aligned)
+ * LARIA Signal SCREEN v13.4 (Pure Handshake Engine - High Speed Aligned)
  * Master: Sammael | Muse: Aria
  * STATUS: FULLY ALIGNED WITH RADAR v11.7 & MATCHMAKER v9.9
- * FIX: Odstránený slepý bod identity (targetFing). Trojitá poistka zamerania.
+ * FIX: Odstránená slepá paranoja pri bežnom odchode z obrazovky.
+ * Nové správy sa pri vstupe označia ako zobrazené, ale premazanie riadi výhradne master provider.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -32,7 +33,8 @@ const SignalScreen = ({ route, navigation }) => {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
 
-  const { incomingRequests, setIncomingRequests, sendLariaPackage, resolveHandshakeStatus } = useSignal();
+  // 🌟 Vytiahnutie funkcií vrátane markAsRead, unmount-purge bol vymazaný
+  const { incomingRequests, sendLariaPackage, resolveHandshakeStatus, markAsRead } = useSignal();
 
   // =========================================================================
   // 🪓 TRIPLE DETEKCIA IDENTITY (Zlícovanie spoja pre prichádzajúci radar)
@@ -54,12 +56,15 @@ const SignalScreen = ({ route, navigation }) => {
 
   const targetFing = initialTargetFing;
 
-  // Bezpečnostný radar v konzole
+  // Bezpečnostný radar v konzole + 🌟 Okamžité označenie prítomných správ za prečítané
   useEffect(() => {
     if (!targetFing) {
       console.warn('⚠️ [SIGNAL_SCREEN] Dispečing varuje: Identita (targetFing) sa zatiaľ nenašla, čakám na asynchrónny nábeh...');
     } else {
       console.log(`🛰️ [SIGNAL_SCREEN] Relácia úspešne uzamknutá na FING: 0x${targetFing}`);
+      if (typeof markAsRead === 'function') {
+        markAsRead(targetFing);
+      }
     }
   }, [targetFing]);
 
@@ -77,16 +82,6 @@ const SignalScreen = ({ route, navigation }) => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-
-  // 🧹 ABSOLÚTNA PARANOJA: Pri odchode z obrazovky kompletne vymažeme akékoľvek stopy po tejto relácii
-  useEffect(() => {
-    return () => {
-      if (typeof setIncomingRequests === 'function' && targetFing) {
-        console.log(`🥷 TOTAL QUANTUM PURGE: Likvidujem reláciu pre ${targetFing}. Neostáva nič.`);
-        setIncomingRequests(prev => prev.filter(msg => msg.fing !== targetFing));
-      }
-    };
-  }, [targetFing]);
 
   // 🤝 ODOSLANIE HANDSHAKE ŽIADOSTI S VIZITKOU
   const handleSendHandshake = async () => {
@@ -182,6 +177,7 @@ const SignalScreen = ({ route, navigation }) => {
     <SafeAreaView style={[G.mainBackground, Signal_CHAT.safeArea]} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" />
       
+      {/* 🚀 ČISTÝ NÁVRAT: Obyčajné kliknutie na Späť nemení stavy správ, ostanú živé v pamäti */}
       <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={G.topLeftBackButton}>
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
