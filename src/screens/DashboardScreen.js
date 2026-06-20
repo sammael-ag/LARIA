@@ -1,8 +1,9 @@
 /**
- * LARIA v2.0.6: DashboardScreen
+ * LARIA v2.0.7: DashboardScreen
  * Master: Sammael | Muse: Aria
- * Status: IDENTITY_ACCESS_ENABLED_STEALTH | PRODUCTION_CLEAN
+ * Status: IDENTITY_ACCESS_ENABLED_STEALTH | PRODUCTION_CLEAN | RADAR_BADGE_ALIGNED
  * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: dashboard).
+ *        Prepojené s ContactContext pre globálnu detekciu nových správ a kontraktov.
  * MASKER: Odstránený kurzor ruky (packy) na webe a minimalizovaná dotyková zóna.
  * PROD: Vyčistené diagnostické logy pre tichý a čistý beh.
  */
@@ -13,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAccount } from 'wagmi';
 
 import { useLaria } from '../context/LariaContext';
+import { useContacts } from '../context/ContactContext'; // 🔐 Priamy import nášho trezoru pečatí
 import { G, ACCENT } from '../styles/styles'; 
 import { verifyMasterAccess } from '../services/GMatrixService';
 
@@ -28,6 +30,17 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
   const menuTxt = txt.menu || {};
   const modalTxt = txt.modal || {};
   const { status, identity } = vault;
+
+  // 📡 GLOBÁLNY RADAR PRE NOTIFIKÁCIE KONTAKTOV
+  const { contacts, unknownContacts, getContactBadgeStatus } = useContacts();
+
+  // Prebehneme overené aj prichádzajúce neznáme pečate v reálnom čase
+  const hasGlobalContactNotification = [...contacts, ...unknownContacts].some(contact => {
+    if (!contact.fing) return false;
+    const badgeStatus = getContactBadgeStatus(contact.fing);
+    // Ak svieti čakajúci kontrakt (ALLOW/ABORT) alebo nová blesková správa
+    return badgeStatus === 'CONTRACT_PENDING' || badgeStatus === 'NEW_MESSAGE';
+  });
 
   // 🔌 BEZPEČNÉ VYŤAHOVANIE WEBOVEJ PEŇAŽENKY
   let address = null;
@@ -92,8 +105,8 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
     }
   };
 
-  // --- KOMPONENT KARTY ---
-  const MenuCard = ({ title, icon, target, onPressCustom, description, color }) => (
+  // --- KOMPONENT KARTY (Rozšírený o rightElement pre flexibilné umiestnenie obálky) ---
+  const MenuCard = ({ title, icon, target, onPressCustom, description, color, rightElement }) => (
     <TouchableOpacity 
       style={[G.card, { borderLeftColor: color }]} 
       onPress={() => {
@@ -106,9 +119,13 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
       activeOpacity={0.7}
     >
       <View style={G.cardContent}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ fontSize: 20, marginRight: 15 }}>{icon}</Text>
-          <Text style={G.cardTitleText}>{(title || '').toUpperCase()}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ fontSize: 20, marginRight: 15 }}>{icon}</Text>
+            <Text style={G.cardTitleText}>{(title || '').toUpperCase()}</Text>
+          </View>
+          {/* Ak existuje pravý element (obálka), bezpečne ho tu vyrenderujeme */}
+          {rightElement && <View style={{ paddingRight: 5 }}>{rightElement}</View>}
         </View>
         <Text style={G.cardDescriptionText}>{description}</Text>
       </View>
@@ -158,13 +175,20 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
               color="#FFF" 
             />
 
-            {/* 📇 KONTAKTY */}
+            {/* 📇 KONTAKTY (S vmontovaným strážnym indikátorom) */}
             <MenuCard 
               title={menuTxt.contacts?.title || "Kontakty"} 
               icon="📇" 
               target="Contacts" 
               description={menuTxt.contacts?.desc || "Všetky zachytené pečate v reťazci"} 
               color={ACCENT} 
+              rightElement={
+                hasGlobalContactNotification ? (
+                  <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>
+                    ✉️
+                  </Text>
+                ) : null
+              }
             />
             
             {/* 🛠️ NASTAVENIA */}
@@ -196,7 +220,6 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
           </View>
 
           {/* 🕵️‍♂️ ULTRA-STEALTH SPÚŠŤAČ PRE ARCHITEKTA */}
-          {/* Pridaný maskovací štýl pre web, ktorý ruší packu a mení kurzor na bežnú šípku/text */}
           <TouchableOpacity 
             activeOpacity={1} 
             onPress={handleSecretTap} 

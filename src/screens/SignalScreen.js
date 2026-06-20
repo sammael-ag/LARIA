@@ -1,8 +1,9 @@
 /**
- * LARIA Signal SCREEN v13.7 (Pure Handshake Engine - High Speed Aligned)
+ * LARIA Signal SCREEN v14.0 (Pure Handshake Engine - High Speed Aligned)
  * Master: Sammael | Muse: Aria
  * STATUS: FULL DUAL MODE (HANDSHAKE CONTROL & CHAT AUTOMATION)
- * FIX: Opravená syntax komentárov v JSX, ktoré spôsobovali chyby parseru.
+ * Úprava: Kompletne zjednotený FING na formát '0x'. Vyhádzané orezávanie prefixov.
+ *         Prepojené s ContactContext pre finálny zápis overenej pečate pri ALLOW.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -17,15 +18,16 @@ import {
   Alert 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'; 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { G, ACCENT, Signal_BOTTOM, Signal_CHAT, HANDSHAKE_PANEL } from '../styles/styles.js';
 import { useSignal } from '../context/SignalContext.js';
 import { useLaria } from '../context/LariaContext.js'; 
+import { useContacts } from '../context/ContactContext.js'; // 🔐 Importujeme náš trezor kontaktov
 import { SignalService } from '../services/SignalService.js';
 
 const SignalScreen = ({ route, navigation }) => {
   const { t, vault } = useLaria(); 
+  const { addContact } = useContacts(); // 🧲 Vyťahujeme ostrý zápis do trezoru
   const [note, setNote] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [isNetOnline, setIsNetOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -33,13 +35,18 @@ const SignalScreen = ({ route, navigation }) => {
 
   const { incomingRequests, sendLariaPackage, sendChatMessage, resolveHandshakeStatus, markAsRead } = useSignal();
 
-  // --- EXTRACT IDENTITY ---
+  // --- EXTRACT IDENTITY (Strikné zachovanie 0x a unifikácia na malé písmená) ---
   const { target, fallbackFing } = route.params || {};
-  let initialTargetFing = target?.poznamka ? target.poznamka.replace('0x', '').trim().toLowerCase() : "";
-  if (!initialTargetFing && fallbackFing) initialTargetFing = fallbackFing.replace('0x', '').trim().toLowerCase();
   
-  const targetFing = initialTargetFing;
-  const channelName = target?.meno || (targetFing ? `Mravec L_${targetFing.substring(0, 10)}` : "Laria Handshake");
+  let initialTargetFing = target?.poznamka || target?.fing || '';
+  if (!initialTargetFing && fallbackFing) initialTargetFing = fallbackFing;
+  
+  // Poistka: zabezpečíme, aby mal kľúč vždy '0x' a bol malým písmom
+  const targetFing = initialTargetFing.trim().toLowerCase().startsWith('0x') 
+    ? initialTargetFing.trim().toLowerCase() 
+    : `0x${initialTargetFing.trim().toLowerCase()}`;
+  
+  const channelName = target?.meno || (targetFing ? `Mravec L_${targetFing.substring(2, 10).toUpperCase()}` : "Laria Handshake");
   const masterName = vault?.identity?.meno || 'Sammael';
 
   // Pri vstupe označíme prichádzajúce správy chatu za zobrazené (READ)
@@ -49,55 +56,56 @@ const SignalScreen = ({ route, navigation }) => {
     }
   }, [targetFing, incomingRequests]);
 
-  // --- AKCIA: ALLOW (POTVRDENIE ZMLUVY) ---
+  // --- AKCIA: ALLOW (POTVRDENIE ZMLUVY & ZÁPIS DO TREZORU) ---
   const handleAcceptHandshake = async (handshakeMsg) => {
     try {
-      console.log(`[SIGNAL] Schvaľujem zmluvu ALLOW pre FING: ${targetFing}`);
-      const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || '';
+      console.log(`[SIGNAL] Schvaľujem zmluvu ALLOW pre unifikovaný FING: ${targetFing}`);
       
+      // Zabezpečíme, aby aj naša pečať odchádzala v čistom tvare s 0x
+      const myFing = vault?.identity?.poznamka || vault?.identity?.fing || '';
+      const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
+      
+      // 📡 Odoslanie na sieťovú maticu
       await SignalService.manageContract('CONFIRM_CONTRACT', {
         fing_a: targetFing,
         fing_b: myCleanFing,
         status_b: "1" // ALLOW
       });
 
-      // Zápis vizitky do tajného lokálneho úložiska
-      try {
-        const storedProfiles = await AsyncStorage.getItem('laria_local_profiles');
-        let profiles = storedProfiles ? JSON.parse(storedProfiles) : [];
-        let pIdx = profiles.findIndex(p => p.poznamka?.replace('0x', '').toLowerCase() === targetFing);
-        
-        const securedData = {
-          meno: target?.meno || `L_${targetFing.substring(0, 10)}`,
-          poznamka: target?.poznamka || `0x${targetFing}`,
-          sha: target?.sha || handshakeMsg?.targetSha || '',
-          isOdomknuty: true
-        };
+      // 🔐 KRYŠTÁLOVÝ ZÁPIS: Presúvame mravca z dočasného stavu priamo do trvalého trezoru kontaktov
+      const vaultResult = await addContact({
+        fing: targetFing,
+        meno: target?.meno || `L_${targetFing.substring(2, 10).toUpperCase()}`,
+        sha: target?.sha || handshakeMsg?.targetSha || '',
+        kat: 'Overený partner',
+        lok: target?.lok || 'V sieti',
+        popis: target?.popis || handshakeMsg?.text || 'Spojenie nadviazané cez handshake.'
+      });
 
-        if (pIdx > -1) profiles[pIdx] = { ...profiles[pIdx], ...securedData };
-        else profiles.push(securedData);
-
-        await AsyncStorage.setItem('laria_local_profiles', JSON.stringify(profiles));
-      } catch (err) {
-        console.error("Chyba trezoru:", err);
+      if (vaultResult.success) {
+        console.log(`[SIGNAL] Pečať ${targetFing} bola úspešne uzamknutá v trebore.`);
       }
 
       resolveHandshakeStatus(handshakeMsg.id, 'ALLOWED');
-      Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Brána otvorená.");
+      Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Brána otvorená a kontakt uložený.");
     } catch (err) {
       console.error("ALLOW zlyhal:", err);
+      Alert.alert("⚠️ MATRIX ERROR", "Nepodarilo sa bezpečne podpísať zmluvu.");
     }
   };
 
   // --- AKCIA: ABORT (ODMIETNUTIE ZMLUVY) ---
   const handleRejectHandshake = async (handshakeMsg) => {
     try {
-      const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || '';
+      const myFing = vault?.identity?.poznamka || vault?.identity?.fing || '';
+      const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
+
       await SignalService.manageContract('CONFIRM_CONTRACT', {
         fing_a: targetFing,
         fing_b: myCleanFing,
         status_b: "2" // ABORT
       });
+      
       resolveHandshakeStatus(handshakeMsg.id, 'ABORTED');
       Alert.alert("MATRIX", "Zmluva zrušená (ABORT).");
       navigation.goBack();
@@ -124,7 +132,10 @@ const SignalScreen = ({ route, navigation }) => {
   };
 
   // --- RECRUITING LOGIC PRE REŽIMY OBRAZOVKY ---
-  const currentChannelLog = incomingRequests ? incomingRequests.filter(req => req.fing && req.fing.replace('0x', '').trim().toLowerCase() === targetFing) : [];
+  // Filtrujeme buffer radaru striktne podľa unifikovaného 0x fingu
+  const currentChannelLog = incomingRequests 
+    ? incomingRequests.filter(req => req.fing && req.fing.trim().toLowerCase() === targetFing) 
+    : [];
   
   // Hľadáme aktívny handshake, ktorý čaká vyložene na mňa (visí permanentne)
   const pendingIncomingHandshake = currentChannelLog.find(msg => msg.isHandshake && msg.status === 'WAITING_FOR_ME');

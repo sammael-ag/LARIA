@@ -1,11 +1,12 @@
 /**
- * LARIA v2.5: ContactContext (Trezor identít s Radarovým prepojením)
+ * LARIA v2.5: ContactContext (Trezor identít zjednotený na v9.9.9)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
  * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | GATEWAY_SECURED | RADAR_ALIGNED
- * Úprava: Zlícované so SignalContextom. Pridaná detekcia stavov pre rozsvietenie obálok a čistenie bleskových správ.
+ * Úprava: Zjednotené formátovanie FING – všade striktne držíme prefix '0x'.
+ *         Vyhádzané chaotické orezávanie .replace('0x', '').
  */
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSignal } from './SignalContext.js'; // 🛰️ Prepojenie na náš bleskový radar
 
@@ -16,11 +17,17 @@ const brana_p1 = "https://script.google.com/macros/s/";
 const brana_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ";
 const brana_p3 = "/exec";
 
-/**
- * 🛠️ PRIVÁTNY LÚČ: Dynamické zostavenie URL adresy brány v pamäti počas behu
- */
 const ziskajBranaUrl = () => {
     return `${brana_p1}${brana_p2}${brana_p3}`;
+};
+
+/**
+ * 🛡️ UNIFIKÁTOR: Zabezpečí, že každý odtlačok v systéme začína na '0x' a je písaný malým písmom.
+ */
+const sformatujFing = (fing) => {
+  if (!fing) return '';
+  const clean = fing.trim().toLowerCase();
+  return clean.startsWith('0x') ? clean : `0x${clean}`;
 };
 
 export const ContactProvider = ({ children }) => {
@@ -45,62 +52,84 @@ export const ContactProvider = ({ children }) => {
     loadContacts();
   }, []);
 
-  // --- 🛠️ RADAR BADGE INTERACTION (Zlícovanie pre ContactScreen) ---
+  // --- 📡 DYNAMICKÝ DETEKTOR NEZNÁMYCH PEČATÍ (Nový Prijímací Salón) ---
+  const unknownContacts = useMemo(() => {
+    if (!incomingRequests) return [];
+
+    // Vytiahneme unikátne sformátované odtlačky s 0x z bufferu radaru
+    const uniqueIncomingFings = [...new Set(incomingRequests.map(req => 
+      sformatujFing(req.fing)
+    ))].filter(Boolean);
+
+    // Odfiltrujeme tie, ktoré už máme v našom trvalom trezore
+    const unknownFings = uniqueIncomingFings.filter(fing => 
+      !contacts.some(c => sformatujFing(c.fing) === fing)
+    );
+
+    // Pre každého neznámeho mravca vygenerujeme dočasný profil s 0x fingom
+    return unknownFings.map(fing => {
+      const firstMsg = incomingRequests.find(req => sformatujFing(req.fing) === fing);
+
+      return {
+        fing: fing, // Kompletný tvar s 0x
+        meno: `Neznáma pečať L_${fing.substring(2, 10).toUpperCase()}`, // Ostrihneme len pre pekné zobrazenie mena
+        kat: 'Pútnik v sieti',
+        lok: 'Čaká na overenie',
+        popis: firstMsg?.message || 'Poslal ti handshake požiadavku naslepo...',
+        sha: firstMsg?.targetSha || '',
+        temporary: true 
+      };
+    });
+  }, [incomingRequests, contacts]);
+
+  // --- 🛠️ RADAR BADGE INTERACTION ---
   
-  /**
-   * Zistí, či pre daný kontakt svieti nevyriešená zmluva alebo nová blesková správa.
-   * Vráti 'CONTRACT_PENDING', 'NEW_MESSAGE' alebo null.
-   */
   const getContactBadgeStatus = (contactFing) => {
     if (!contactFing) return null;
-    const cleanFing = contactFing.replace('0x', '').trim().toLowerCase();
+    const targetFing = sformatujFing(contactFing);
 
-    // Prebehneme balíky na radare, ktoré matchujú fing tohto partnera
-    const match = incomingRequests.find(req => req.fing?.replace('0x', '').trim().toLowerCase() === cleanFing);
+    const match = incomingRequests.find(req => sformatujFing(req.fing) === targetFing);
 
     if (match) {
       if (match.isHandshake && match.status === 'WAITING_FOR_ME') {
-        return 'CONTRACT_PENDING'; // ✉️ Čaká podpis vizitky (Ľavé krídlo)
+        return 'CONTRACT_PENDING'; 
       }
       if (!match.isHandshake && match.status === 'UNREAD') {
-        return 'NEW_MESSAGE'; // 💬 Čaká neprečítaná bleskovka (Pravé krídlo)
+        return 'NEW_MESSAGE'; 
       }
     }
     return null;
   };
 
-  /**
-   * Vyčistí stav bleskovej správy (prepne na READ), keď skočíš s chlapíkom do chatu.
-   */
   const clearUnreadBadge = (contactFing) => {
     if (!contactFing) return;
-    const cleanFing = contactFing.replace('0x', '').trim().toLowerCase();
+    const targetFing = sformatujFing(contactFing);
 
     setIncomingRequests(prev => 
       prev.map(req => {
-        const reqFing = req.fing?.replace('0x', '').trim().toLowerCase();
-        if (reqFing === cleanFing && !req.isHandshake && req.status === 'UNREAD') {
-          return { ...req, status: 'READ' }; // Zhasneme obálku chatu
+        if (sformatujFing(req.fing) === targetFing && !req.isHandshake && req.status === 'UNREAD') {
+          return { ...req, status: 'READ' };
         }
         return req;
       })
     );
   };
 
-  // --- 2. UNIVERZÁLNY ZÁPIS PEČATE (v9.9.9) ---
+  // --- 2. UNIVERZÁLNY ZÁPIS PEČATE (v9.9.9 - Čistý 0x Spoj) ---
   const addContact = async (rawData) => {
     try {
       const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
 
-      const targetFing = (data.fing || data.id || data.f || data.poznamka)?.trim(); 
+      // Zjednotíme FING na 0x hneď na bráne trezoru
+      const targetFing = sformatujFing(data.fing || data.id || data.f || data.poznamka || data.key);
       const targetMeno = data.meno || data.m || "Pútnik";
 
-      if (!targetFing) {
+      if (!targetFing || targetFing === '0x') {
         console.log("⚠️ PROTOKOL_VIOLATION: Chýba FING", data);
         return { success: false, error: "Pečať je nečitateľná (chýba kľúč)." };
       }
 
-      const existing = contacts.find(c => c.fing === targetFing);
+      const existing = contacts.find(c => sformatujFing(c.fing) === targetFing);
       if (existing) {
         return { success: false, isDuplicate: true, error: "Túto identitu už v ateliéri máš.", contact: existing };
       }
@@ -123,7 +152,7 @@ export const ContactProvider = ({ children }) => {
 
       let updatedContacts;
       setContacts(prev => {
-        if (prev.find(c => c.fing === targetFing)) return prev;
+        if (prev.find(c => sformatujFing(c.fing) === targetFing)) return prev;
         updatedContacts = [...prev, newContact];
         AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts)).catch(e => 
           console.error("❌ VAULT_WRITE_FAST_ERROR:", e)
@@ -139,7 +168,7 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- 3. 📡 TELEPATICKÝ LOKÁLNY NERVOVÝ MOST (Tauri + PWA Symbióza) ---
+  // --- 3. 📡 TELEPATICKÝ LOKÁLNY NERVOVÝ MOST ---
   useEffect(() => {
     let unsubscribeTauriFn = null;
 
@@ -174,12 +203,9 @@ export const ContactProvider = ({ children }) => {
             spracujPrijatuPecat(event.payload);
           });
           unsubscribeTauriFn = unlisten;
-          console.log("⚡ LARIA NATIVE JADRO: Natívny Tauri prijímač pre QR/NFC aktivovaný.");
         } catch (err) {
           console.log("❌ CRYSTAL_CORE_ERROR: Zlyhalo zapojenie Tauri listenera.");
         }
-      } else {
-        console.log("🌐 LARIA WEB MODE: Tauri hardvérový most nedostupný, bežíme len na webe.");
       }
     };
 
@@ -198,10 +224,11 @@ export const ContactProvider = ({ children }) => {
     };
   }, [contacts]);
 
-  // --- 4. 📡 MATRIX RE-SYNC (Preleštenie identity cez unifikovanú Bránu) ---
+  // --- 4. 📡 MATRIX RE-SYNC ---
   const syncContactWithMatrix = async (fingId) => {
     try {
-      console.log(`📡 Re-sync: Hľadám majstra ${fingId} v Matrixe cez Bránu...`);
+      const targetFing = sformatujFing(fingId);
+      console.log(`📡 Re-sync: Hľadám majstra ${targetFing} v Matrixe cez Bránu...`);
       
       const response = await fetch(ziskajBranaUrl(), {
         method: 'POST',
@@ -209,7 +236,7 @@ export const ContactProvider = ({ children }) => {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'recover',
-          sha: fingId
+          sha: targetFing
         })
       });
 
@@ -221,7 +248,7 @@ export const ContactProvider = ({ children }) => {
 
         setContacts(prev => {
           const updated = prev.map(c => {
-            if (c.fing === fingId) {
+            if (sformatujFing(c.fing) === targetFing) {
               wasUpdated = true;
               return {
                 ...c,
@@ -247,7 +274,7 @@ export const ContactProvider = ({ children }) => {
           return updated;
         });
 
-        console.log(`✅ Identita ${fingId} bola úspešne preleštená.`);
+        console.log(`✅ Identita ${targetFing} bola úspešne preleštená.`);
         return { success: true };
       }
       return { success: false, error: "Identita v Matrixe nenájdená." };
@@ -259,8 +286,9 @@ export const ContactProvider = ({ children }) => {
 
   // --- 5. PRIPNUTIE CEZ FING ---
   const togglePin = (fingId) => {
+    const targetFing = sformatujFing(fingId);
     setContacts(prev => {
-      const updatedContacts = prev.map(c => c.fing === fingId ? { ...c, pinned: !c.pinned } : c);
+      const updatedContacts = prev.map(c => sformatujFing(c.fing) === targetFing ? { ...c, pinned: !c.pinned } : c);
       AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts)).catch(e =>
         console.error("❌ VAULT_PIN_WRITE_ERROR:", e)
       );
@@ -270,8 +298,9 @@ export const ContactProvider = ({ children }) => {
 
   // --- 6. VYMAZANIE CEZ FING ---
   const deleteContact = (fingId) => {
+    const targetFing = sformatujFing(fingId);
     setContacts(prev => {
-      const updatedContacts = prev.filter(c => c.fing !== fingId);
+      const updatedContacts = prev.filter(c => sformatujFing(c.fing) !== targetFing);
       AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts)).catch(e =>
         console.error("❌ VAULT_DELETE_WRITE_ERROR:", e)
       );
@@ -282,13 +311,14 @@ export const ContactProvider = ({ children }) => {
   return (
     <ContactContext.Provider value={{ 
       contacts, 
+      unknownContacts, 
       loading, 
       addContact, 
       deleteContact, 
       togglePin, 
       syncContactWithMatrix,
-      getContactBadgeStatus,  // 💡 Exportované pre ikony obálok v UI
-      clearUnreadBadge        // 💡 Exportované pre vynulovanie po kliknutí na kontakt
+      getContactBadgeStatus,  
+      clearUnreadBadge        
     }}>
       {children}
     </ContactContext.Provider>
