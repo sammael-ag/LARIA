@@ -3,7 +3,8 @@
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
  * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | GATEWAY_SECURED | RADAR_ALIGNED
  * Úprava: Zjednotené formátovanie FING – všade striktne držíme prefix '0x'.
- *         Vyhádzané chaotické orezávanie .replace('0x', '').
+ * Vyhádzané akékoľvek poistné alebo náhodné generovanie FING-u.
+ * Akceptujeme LEN reálny, prichádzajúci fing z backendu (0x + 10 znakov).
  */
 
 import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
@@ -56,26 +57,28 @@ export const ContactProvider = ({ children }) => {
   const unknownContacts = useMemo(() => {
     if (!incomingRequests) return [];
 
-    // Vytiahneme unikátne sformátované odtlačky s 0x z bufferu radaru
-    const uniqueIncomingFings = [...new Set(incomingRequests.map(req => 
-      sformatujFing(req.fing)
-    ))].filter(Boolean);
+    // Vytiahneme unikátne sformátované odtlačky s 0x z bufferu radaru.
+    // Ak FING z backendu neexistuje, filter ho okamžite zahodí.
+    const uniqueIncomingFings = [...new Set(incomingRequests.map(req => {
+      const parsedFing = req.fing || req.id || req.f;
+      return parsedFing ? sformatujFing(parsedFing) : null;
+    }))].filter(Boolean);
 
     // Odfiltrujeme tie, ktoré už máme v našom trvalom trezore
     const unknownFings = uniqueIncomingFings.filter(fing => 
       !contacts.some(c => sformatujFing(c.fing) === fing)
     );
 
-    // Pre každého neznámeho mravca vygenerujeme dočasný profil s 0x fingom
+    // Pre každú REÁLNU prichádzajúcu neznámu pečať vytvoríme dočasný profil pre UI
     return unknownFings.map(fing => {
       const firstMsg = incomingRequests.find(req => sformatujFing(req.fing) === fing);
 
       return {
-        fing: fing, // Kompletný tvar s 0x
-        meno: `Neznáma pečať L_${fing.substring(2, 10).toUpperCase()}`, // Ostrihneme len pre pekné zobrazenie mena
+        fing: fing, // Striktný, reálny 12-znakový tvar s 0x priamo z Matrixu
+        meno: `Kontakt ${fing.toUpperCase()}`, // Čisté zobrazenie celej overenej pečate
         kat: 'Pútnik v sieti',
         lok: 'Čaká na overenie',
-        popis: firstMsg?.message || 'Poslal ti handshake požiadavku naslepo...',
+        popis: firstMsg?.message || 'Poslal ti handshake požiadavku...',
         sha: firstMsg?.targetSha || '',
         temporary: true 
       };

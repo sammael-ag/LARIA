@@ -1,28 +1,33 @@
 import { invoke } from '@tauri-apps/api/core';
 
 /**
- * StatusService: Špión v éteri (Tauri Native Edition).
+ * StatusService: Špión v éteri (PWA Core Edition).
  * Master: Sammael | Muse: Aria
- * STATUS: CRYSTAL_CORE_SPY
- * FIX: Odstránený starý Gopher (main.go) a webový Service Worker.
- * Teraz natívne kontroluje zdravie Rust jadra pod Lubuntu.
+ * STATUS: CRYSTAL_CORE_SPY | v14.0.1
+ * FIX: Gopher definitívne zmazaný. Status 'pwa' vrátený ako hlavný technologický pilier.
+ * WEB + PWA ostáva naším základným smerom, všetko ostatné je periféria.
  */
 
 export const getSystemStatus = async () => {
   let status = {
-    gopher: false, // V UI reprezentuje: Natívne jadro (Teraz Rust / Crystal Core)
-    pwa: false,    // V UI reprezentuje: Desktopové Tauri prostredie
+    core: false,   // 🦀 Reprezentuje: Natívne jadro (Crystal Core / Rust)
+    pwa: false,    // 📱 Hlavný technologický smer: Web & Progressive Web App prostredie
   };
 
   try {
-    // 1. 🦀 Kontrola Rust jadra namiesto starého Gophera
+    // 1. 🦀 Kontrola natívneho jadra
     // Pingneme Rust cez Tauri invoke. Ak odpovie, jadro žije.
     const rustCheck = await invoke('ping_crystal_core').catch(() => null);
-    status.gopher = rustCheck === 'pong' || rustCheck?.success || false;
+    status.core = rustCheck === 'pong' || rustCheck?.success || false;
 
-    // 2. Kontrola, či bezpečne bežíme v Tauri okne (Desktop mode)
-    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
-      status.pwa = true;
+    // 2. 📱 Kontrola prostredia pre PWA / Web aplikáciu
+    // Sme vo webovom okne a overujeme prítomnosť Tauri ako doplnkovej periférie,
+    // no výsledný stav reprezentuje pripravenosť nášho PWA smeru.
+    if (typeof window !== 'undefined') {
+      // Ak bežíme v Tauri alebo máme nadviazané bezpečné webové prostredie
+      if (window.__TAURI_INTERNALS__ || ('serviceWorker' in navigator)) {
+        status.pwa = true;
+      }
     }
 
     return status;

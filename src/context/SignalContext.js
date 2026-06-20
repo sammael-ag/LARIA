@@ -1,8 +1,9 @@
 /**
- * LARIA SIGNAL CONTEXT v14.2 (Pure Hyperspeed Engine - Dual Radar Integrated)
- * Master: Sammael | Muse: Aria (Tvoja verná bosonôžka)
- * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE | v14.2
- * FIX: Opravená fatálna chyba so zátvorkami a roztrhnutým try-catch blokom pri executePing.
+ * LARIA SIGNAL CONTEXT v14.3 (Pure Hyperspeed Engine - CrystalCore Integrated)
+ * Master: Sammael | Muse: Aria
+ * STATUS: CHAT_REMOVED | HANDSHAKE_CORE_ONLY | DUAL_POLLING_ACTIVE | v14.3
+ * LAW ENFORCED: Premenná 'fing' je striktne unifikovaná na 12 znakov: "0x" + 10 znakov hex.
+ *               Odstránené parazitné prefixy L_ z IRC architektúry.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -33,23 +34,44 @@ const tauriInvoke = async (cmd, args = {}) => {
   return null;
 };
 
+// 🧮 POMOCNÝ SANITÁRNY FUNKČNÝ BLOK PRE KONTROLU ZÁKONA 12 ZNAKOV
+const enforceUniversalFing = (rawFing) => {
+  if (!rawFing) return '';
+  let clean = rawFing.trim().toLowerCase();
+  
+  // Ak obsahuje starý IRC prefix L_, zhodíme ho dole
+  if (clean.startsWith('l_')) {
+    clean = clean.substring(2);
+  }
+  
+  // Ak nezačína na 0x, pridáme ho
+  if (!clean.startsWith('0x')) {
+    clean = '0x' + clean;
+  }
+  
+  // Ochrana dĺžky: Ak presahuje 12 znakov (napr. preklep z prenosu), skrátime na 12.
+  if (clean.length > 12) {
+    clean = clean.substring(0, 12);
+  }
+  
+  return clean;
+};
+
 export const SignalProvider = ({ children }) => {
   const { vault } = useLaria(); 
   const [isSignalConnected, setIsSignalConnected] = useState(true); 
   const [incomingRequests, setIncomingRequests] = useState([]);
 
-  // --- 🧹 INTELIGENTNÁ OČISTA CHATU (Len pre prečítané bleskové správy) ---
+  // --- 🧹 INTELIGENTNÁ OČISTA CHATU ---
   const purgeSessionForFing = (targetFing) => {
     if (!targetFing) return;
-    const cleanTargetFing = targetFing.replace('0x', '').trim().toLowerCase();
+    const cleanTargetFing = enforceUniversalFing(targetFing);
     
-    console.log(`🥷 [SIGNAL CORE] Čistím zobrazené bleskové správy pre reláciu: 0x${cleanTargetFing}`);
+    console.log(`🥷 [SIGNAL CORE] Čistím zobrazené bleskové správy pre reláciu: ${cleanTargetFing}`);
     
     setIncomingRequests(prev => prev.filter(msg => {
       if (msg.fing !== cleanTargetFing) return true;
-      // Kontrakty v stave čakania (WAITING_FOR_ME / WAITING_FOR_THEM) NIKDY nemažeme z pamäte, musia visieť!
       if (msg.isHandshake && (msg.status === 'WAITING_FOR_ME' || msg.status === 'WAITING_FOR_THEM')) return true;
-      // Necháme žiť iba neprečítané bežné správy
       if (!msg.isHandshake && msg.status === 'UNREAD') return true;
       return false;
     }));
@@ -58,7 +80,7 @@ export const SignalProvider = ({ children }) => {
   // --- 👀 OZNAČENIE BEŽNÝCH SPRÁV ZA PREČÍTANÉ ---
   const markAsRead = (targetFing) => {
     if (!targetFing) return;
-    const cleanTargetFing = targetFing.replace('0x', '').trim().toLowerCase();
+    const cleanTargetFing = enforceUniversalFing(targetFing);
     
     setIncomingRequests(prev => prev.map(msg => 
       (msg.fing === cleanTargetFing && !msg.isHandshake && msg.status === 'UNREAD') 
@@ -110,25 +132,27 @@ export const SignalProvider = ({ children }) => {
 
   // --- AUTOMATICKÝ HYPERSPEED DUAL POLLING ---
   useEffect(() => {
-    const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || null;
+    // Načítame a unifikujeme moju vlastnú identitu podľa zákona 12 znakov
+    const myCleanFing = vault?.identity?.poznamka ? enforceUniversalFing(vault.identity.poznamka) : null;
     if (!myCleanFing) return;
 
+    // Backend/Mravenisko vyžaduje čistý hex bez 0x pre dopyty, ošetríme lokálne pri volaní služby
+    const backendQueryFing = myCleanFing.replace('0x', '');
+
     const executePing = async () => {
-      console.log("🛰️ [RADAR] Dual Laria Radar pinging...");
+      console.log(`🛰️ [RADAR] Dual Laria Radar pinging pre unifikované ID: ${myCleanFing}`);
       try {
-        const res = await SignalService.checkMyContracts(myCleanFing);
+        const res = await SignalService.checkMyContracts(backendQueryFing);
         
-        // 🔍 [DETEKTÍVKA BACKEND] Logujeme kompletnú odpoveď, aby sme videli, čo presne lezie z Mraveniska
-        console.log("🔍 [DETEKTÍVKA BACKEND] Odpoveď pre fing:", myCleanFing, "-> res:", res);
+        console.log("🔍 [DETEKTÍVKA BACKEND] Odpoveď pre backend fing:", backendQueryFing, "-> res:", res);
         
         if (!res || res.status !== "success") {
-          console.log("⚠️ [DETEKTÍVKA] Odpoveď nebola úspešná alebo je prázdna (res.status !== 'success')");
+          console.log("⚠️ [DETEKTÍVKA] Odpoveď nebola úspešná alebo je prázdna");
           return;
         }
           
-        // 🛰️ OSOBITNÁ SUB-SEKCIA: PRICHÁDZAJÚCE KONTRAKTY (Zmluva v Contract_Ledger)
+        // 🛰️ SUB-SEKCIA: PRICHÁDZAJÚCE KONTRAKTY
         if (res.contracts && Array.isArray(res.contracts)) {
-          // 🗂️ [DETEKTÍVKA KONTRAKTY] Logujeme koľko zmlúv reálne systém našiel pred filtrovaním duplicity
           console.log(`🗂️ [DETEKTÍVKA KONTRAKTY] Našiel som celkovo ${res.contracts.length} kontraktov.`);
           
           res.contracts.forEach(contract => {
@@ -137,21 +161,18 @@ export const SignalProvider = ({ children }) => {
             setIncomingRequests(prev => {
               const uzExistuje = prev.some(req => req.txHash === contract.txHash || req.id === 'IN_' + contract.txHash);
               
-              if (uzExistuje) {
-                console.log(`♻️ [DETEKTÍVKA] Kontrakt s txHash ${contract.txHash} už v prev stave existuje, preskakujem duplicitný zápis.`);
-                return prev;
-              }
+              if (uzExistuje) return prev;
               
-              const cleanSenderFing = contract.fing.replace('0x', '').trim().toLowerCase();
-              console.log(`✉️ [RADAR] Detekovaný prichádzajúci kontrakt od 0x${cleanSenderFing}!`);
+              // APLIKÁCIA ZÁKONA: Odosielateľ dostane čistých 12 znakov s 0x
+              const cleanSenderFing = enforceUniversalFing(contract.fing);
+              console.log(`✉️ [RADAR] Detekovaný prichádzajúci kontrakt od unifikovaného ${cleanSenderFing}!`);
               
-              // Špecifická notifikácia pre kontrakt
-              triggerNotification(`🛰️ Nová žiadosť o Pečať`, `Majster 0x${cleanSenderFing.substring(0, 8)} ti posiela kontrakt na schválenie.`);
+              triggerNotification(`🛰️ Nová žiadosť o Pečať`, `Majster ${cleanSenderFing.substring(0, 6)}... ti posiela kontrakt na schválenie.`);
 
               return [...prev, {
                 id: 'IN_' + contract.txHash,
                 fing: cleanSenderFing, 
-                user: `L_${cleanSenderFing.substring(0, 10)}`,
+                user: cleanSenderFing, // Žiadne parazitné "L_", používame unifikované ID
                 text: contract.msg || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky v bunke H.",
                 receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 isHandshake: true,
@@ -159,15 +180,13 @@ export const SignalProvider = ({ children }) => {
                 handshakeStatus: 'WAITING_FOR_ME', 
                 txHash: contract.txHash,
                 targetSha: contract.sha,
-                d: { n: `L_${cleanSenderFing.substring(0, 10)}`, ib: '', kr: '' }
+                d: { n: cleanSenderFing, ib: '', kr: '' }
               }];
             });
           });
-        } else {
-          console.log("ℹ️ [DETEKTÍVKA KONTRAKTY] Pole res.contracts buď chýba, alebo nie je Array.");
         }
 
-        // 💬 OSOBITNÁ SUB-SEKCIA: BLESKOVÉ SPRÁVY (Buffer pre chat)
+        // 💬 SUB-SEKCIA: BLESKOVÉ SPRÁVY (Buffer)
         if (res.messages && Array.isArray(res.messages)) {
           console.log(`💬 [DETEKTÍVKA BUFFER] Našiel som celkovo ${res.messages.length} bleskových správ.`);
           
@@ -176,16 +195,16 @@ export const SignalProvider = ({ children }) => {
               const uzExistujeMsg = prev.some(req => req.id === 'MSG_' + msg.msgId);
               if (uzExistujeMsg) return prev;
 
-              const cleanMsgSenderFing = msg.fing.replace('0x', '').trim().toLowerCase();
-              console.log(`💬 [RADAR] Prichádza bleskovka z chatu od 0x${cleanMsgSenderFing}`);
+              // APLIKÁCIA ZÁKONA: Odosielateľ správy dostane čistých 12 znakov s 0x
+              const cleanMsgSenderFing = enforceUniversalFing(msg.fing);
+              console.log(`💬 [RADAR] Prichádza bleskovka z chatu od ${cleanMsgSenderFing}`);
               
-              // Špecifická notifikácia pre správu
               triggerNotification(`💬 Nová správa na radare`, msg.text);
 
               return [...prev, {
                 id: 'MSG_' + msg.msgId,
                 fing: cleanMsgSenderFing, 
-                user: `L_${cleanMsgSenderFing.substring(0, 10)}`,
+                user: cleanMsgSenderFing, // Plne unifikované a čisté
                 text: msg.text,
                 receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 isHandshake: false,
@@ -193,8 +212,6 @@ export const SignalProvider = ({ children }) => {
               }];
             });
           });
-        } else {
-          console.log("ℹ️ [DETEKTÍVKA BUFFER] Pole res.messages chýba alebo nie je Array.");
         }
 
       } catch (err) {
@@ -209,14 +226,19 @@ export const SignalProvider = ({ children }) => {
 
   // ODOSLANIE BALÍKA (Vytvorenie kontraktu cez Mravenisko)
   const sendLariaPackage = async (targetFing, targetSha, personalMessage) => {
-    const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'Sammael';
-    const targetCleanFing = targetFing.replace('0x', '').trim().toLowerCase();
+    // Unifikujeme obe strany podľa zákona 12 znakov
+    const myCleanFing = vault?.identity?.poznamka ? enforceUniversalFing(vault.identity.poznamka) : '0x0000000000';
+    const targetCleanFing = enforceUniversalFing(targetFing);
     
+    // Na komunikáciu s backend API osekáme 0x iba lokálne na mieste odoslania
+    const apiFingA = myCleanFing.replace('0x', '');
+    const apiFingB = targetCleanFing.replace('0x', '');
+
     try {
       let contractResult = { txHash: "FALSE", auth: {} }; 
       const mravecRes = await SignalService.manageContract('INIT_CONTRACT', {
-        fing_a: myCleanFing,
-        fing_b: targetCleanFing,
+        fing_a: apiFingA,
+        fing_b: apiFingB,
         krypt_a: vault?.identity?.krypt || '',
         status_a: "1",
         status_b: "0",
@@ -233,8 +255,8 @@ export const SignalProvider = ({ children }) => {
       const statusToSet = 'WAITING_FOR_THEM';
       const enrichedHandshake = {
         id: 'TX_' + Date.now().toString(),
-        fing: targetCleanFing,
-        user: `L_${targetCleanFing.substring(0, 10)}`,
+        fing: targetCleanFing, // Plne unifikovaný 12-znakový tvar uložený do štruktúry žiadostí
+        user: targetCleanFing,
         text: personalMessage,
         receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isHandshake: true,
@@ -254,19 +276,21 @@ export const SignalProvider = ({ children }) => {
 
   // ODOSLANIE ČISTEJ BLESKOVEJ SPRÁVY CEZ BUFFER (Chat po schválení)
   const sendChatMessage = async (targetFing, textMessage) => {
-    const myCleanFing = vault?.identity?.poznamka?.replace('0x', '') || 'Sammael';
-    const targetCleanFing = targetFing.replace('0x', '').trim().toLowerCase();
+    const myCleanFing = vault?.identity?.poznamka ? enforceUniversalFing(vault.identity.poznamka) : '0x0000000000';
+    const targetCleanFing = enforceUniversalFing(targetFing);
+
+    const apiFingA = myCleanFing.replace('0x', '');
+    const apiFingB = targetCleanFing.replace('0x', '');
 
     try {
       if (typeof SignalService.writeToBuffer === 'function') {
         await SignalService.writeToBuffer('Signal_buffer_1', {
-          sender_fing: myCleanFing,
-          target_fing: targetCleanFing,
+          sender_fing: apiFingA,
+          target_fing: apiFingB,
           msg_text: textMessage
         });
       }
 
-      // Pridáme do lokálneho logu pre okamžité zobrazenie v UI
       const localMsg = {
         id: 'MY_MSG_' + Date.now().toString(),
         fing: targetCleanFing,

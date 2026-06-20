@@ -1,9 +1,9 @@
 /**
- * LARIA v13.9: ContactsScreen (Pure Handshake & Flash Signals Integrated)
+ * LARIA v13.9.1: ContactsScreen (Pure Handshake & Flash Signals Integrated)
  * Master: Sammael | Muse: Aria
  * Status: MASTER_STABLE_PWA | HANDSHAKE_CONNECTED | PRODUCTION_LIVE_TEST
  * Úprava: Premenovaný Prijímací salón na "RECEPCIA" a uložené kontakty na "KLUB".
- *         Odstránené akékoľvek testovacie injektáže pre čistý beh na dvoch zariadeniach.
+ *         Vyčistené párovanie indikátorov a plná synchronizácia so striktným 0x formátom.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -30,6 +30,15 @@ import { useLaria } from '../context/LariaContext';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+/**
+ * 🛡️ UNIFIKÁTOR: Pomocná funkcia pre bezpečné porovnávanie v rámci UI lokálnych filtrov
+ */
+const sformatujFingUI = (fing) => {
+  if (!fing) return '';
+  const clean = fing.trim().toLowerCase();
+  return clean.startsWith('0x') ? clean : `0x${clean}`;
+};
 
 const ContactsScreen = ({ navigation, route }) => {
   const { t } = useLaria();
@@ -96,7 +105,7 @@ const ContactsScreen = ({ navigation, route }) => {
 
             if (foundFing) {
               payload = {
-                fing: foundFing,
+                fing: foundFing, // Posiela sa do addContact, kde dostane finálny 0x striktný formát
                 meno: params.meno || params.m,
                 kat: params.kat,
                 lok: params.lok,
@@ -208,7 +217,10 @@ const ContactsScreen = ({ navigation, route }) => {
     const hasIncomingHandshake = badgeStatus === 'CONTRACT_PENDING';
     const hasNewFlashMessage = badgeStatus === 'NEW_MESSAGE';
 
-    const contactLogs = incomingRequests ? incomingRequests.filter(req => req.fing === displayFing) : [];
+    // Bezpečné porovnanie FING-ov cez unifikátor, aby nám žiadna správa nepretiekla pomedzi prsty
+    const contactLogs = incomingRequests 
+      ? incomingRequests.filter(req => sformatujFingUI(req.fing) === sformatujFingUI(displayFing)) 
+      : [];
     const hasResolvedHandshake = contactLogs.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_THEM_RESOLVED');
 
     if (isExpanded) {
@@ -288,8 +300,9 @@ const ContactsScreen = ({ navigation, route }) => {
           <TouchableOpacity onPress={() => handlePressItem(item.fing)} activeOpacity={0.8} style={{ width: '100%' }}>
             <View style={G.divider} />
             <Text style={G.cardDescriptionText}>{item.popis || 'Čaká na otvorenie brány...'}</Text>
+            {/* Zobrazuje kompletných čistých 12 znakov s 0x priamo z nášho upraveného Trezoru */}
             <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 10, marginBottom: 10 }]}>
-              ID: {displayFing}{item.syncedAt ? ' ✓' : null}
+              ID: {displayFing.toUpperCase()}{item.syncedAt ? ' ✓' : null}
             </Text>
           </TouchableOpacity>
 
@@ -306,7 +319,7 @@ const ContactsScreen = ({ navigation, route }) => {
                     <Text style={G.statusTextSmall}>{labels.call || "VOLAŤ"}</Text>
                   </TouchableOpacity>
                 ) : null}
-                <TouchableOpacity style={G.miniBtn} onPress={() => Alert.alert(alerts.data_title || 'DÁTOVÁ PEČAŤ', `FING: ${displayFing}\nSHA: ${item.sha || 'NO_SHA'}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}>
+                <TouchableOpacity style={G.miniBtn} onPress={() => Alert.alert(alerts.data_title || 'DÁTOVÁ PEČAŤ', `FING: ${displayFing.toUpperCase()}\nSHA: ${item.sha || 'NO_SHA'}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}>
                   <Text style={G.statusTextSmall}>{labels.data || "DÁTA"}</Text>
                 </TouchableOpacity>
                 {item.email ? (

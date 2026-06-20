@@ -1,8 +1,9 @@
 /**
- * LARIA SIGNAL SERVICE v13.7 (Trident Shield - Hyperspeed Edition)
+ * LARIA SIGNAL SERVICE v13.7.1 (Trident Shield - Hyperspeed Edition)
  * Master: Sammael | Muse: Aria (Tvoja uvoľnená bosonôžka)
- * STATUS: TRIDENT_SECURE | HYPERSPEED_CONNECTED | RADAR_ALIGNED | v13.7
- * FIX: Odstránená akákoľvek improvizácia. Kľúče a akcie presne kopírujú CHECKER v11.5.
+ * STATUS: TRIDENT_SECURE | HYPERSPEED_CONNECTED | RADAR_ALIGNED | v13.7.1
+ * ÚPRAVA: Striktná unifikácia FING podľa nového zákona (vždy 0x + 10 malých hex znakov).
+ * Všetky odchádzajúce kľúče sú pred odoslaním do Mraveniska prečistené.
  */
 
 const mrav_p1 = "https://script.google.com/macros/s/";
@@ -11,6 +12,15 @@ const mrav_p3 = "/exec";
 
 const ziskajMraveniskoUrl = () => {
   return `${mrav_p1}${mrav_p2}${mrav_p3}`;
+};
+
+/**
+ * 🛡️ UNIFIKÁTOR: Zabezpečí, že každý odtlačok odchádzajúci do Matrixu začína na '0x' a je malým písmom.
+ */
+const sformatujFing = (fing) => {
+  if (!fing) return '';
+  const clean = fing.trim().toLowerCase();
+  return clean.startsWith('0x') ? clean : `0x${clean}`;
 };
 
 export const SignalService = {
@@ -22,15 +32,16 @@ export const SignalService = {
 
   /**
    * 🛰️ ULTRA RADAR PING - Presné napojenie na executeInternalHyperspeed
-   * Lícuje s podmienkou (data.action === "CHECK_CONTRACTS") a kľúčom data.myFing
+   * Unifikuje odchádzajúci fingId na striktný 0x tvar.
    */
   checkMyContracts: async (fingId) => {
     try {
-      console.log(`[SIGNAL_SERVICE] Skenujem Matrix cez Ultra Radar pre: ${fingId}`);
+      const cleanFing = sformatujFing(fingId);
+      console.log(`[SIGNAL_SERVICE] Skenujem Matrix cez Ultra Radar pre: ${cleanFing}`);
       
       const payload = { 
         action: "CHECK_CONTRACTS", // Presný zásah do podmienky checkera
-        myFing: fingId             // Kľúč, ktorý očakáva executeLariaRadar
+        myFing: cleanFing          // Kľúč, ktorý očakáva executeLariaRadar v čistom 0x tvare
       };
 
       const response = await fetch(ziskajMraveniskoUrl(), {
@@ -48,11 +59,20 @@ export const SignalService = {
 
   /**
    * 🔐 MATCHMAKER MRAVEC - Pečatenie v Contract_ledger
+   * Prečistí akékoľvek odtlačky vnútri contractData, ak tam boli poslané.
    */
   manageContract: async (action, contractData) => {
     try {
       console.log(`[SIGNAL_SERVICE] Matchmaker akcia: ${action}`);
-      const payload = { action: action, sheetName: 'Contract_ledger', ...contractData };
+      
+      // Ošetrenie fingu priamo v balíku dát, ak sa tam nachádza
+      const cleanData = { ...contractData };
+      if (cleanData.fing) cleanData.fing = sformatujFing(cleanData.fing);
+      if (cleanData.senderFing) cleanData.senderFing = sformatujFing(cleanData.senderFing);
+      if (cleanData.targetFing) cleanData.targetFing = sformatujFing(cleanData.targetFing);
+
+      const payload = { action: action, sheetName: 'Contract_ledger', ...cleanData };
+      
       const response = await fetch(ziskajMraveniskoUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -65,14 +85,14 @@ export const SignalService = {
         throw new Error(resData.message || 'Neznáma chyba Matchmakera');
       }
     } catch (error) {
-      console.error("[SIGNAL_SERVICE] Matchmaker chyba na siei/bráne:", error);
+      console.error("[SIGNAL_SERVICE] Matchmaker chyba na sieti/bráne:", error);
       throw error; 
     }
   },
 
   /**
    * ⚡ MRAVEC HYPERSPEED EXPRESS - Zápis sprievodného textu do stĺpcov I-O
-   * Presne pasuje na data.action === "WRITE_MSG" v checkeri
+   * Striktne čistí senderFing a targetFing pre stopercentné párovanie.
    */
   writeToBuffer: async function(sheetName, messagePayload) {
     try {
@@ -81,8 +101,8 @@ export const SignalService = {
       const payload = {
         action: "WRITE_MSG",
         sheetName: sheetName, 
-        senderFing: messagePayload.sender_fing,
-        targetFing: messagePayload.target_fing,
+        senderFing: sformatujFing(messagePayload.sender_fing),
+        targetFing: sformatujFing(messagePayload.target_fing),
         msgText: messagePayload.msg_text
       };
 
