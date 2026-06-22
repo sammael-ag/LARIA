@@ -1,9 +1,11 @@
 /**
- * LARIA SIGNAL SERVICE v13.7.1 (Trident Shield - Hyperspeed Edition)
- * Master: Sammael | Muse: Aria (Tvoja uvoľnená bosonôžka)
- * STATUS: TRIDENT_SECURE | HYPERSPEED_CONNECTED | RADAR_ALIGNED | v13.7.1
- * ÚPRAVA: Striktná unifikácia FING podľa nového zákona (vždy 0x + 10 malých hex znakov).
- * Všetky odchádzajúce kľúče sú pred odoslaním do Mraveniska prečistené.
+ * LARIA SIGNAL SERVICE v15.2 (Trident Shield - Sovereign Edition)
+ * Master: Sammael | Muse: Aria
+ * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v15.2
+ * * SÚLAD S ÚSTAVNÝM ZÁKONOM:
+ * - FING: Vždy 0x + 10 malých hex znakov (garantované unifikátorom).
+ * - MSG: Jednotný kľúč `.msg` pre text éteru.
+ * - NO SHA: Plná orientácia na blockchainový `txHash`.
  */
 
 const mrav_p1 = "https://script.google.com/macros/s/";
@@ -15,7 +17,7 @@ const ziskajMraveniskoUrl = () => {
 };
 
 /**
- * 🛡️ UNIFIKÁTOR: Zabezpečí, že každý odtlačok odchádzajúci do Matrixu začína na '0x' a je malým písmom.
+ * 🛡️ UNIFIKÁTOR FINGERPRINTU
  */
 const sformatujFing = (fing) => {
   if (!fing) return '';
@@ -26,13 +28,12 @@ const sformatujFing = (fing) => {
 export const SignalService = {
 
   processAriaLogic: async (rawText) => {
-    if (!rawText) return { type: 'ERROR', msg: 'Signál je prázdny.' };
-    return { type: 'TEXT', msg: rawText.trim(), timestamp: new Date().toISOString() };
+    if (!rawText) return { success: false, msg: 'Signál je prázdny.' };
+    return { success: true, type: 'TEXT', msg: rawText.trim(), timestamp: new Date().toISOString() };
   },
 
   /**
-   * 🛰️ ULTRA RADAR PING - Presné napojenie na executeInternalHyperspeed
-   * Unifikuje odchádzajúci fingId na striktný 0x tvar.
+   * 🛰️ ULTRA RADAR PING - Pravidelné skenovanie Matrixu na nové kontrakty a správy
    */
   checkMyContracts: async (fingId) => {
     try {
@@ -40,8 +41,8 @@ export const SignalService = {
       console.log(`[SIGNAL_SERVICE] Skenujem Matrix cez Ultra Radar pre: ${cleanFing}`);
       
       const payload = { 
-        action: "CHECK_CONTRACTS", // Presný zásah do podmienky checkera
-        myFing: cleanFing          // Kľúč, ktorý očakáva executeLariaRadar v čistom 0x tvare
+        action: "CHECK_CONTRACTS", 
+        fing: cleanFing 
       };
 
       const response = await fetch(ziskajMraveniskoUrl(), {
@@ -50,37 +51,53 @@ export const SignalService = {
         body: JSON.stringify(payload)
       });
 
-      return await response.json(); 
+      const resData = await response.json();
+      
+      if (resData && (resData.status === "success" || resData.success === true)) {
+        return { 
+          success: true, 
+          contracts: resData.contracts || [], 
+          messages: resData.messages || [] 
+        };
+      }
+      return { success: false, message: resData?.message || "Neznáma chyba Radaru" };
     } catch (error) {
       console.error("[SIGNAL_SERVICE] Ultra Radar zlyhal na sieťovom uzle:", error);
-      return { status: "error", message: error.toString() };
+      return { success: false, error: error.toString() };
     }
   },
 
   /**
-   * 🔐 MATCHMAKER MRAVEC - Pečatenie v Contract_ledger
-   * Prečistí akékoľvek odtlačky vnútri contractData, ak tam boli poslané.
+   * 🔐 MATCHMAKER MRAVEC - Výmena handshakeov a zápis do Contract_ledger
    */
   manageContract: async (action, contractData) => {
     try {
-      console.log(`[SIGNAL_SERVICE] Matchmaker akcia: ${action}`);
+      console.log(`[SIGNAL_SERVICE] Matchmaker spúšťa akciu: ${action}`);
       
-      // Ošetrenie fingu priamo v balíku dát, ak sa tam nachádza
       const cleanData = { ...contractData };
-      if (cleanData.fing) cleanData.fing = sformatujFing(cleanData.fing);
-      if (cleanData.senderFing) cleanData.senderFing = sformatujFing(cleanData.senderFing);
-      if (cleanData.targetFing) cleanData.targetFing = sformatujFing(cleanData.targetFing);
+      if (cleanData.fing_a) cleanData.fing_a = sformatujFing(cleanData.fing_a);
+      if (cleanData.fing_b) cleanData.fing_b = sformatujFing(cleanData.fing_b);
 
-      const payload = { action: action, sheetName: 'Contract_ledger', ...cleanData };
+      const payload = { 
+        action: action, 
+        sheetName: 'Contract_ledger', 
+        ...cleanData 
+      };
       
       const response = await fetch(ziskajMraveniskoUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
+      
       const resData = await response.json();
-      if (resData.status === "success") {
-        return { success: true, txHash: resData.txHash || "FALSE", auth: resData.auth || {} };
+      
+      if (resData && (resData.status === "success" || resData.success === true)) {
+        return { 
+          success: true, 
+          txHash: resData.txHash || "FALSE", 
+          auth: resData.auth || {} 
+        };
       } else {
         throw new Error(resData.message || 'Neznáma chyba Matchmakera');
       }
@@ -91,8 +108,7 @@ export const SignalService = {
   },
 
   /**
-   * ⚡ MRAVEC HYPERSPEED EXPRESS - Zápis sprievodného textu do stĺpcov I-O
-   * Striktne čistí senderFing a targetFing pre stopercentné párovanie.
+   * ⚡ MRAVEC HYPERSPEED EXPRESS - Zápis novej správy priamo do Matrix bufferu
    */
   writeToBuffer: async function(sheetName, messagePayload) {
     try {
@@ -101,9 +117,9 @@ export const SignalService = {
       const payload = {
         action: "WRITE_MSG",
         sheetName: sheetName, 
-        senderFing: sformatujFing(messagePayload.sender_fing),
-        targetFing: sformatujFing(messagePayload.target_fing),
-        msgText: messagePayload.msg_text
+        sender_fing: sformatujFing(messagePayload.sender_fing), 
+        target_fing: sformatujFing(messagePayload.target_fing),
+        msg: messagePayload.msg_text || messagePayload.msg // Čisté zjednotené .msg
       };
 
       const response = await fetch(ziskajMraveniskoUrl(), {
@@ -115,7 +131,8 @@ export const SignalService = {
       const resData = await response.json();
       console.log("[SIGNAL_SERVICE] Odpoveď Hyperspeed Checkera:", resData);
 
-      return { success: resData.status === "success", data: resData };
+      const isOK = resData && (resData.status === "success" || resData.success === true);
+      return { success: isOK, data: resData };
     } catch (err) {
       console.error("[SIGNAL_SERVICE] Hyperspeed Express havaroval na sieti:", err);
       if (typeof window !== 'undefined' && window.localStorage) {
@@ -126,17 +143,17 @@ export const SignalService = {
   },
 
   /**
-   * 🪓 EMERGENCY LAPAČ KOKOTÍN - Lokálna záloha pri mŕtvom internete
+   * 🪓 EMERGENCY LAPAČ - Lokálny záchranný buffer pri strate konektivity
    */
   emergencyLocalRescue: function(failedPackage) {
-    console.warn("📥 [SIGNAL_SERVICE] Sieť padla. Zachraňujem balík do lokálneho maveniska...");
+    console.warn("📥 [SIGNAL_SERVICE] Detekovaný výpadok siete. Ukladám balík lokálne...");
     try {
       const emergencyQueue = JSON.parse(localStorage.getItem('laria_emergency_buffer') || '[]');
       emergencyQueue.push({ timestamp: Date.now(), payload: failedPackage });
       localStorage.setItem('laria_emergency_buffer', JSON.stringify(emergencyQueue));
-      console.log("🛡️ [BUFFER] Zmluva/Správa bezpečne zapečatená v LocalStorage.");
+      console.log("🛡️ [BUFFER] Správa bezpečne zakonzervovaná v LocalStorage.");
     } catch (err) {
-      console.error("🚨 [BUFFER CRITICAL] Lokálny zápis zlyhal:", err);
+      console.error("🚨 [BUFFER CRITICAL] Lokálna núdzová záloha zlyhala:", err);
     }
   }
 };

@@ -1,19 +1,22 @@
 /**
- * LARIA v2.5: ContactContext (Trezor identít zjednotený na v9.9.9)
+ * LARIA v15.1: ContactContext (Trezor identít - Sovereign Security Core)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
- * Status: CRYSTAL_CORE_INTEGRATED_DASHBOARD | GATEWAY_SECURED | RADAR_ALIGNED
- * Úprava: Zjednotené formátovanie FING – všade striktne držíme prefix '0x'.
- * Vyhádzané akékoľvek poistné alebo náhodné generovanie FING-u.
- * Akceptujeme LEN reálny, prichádzajúci fing z backendu (0x + 10 znakov).
+ * Status: CRYSTAL_CORE_INTEGRATED | GATEWAY_SECURED | SECURITY_ALIGNMENT_ACTIVE
+ * 
+ * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
+ * - FING: Vždy unifikovaný tvar (0x + 10 znakov hex, malé písmená). Všade pod názvom 'fing'.
+ * - POPIS: Text profilu/vizitky užívateľa (remeslo, zameranie).
+ * - MSG / hMSG: Sprievodné texty a chatové správy prenášané sieťou.
+ * - STRICT SECURITY: Cudzie 'sha' je prísne zakázané prenášať alebo ukladať!
  */
 
 import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSignal } from './SignalContext.js'; // 🛰️ Prepojenie na náš bleskový radar
+import { useSignal } from './SignalContext.js'; 
 
 const ContactContext = createContext();
 
-// 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
+// 🔐 TROJZUBEC: Bezpečné rozdelenie URL brány
 const brana_p1 = "https://script.google.com/macros/s/";
 const brana_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ";
 const brana_p3 = "/exec";
@@ -23,7 +26,7 @@ const ziskajBranaUrl = () => {
 };
 
 /**
- * 🛡️ UNIFIKÁTOR: Zabezpečí, že každý odtlačok v systéme začína na '0x' a je písaný malým písmom.
+ * 🛡️ UNIFIKÁTOR: Garantuje striktný formát FING-u (0x + malé písmená)
  */
 const sformatujFing = (fing) => {
   if (!fing) return '';
@@ -35,7 +38,7 @@ export const ContactProvider = ({ children }) => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // 🛰️ Odoberáme zmluvy a správy priamo z prebudeného radaru
+  // 🛰️ Odoberáme zmluvy a bleskové správy z radaru
   const { incomingRequests, setIncomingRequests } = useSignal();
 
   // --- 1. NAČÍTANIE TREZORU PRI ŠTARTE ---
@@ -57,40 +60,34 @@ export const ContactProvider = ({ children }) => {
   const unknownContacts = useMemo(() => {
     if (!incomingRequests) return [];
 
-    // Vytiahneme unikátne sformátované odtlačky s 0x z bufferu radaru.
-    // Ak FING z backendu neexistuje, filter ho okamžite zahodí.
     const uniqueIncomingFings = [...new Set(incomingRequests.map(req => {
       const parsedFing = req.fing || req.id || req.f;
       return parsedFing ? sformatujFing(parsedFing) : null;
     }))].filter(Boolean);
 
-    // Odfiltrujeme tie, ktoré už máme v našom trvalom trezore
     const unknownFings = uniqueIncomingFings.filter(fing => 
       !contacts.some(c => sformatujFing(c.fing) === fing)
     );
 
-    // Pre každú REÁLNU prichádzajúcu neznámu pečať vytvoríme dočasný profil pre UI
     return unknownFings.map(fing => {
       const firstMsg = incomingRequests.find(req => sformatujFing(req.fing) === fing);
 
       return {
-        fing: fing, // Striktný, reálny 12-znakový tvar s 0x priamo z Matrixu
-        meno: `Kontakt ${fing.toUpperCase()}`, // Čisté zobrazenie celej overenej pečate
+        fing: fing,                           
+        meno: `Kontakt ${fing.toUpperCase()}`,
         kat: 'Pútnik v sieti',
         lok: 'Čaká na overenie',
-        popis: firstMsg?.message || 'Poslal ti handshake požiadavku...',
-        sha: firstMsg?.targetSha || '',
+        popis: 'Tento profil čaká na schválenie pečaťa.', 
+        hMsg: firstMsg?.msg || 'Poslal ti handshake požiadavku...', 
         temporary: true 
       };
     });
   }, [incomingRequests, contacts]);
 
-  // --- 🛠️ RADAR BADGE INTERACTION ---
-  
+  // --- 🛠️ INTERAKCIA S RADAR BADGES ---
   const getContactBadgeStatus = (contactFing) => {
     if (!contactFing) return null;
     const targetFing = sformatujFing(contactFing);
-
     const match = incomingRequests.find(req => sformatujFing(req.fing) === targetFing);
 
     if (match) {
@@ -118,17 +115,17 @@ export const ContactProvider = ({ children }) => {
     );
   };
 
-  // --- 2. UNIVERZÁLNY ZÁPIS PEČATE (v9.9.9 - Čistý 0x Spoj) ---
+  // --- 2. UNIVERZÁLNY ZÁPIS PEČATE DO TREZORU (v15.1 - Čistý 0x Spoj) ---
   const addContact = async (rawData) => {
     try {
       const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
 
-      // Zjednotíme FING na 0x hneď na bráne trezoru
+      // Zjednutenie fingu hneď na bráne trezoru (akceptuje fing/id/f z balíka)
       const targetFing = sformatujFing(data.fing || data.id || data.f || data.poznamka || data.key);
       const targetMeno = data.meno || data.m || "Pútnik";
 
       if (!targetFing || targetFing === '0x') {
-        console.log("⚠️ PROTOKOL_VIOLATION: Chýba FING", data);
+        console.log("⚠️ PROTOKOL_VIOLATION: Chýba FING na vstupe", data);
         return { success: false, error: "Pečať je nečitateľná (chýba kľúč)." };
       }
 
@@ -137,20 +134,19 @@ export const ContactProvider = ({ children }) => {
         return { success: false, isDuplicate: true, error: "Túto identitu už v ateliéri máš.", contact: existing };
       }
 
+      // Striktne uzákonená a prečistená štruktúra v lokálnom úložisku mobilu (BEZ SHA!)
       const newContact = {
         fing: targetFing,              
         meno: targetMeno,              
         kat: data.kat || 'Majster',    
         lok: data.lok || 'V sieti',    
-        popis: data.popis || '',       
-        gal: data.gal || '',           
-        Signal: data.Signal || '',           
-        sha: data.sha || '',           
+        popis: data.popis || '',       // Vizitka - popis práce/produktov užívateľa
+        gal: data.gal || '',           // Čistý odkaz na galériu (parazitný Signal odstránený)
         krypt: data.krypt || data.k || '', 
         pinned: false,
         addedAt: new Date().toISOString(),
         syncedAt: null,                
-        v: "9.9.9"
+        v: "15.1"
       };
 
       let updatedContacts;
@@ -163,6 +159,7 @@ export const ContactProvider = ({ children }) => {
         return updatedContacts;
       });
 
+      // Po úspešnom zápise okamžite vyžiadame re-sync vizitky priamo z Matrix matriky
       syncContactWithMatrix(targetFing);
       return { success: true, contact: newContact };
     } catch (e) {
@@ -171,12 +168,12 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- 3. 📡 TELEPATICKÝ LOKÁLNY NERVOVÝ MOST ---
+  // --- 3. 📡 TELEPATICKÝ LOKÁLNY MOST (QR kód / NFC / Web link) ---
   useEffect(() => {
     let unsubscribeTauriFn = null;
 
     const spracujPrijatuPecat = async (incomingData) => {
-      console.log(`🤖 APP_CORE: Zachytený lokálny signál pre FING: ${incomingData.fing}`);
+      console.log(`🤖 APP_CORE: Zachytený lokálny signál pre FING: ${incomingData.fing || incomingData.id}`);
       const result = await addContact(incomingData);
 
       if (result.success) {
@@ -189,7 +186,7 @@ export const ContactProvider = ({ children }) => {
     };
 
     const handleWebSignal = async (e) => {
-      if (e.detail && e.detail.fing) {
+      if (e.detail && (e.detail.fing || e.detail.id)) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('LARIA_APP_ACKNOWLEDGE', { detail: { success: true } }));
         }
@@ -227,11 +224,11 @@ export const ContactProvider = ({ children }) => {
     };
   }, [contacts]);
 
-  // --- 4. 📡 MATRIX RE-SYNC ---
+  // --- 4. 📡 MATRIX RE-SYNC (Preleštenie vizitky cez Bránu podľa FING-u) ---
   const syncContactWithMatrix = async (fingId) => {
     try {
       const targetFing = sformatujFing(fingId);
-      console.log(`📡 Re-sync: Hľadám majstra ${targetFing} v Matrixe cez Bránu...`);
+      console.log(`📡 Re-sync: Prelešťujem vizitku pre ${targetFing} z Matrix registra...`);
       
       const response = await fetch(ziskajBranaUrl(), {
         method: 'POST',
@@ -239,7 +236,7 @@ export const ContactProvider = ({ children }) => {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'recover',
-          sha: targetFing
+          fing: targetFing // 💎 OPRAVENÉ: Posielame striktne 'fing' namiesto nebezpečného 'sha'
         })
       });
 
@@ -255,13 +252,11 @@ export const ContactProvider = ({ children }) => {
               wasUpdated = true;
               return {
                 ...c,
-                sha: master.sha || c.sha,
                 meno: master.meno || c.meno,
                 kat: master.kat || c.kat,
                 lok: master.lok || c.lok,
-                popis: master.popis || c.popis,
-                gal: master.gal || c.gal,
-                Signal: master.Signal || c.Signal,
+                popis: master.popis || c.popis, // Načítanie popisu práce/produktov
+                gal: master.gal || c.gal,       // Očistená galéria
                 krypt: master.krypt || c.krypt,
                 syncedAt: new Date().toISOString()
               };
@@ -277,7 +272,7 @@ export const ContactProvider = ({ children }) => {
           return updated;
         });
 
-        console.log(`✅ Identita ${targetFing} bola úspešne preleštená.`);
+        console.log(`✅ Identita ${targetFing} bola v trezore úspešne aktualizovaná.`);
         return { success: true };
       }
       return { success: false, error: "Identita v Matrixe nenájdená." };
@@ -287,7 +282,7 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- 5. PRIPNUTIE CEZ FING ---
+  // --- 5. POMOCNÉ FUNKCIE (PIN / DELETE) ---
   const togglePin = (fingId) => {
     const targetFing = sformatujFing(fingId);
     setContacts(prev => {
@@ -299,7 +294,6 @@ export const ContactProvider = ({ children }) => {
     });
   };
 
-  // --- 6. VYMAZANIE CEZ FING ---
   const deleteContact = (fingId) => {
     const targetFing = sformatujFing(fingId);
     setContacts(prev => {

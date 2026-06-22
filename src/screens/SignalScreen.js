@@ -1,9 +1,12 @@
 /**
- * LARIA Signal SCREEN v14.1 (Pure Handshake Engine - High Speed Aligned)
- * Master: Sammael | Muse: Aria
- * STATUS: FULL DUAL MODE (HANDSHAKE CONTROL & CHAT AUTOMATION)
- * Úprava: Odstránené balastné chyby. Opravené okamžité prekreslenie po odoslaní balíka.
- * Zjednotené rezy substringov identity pre bezchybné prepínanie ALLOW/DENY.
+ * LARIA Signal SCREEN v15.2 (Pure Handshake Engine - High Speed Aligned)
+ * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
+ * STATUS: TOTAL_PURGE | IRC_BALAST_REMOVED | LAW_SECURE | v15.2
+ * 
+ * * SÚLAD S ÚSTAVNÝM ZÁKONOM:
+ * - NO IRC PREFIXES: Úplne odstránený starý balast 'Mravec L_' a skracovanie fingov na shortFingDisplay.
+ * - FALLBACK TO FING: Ak systém nepozná meno kontaktu, preberá sa čistý 12-znakový unifikovaný tvar 0x...
+ * - MSG: Vykresľovanie a mapovanie textov drží striktne posvätné .msg.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -27,7 +30,7 @@ import { SignalService } from '../services/SignalService.js';
 
 const SignalScreen = ({ route, navigation }) => {
   const { t, vault } = useLaria(); 
-  const { addContact } = useContacts(); 
+  const { contacts, addContact } = useContacts(); 
   const [note, setNote] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [isNetOnline, setIsNetOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -35,7 +38,7 @@ const SignalScreen = ({ route, navigation }) => {
 
   const { incomingRequests, sendLariaPackage, sendChatMessage, resolveHandshakeStatus, markAsRead } = useSignal();
 
-  // --- EXTRACT IDENTITY (Striktný unifikovaný 12-znakový formát) ---
+  // --- EXTRACT IDENTITY (Striktný unifikovaný 12-znakový formát 0x...) ---
   const { target, fallbackFing } = route.params || {};
   
   let initialTargetFing = target?.poznamka || target?.fing || '';
@@ -45,10 +48,17 @@ const SignalScreen = ({ route, navigation }) => {
     ? initialTargetFing.trim().toLowerCase() 
     : `0x${initialTargetFing.trim().toLowerCase()}`;
   
-  // Zjednotený výrez na zobrazenie skráteného ID (0x + prvých 6 znakov)
-  const shortFingDisplay = targetFing.substring(2, 8).toUpperCase();
-  const channelName = target?.meno || (targetFing ? `Mravec L_${shortFingDisplay}` : "Laria Handshake");
   const masterName = vault?.identity?.meno || 'Sammael';
+
+  // 🕵️‍♂️ Dynamické vyhľadanie mena v lokálnom trezore podľa posvätného FINGU
+  const znamyKontakt = contacts?.find(c => {
+    const cf = (c.fing || '').trim().toLowerCase();
+    const cleanC = cf.startsWith('0x') ? cf : `0x${cf}`;
+    return cleanC === targetFing;
+  });
+
+  // 🔥 OPRAVENÉ: Odstránený parazitný prefix Mravec L_ a shortFingDisplay. Fallback je čistý FING.
+  const channelName = znamyKontakt?.meno || target?.meno || targetFing || "Laria Handshake";
 
   useEffect(() => {
     if (targetFing && typeof markAsRead === 'function') {
@@ -64,27 +74,32 @@ const SignalScreen = ({ route, navigation }) => {
       const myFing = vault?.identity?.poznamka || vault?.identity?.fing || '';
       const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
       
-      await SignalService.manageContract('CONFIRM_CONTRACT', {
+      const res = await SignalService.manageContract('CONFIRM_CONTRACT', {
         fing_a: targetFing,
         fing_b: myCleanFing,
         status_b: "1" 
       });
 
-      const vaultResult = await addContact({
-        fing: targetFing,
-        meno: target?.meno || `Mravec L_${shortFingDisplay}`,
-        sha: target?.sha || handshakeMsg?.targetSha || '',
-        kat: 'Overený partner',
-        lok: target?.lok || 'V sieti',
-        popis: target?.popis || handshakeMsg?.text || 'Spojenie nadviazané cez handshake.'
-      });
+      if (res && res.success) {
+        // 🔥 OPRAVENÉ: Pri uložení kontaktu sa namiesto starých IRC sračiek použije čistý targetFing
+        const vaultResult = await addContact({
+          fing: targetFing,
+          meno: target?.meno || handshakeMsg?.senderMeno || targetFing,
+          sha: '0', 
+          kat: 'Overený partner',
+          lok: target?.lok || 'V sieti',
+          popis: target?.popis || handshakeMsg?.msg || 'Spojenie nadviazané cez handshake.' 
+        });
 
-      if (vaultResult.success) {
-        console.log(`[SIGNAL] Pečať ${targetFing} úspešne uzamknutá v klube.`);
+        if (vaultResult && vaultResult.success) {
+          console.log(`[SIGNAL] Pečať ${targetFing} úspešne uzamknutá v klube.`);
+        }
+
+        resolveHandshakeStatus(handshakeMsg.id, 'CONFIRMED');
+        Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Brána otvorená a kontakt uložený.");
+      } else {
+        throw new Error("Brána odmietla potvrdenie kontraktu.");
       }
-
-      resolveHandshakeStatus(handshakeMsg.id, 'ALLOWED');
-      Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Brána otvorená a kontakt uložený.");
     } catch (err) {
       console.error("ALLOW zlyhal:", err);
       Alert.alert("⚠️ MATRIX ERROR", "Nepodarilo sa bezpečne podpísať zmluvu.");
@@ -97,15 +112,17 @@ const SignalScreen = ({ route, navigation }) => {
       const myFing = vault?.identity?.poznamka || vault?.identity?.fing || '';
       const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
 
-      await SignalService.manageContract('CONFIRM_CONTRACT', {
+      const res = await SignalService.manageContract('CONFIRM_CONTRACT', {
         fing_a: targetFing,
         fing_b: myCleanFing,
         status_b: "2" 
       });
       
-      resolveHandshakeStatus(handshakeMsg.id, 'ABORTED');
-      Alert.alert("MATRIX", "Zmluva zrušená (ABORT).");
-      navigation.goBack();
+      if (res && res.success) {
+        resolveHandshakeStatus(handshakeMsg.id, 'ABORTED');
+        Alert.alert("MATRIX", "Zmluva zrušená (ABORT).");
+        navigation.goBack();
+      }
     } catch (err) {
       console.error("ABORT zlyhal:", err);
     }
@@ -116,9 +133,9 @@ const SignalScreen = ({ route, navigation }) => {
     const finalNote = note.trim() || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky v bunke H.";
     console.log(`[SIGNAL] Odosielam prvotný handshake pre: ${targetFing}`);
     
-    const res = await sendLariaPackage(targetFing, target?.sha || '', finalNote);
-    if (res.success) {
-      setNote(''); // 🧼 VYČISTENIE INPUTU: Spustí re-render a okamžite prepne screen do Režimu 2 (Čakanie)
+    const res = await sendLariaPackage(targetFing, finalNote);
+    if (res && res.success) {
+      setNote(''); 
     } else {
       Alert.alert("Chyba", "Nepodarilo sa odoslať balík cez Matrix.");
     }
@@ -128,7 +145,7 @@ const SignalScreen = ({ route, navigation }) => {
   const handleLiveSend = async () => {
     if (!chatInput.trim()) return;
     const res = await sendChatMessage(targetFing, chatInput.trim());
-    if (res.success) {
+    if (res && res.success) {
       setChatInput('');
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     }
@@ -141,7 +158,7 @@ const SignalScreen = ({ route, navigation }) => {
     }
   };
 
-  // --- RECRUITING LOGIC PRE REŽIMY OBRAZOVKY ---
+  // --- MAPOVANIE LOGIKY PRE REŽIMY OBRAZOVKY ---
   const currentChannelLog = incomingRequests 
     ? incomingRequests.filter(req => req.fing && req.fing.trim().toLowerCase() === targetFing) 
     : [];
@@ -149,14 +166,17 @@ const SignalScreen = ({ route, navigation }) => {
   const pendingIncomingHandshake = currentChannelLog.find(msg => msg.isHandshake && msg.status === 'WAITING_FOR_ME');
   const pendingOutgoingHandshake = currentChannelLog.find(msg => msg.isHandshake && msg.status === 'WAITING_FOR_THEM');
   
-  const isContractApproved = currentChannelLog.some(msg => msg.isHandshake && (msg.status === 'ALLOWED' || msg.status === 'RESOLVED')) || target?.isOdomknuty;
+  const isContractApproved = currentChannelLog.some(msg => 
+    msg.isHandshake && (msg.status === 'CONFIRMED' || msg.handshakeStatus === 'CONFIRMED')
+  ) || target?.isOdomknuty || !!znamyKontakt;
 
+  // 💬 FILTRÁCIA ČISTÝCH BLESKOVIEK S JEDNOTNÝM .msg
   const chatMessagesOnly = currentChannelLog
     .filter(msg => !msg.isHandshake)
     .map(msg => ({
       id: msg.id || Date.now().toString() + Math.random(),
       user: msg.isMe ? masterName : channelName,
-      text: msg.text,
+      msg: msg.msg || '', 
       time: msg.receivedAt || ''
     }));
 
@@ -182,12 +202,12 @@ const SignalScreen = ({ route, navigation }) => {
         </View>
 
         {/* REŽIM 1: ROZHRANIE POTVRDENIA (ALLOW / ABORT) */}
-        {pendingIncomingHandshake ? (
+        {pendingIncomingHandshake && !isContractApproved ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
             <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', padding: 20, borderRadius: 6, width: '100%' }}>
               <Text style={[G.statusTextSmall, { color: '#E74C3C', marginBottom: 10, textTransform: 'uppercase', fontWeight: 'bold' }]}>⚠️ Prichádzajúca Pečať (Bunka H):</Text>
               <Text style={[G.cardDescriptionText, { color: '#fff', marginBottom: 25, fontSize: 15, lineHeight: 22, textAlign: 'left' }]}>
-                {pendingIncomingHandshake.text}
+                {pendingIncomingHandshake.msg} 
               </Text>
               
               <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
@@ -207,7 +227,7 @@ const SignalScreen = ({ route, navigation }) => {
               </View>
             </View>
           </View>
-        ) : pendingOutgoingHandshake ? (
+        ) : pendingOutgoingHandshake && !isContractApproved ? (
           /* REŽIM 2: ODOSLANÝ KONTRAKT – ČAKÁ SA NA DRUHÚ STRANU */
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
             <Text style={[G.cardDescriptionText, { color: '#888', textAlign: 'center', fontSize: 16, lineHeight: 24 }]}>
@@ -252,7 +272,7 @@ const SignalScreen = ({ route, navigation }) => {
                     isMyMessage ? Signal_CHAT.bubbleRight : Signal_CHAT.bubbleLeft
                   ]}>
                     <Text style={[G.cardDescriptionText, Signal_CHAT.messageText]}>
-                      {item.text}
+                      {item.msg} 
                     </Text>
                   </View>
                 </View>
@@ -310,7 +330,7 @@ const SignalScreen = ({ route, navigation }) => {
       </View>
 
       {/* INPUT PRE REŽIM 3 */}
-      {isContractApproved && !pendingIncomingHandshake && !pendingOutgoingHandshake && (
+      {isContractApproved && (
         <View style={[Signal_BOTTOM.container, { paddingBottom: 20, backgroundColor: '#000000' }]}>
           <View style={Signal_BOTTOM.innerWrapper}>
             <TextInput

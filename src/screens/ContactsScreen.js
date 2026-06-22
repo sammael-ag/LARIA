@@ -1,9 +1,11 @@
 /**
- * LARIA v13.9.1: ContactsScreen (Pure Handshake & Flash Signals Integrated)
+ * LARIA v15.3: ContactsScreen (Blockchain TxHash Alignment)
  * Master: Sammael | Muse: Aria
- * Status: MASTER_STABLE_PWA | HANDSHAKE_CONNECTED | PRODUCTION_LIVE_TEST
- * Úprava: Premenovaný Prijímací salón na "RECEPCIA" a uložené kontakty na "KLUB".
- *         Vyčistené párovanie indikátorov a plná synchronizácia so striktným 0x formátom.
+ * Status: MASTER_STABLE_PWA | HANDSHAKE_CONNECTED | BLOCKCHAIN_READY | v15.3
+ * 
+ * * ÚPRAVA v15.3:
+ * - TOTAL PURGE OF SHA: Odstránený starý parameter `sha` a plne nahradený za `txHash` (blockchain konfirmácia).
+ * - CLEAN ALIGNMENT: Úprava zobrazenia dátovej pečate pre overovanie transakčných hashov.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -32,7 +34,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 /**
- * 🛡️ UNIFIKÁTOR: Pomocná funkcia pre bezpečné porovnávanie v rámci UI lokálnych filtrov
+ * 🛡️ UNIFIKÁTOR: Pomocná funktion pre bezpečné porovnávanie v rámci UI lokálnych filtrov
  */
 const sformatujFingUI = (fing) => {
   if (!fing) return '';
@@ -52,10 +54,9 @@ const ContactsScreen = ({ navigation, route }) => {
   const flatListRef = useRef(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   
-  // 🔐 Vytiahnutie živých dát bez akýchkoľvek umelých simulácií
   const { 
     contacts, 
-    unknownContacts, // Sem padajú reálni mravci zachytení z Matrixu
+    unknownContacts, 
     togglePin, 
     deleteContact, 
     syncContactWithMatrix, 
@@ -104,13 +105,17 @@ const ContactsScreen = ({ navigation, route }) => {
             }
 
             if (foundFing) {
+              const cleanFing = foundFing.trim().toLowerCase().startsWith('0x') 
+                ? foundFing.trim().toLowerCase() 
+                : `0x${foundFing.trim().toLowerCase()}`;
+
               payload = {
-                fing: foundFing, // Posiela sa do addContact, kde dostane finálny 0x striktný formát
-                meno: params.meno || params.m,
+                fing: cleanFing, 
+                meno: params.meno || params.m || cleanFing, 
                 kat: params.kat,
                 lok: params.lok,
                 krypt: params.krypt || params.k,
-                sha: params.sha
+                txHash: params.txHash || params.tx || params.hash // 🔥 Očakávame čistý hash transakcie
               };
             }
           } catch (e) {
@@ -122,7 +127,7 @@ const ContactsScreen = ({ navigation, route }) => {
           const result = await addContact(payload);
 
           if (result.success) {
-            const menoOznam = result.contact?.meno || "Pútnik";
+            const menoOznam = result.contact?.meno || "Identita";
             Alert.alert(
               "PEČAŤ PRIJATÁ", 
               `Identita ${menoOznam.toUpperCase()} bola bezpečne zapísaná. Systém na pozadí preveruje Matrix...`
@@ -130,7 +135,7 @@ const ContactsScreen = ({ navigation, route }) => {
           } else if (result.isDuplicate) {
             Alert.alert(
               "ATELIÉR INFO", 
-              `Identitu [ ${result.contact?.meno || 'Pútnik'} ] už vo svojom trezore bezpečne držíš.`
+              `Identitu [ ${result.contact?.meno || 'Identita'} ] už vo svojom trezore bezpečne držíš.`
             );
           } else {
             Alert.alert("INFO", result.error || "Chyba pri overovaní pečate.");
@@ -144,7 +149,7 @@ const ContactsScreen = ({ navigation, route }) => {
     }
   }, [route.params]);
 
-  // --- FILTROVANIE A TRIEDENIE KLUBOVÝCH KONTAKTOV ---
+  // --- FILTROVANIE A TRIEDENIE ---
   const sortedContacts = [...contacts]
     .filter(c => {
       const meno = c.meno || ""; 
@@ -161,7 +166,6 @@ const ContactsScreen = ({ navigation, route }) => {
       return a.pinned ? -1 : 1;
     });
 
-  // --- MANUÁLNY SYNC Z MATRIXU ---
   const handleSync = async (fingId) => {
     setSyncingId(fingId);
     const result = await syncContactWithMatrix(fingId);
@@ -174,7 +178,6 @@ const ContactsScreen = ({ navigation, route }) => {
     }
   };
 
-  // --- BEZPEČNÉ VYMAZANIE (ČISTÝ REZ) ---
   const handleDeleteContact = async (fingId) => {
     try {
       setExpandedContactId(null); 
@@ -195,7 +198,6 @@ const ContactsScreen = ({ navigation, route }) => {
     setExpandedContactId(expandedContactId === id ? null : id);
   };
 
-  // --- SMEROVANIE DO KRYPTO-BRÁNY ---
   const handleOpenSignalGate = (item) => {
     clearUnreadBadge(item.fing);
     navigation.navigate('Signal', { 
@@ -204,20 +206,19 @@ const ContactsScreen = ({ navigation, route }) => {
     });
   };
 
-  // --- UNIFIKOVANÝ RENDERER RIADKOV ---
+  // --- UNIFIKOVANÝ RENDERER ---
   const renderItem = ({ item }) => {
     const isExpanded = expandedContactId === item.fing;
     const isSyncing = syncingId === item.fing;
     
-    const displayMeno = item.meno || "Pútnik";
-    const displayKat = item.kat || "Hľadač";
     const displayFing = item.fing || "????";
+    const displayMeno = item.meno || displayFing; 
+    const displayKat = item.kat || "Partner";
 
     const badgeStatus = getContactBadgeStatus(displayFing);
     const hasIncomingHandshake = badgeStatus === 'CONTRACT_PENDING';
     const hasNewFlashMessage = badgeStatus === 'NEW_MESSAGE';
 
-    // Bezpečné porovnanie FING-ov cez unifikátor, aby nám žiadna správa nepretiekla pomedzi prsty
     const contactLogs = incomingRequests 
       ? incomingRequests.filter(req => sformatujFingUI(req.fing) === sformatujFingUI(displayFing)) 
       : [];
@@ -246,7 +247,6 @@ const ContactsScreen = ({ navigation, route }) => {
           
           <View style={{ flexDirection: 'row', height: 45, borderWidth: 1, borderColor: '#1a1a1a', borderRadius: 8, marginTop: 10, marginBottom: 5, backgroundColor: 'transparent' }}>
             
-            {/* 1. ODMIETNUŤ / VYMAZAŤ */}
             <TouchableOpacity 
               style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} 
               onPress={() => {
@@ -258,7 +258,6 @@ const ContactsScreen = ({ navigation, route }) => {
               <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>🗑️</Text>
             </TouchableOpacity>
 
-            {/* 2. RE-SYNC */}
             <TouchableOpacity 
               disabled={!!item.temporary} 
               style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a', opacity: item.temporary ? 0.2 : 1 }} 
@@ -268,7 +267,6 @@ const ContactsScreen = ({ navigation, route }) => {
               {isSyncing ? <ActivityIndicator size="small" color="#0FF" /> : <Text style={{ color: '#0FF', fontSize: 25, fontWeight: 'bold' }}>↻</Text>}
             </TouchableOpacity>
 
-            {/* 3. KRYPTO-BRÁNA */}
             <View style={{ flex: 1 }}>
               <TouchableOpacity 
                 style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a', backgroundColor: (hasNewFlashMessage || hasIncomingHandshake) ? 'rgba(231, 76, 60, 0.1)' : 'transparent' }} 
@@ -285,7 +283,6 @@ const ContactsScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
 
-            {/* 4. PIN */}
             <TouchableOpacity 
               disabled={!!item.temporary} 
               style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a', opacity: item.temporary ? 0.2 : 1 }} 
@@ -300,7 +297,6 @@ const ContactsScreen = ({ navigation, route }) => {
           <TouchableOpacity onPress={() => handlePressItem(item.fing)} activeOpacity={0.8} style={{ width: '100%' }}>
             <View style={G.divider} />
             <Text style={G.cardDescriptionText}>{item.popis || 'Čaká na otvorenie brány...'}</Text>
-            {/* Zobrazuje kompletných čistých 12 znakov s 0x priamo z nášho upraveného Trezoru */}
             <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 10, marginBottom: 10 }]}>
               ID: {displayFing.toUpperCase()}{item.syncedAt ? ' ✓' : null}
             </Text>
@@ -319,7 +315,7 @@ const ContactsScreen = ({ navigation, route }) => {
                     <Text style={G.statusTextSmall}>{labels.call || "VOLAŤ"}</Text>
                   </TouchableOpacity>
                 ) : null}
-                <TouchableOpacity style={G.miniBtn} onPress={() => Alert.alert(alerts.data_title || 'DÁTOVÁ PEČAŤ', `FING: ${displayFing.toUpperCase()}\nSHA: ${item.sha || 'NO_SHA'}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}>
+                <TouchableOpacity style={G.miniBtn} onPress={() => Alert.alert(alerts.data_title || 'DÁTOVÁ PEČAŤ', `FING: ${displayFing.toUpperCase()}\nTX_HASH: ${item.txHash || 'NO_TX_HASH'}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}>
                   <Text style={G.statusTextSmall}>{labels.data || "DÁTA"}</Text>
                 </TouchableOpacity>
                 {item.email ? (
@@ -408,7 +404,7 @@ const ContactsScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
               </View>
 
-              {/* 📡 RECEPCIA: Prichádzajúce signály, ktoré doteraz nie sú uložené */}
+              {/* 📡 RECEPCIA: Prichádzajúce overenia */}
               {unknownContacts && unknownContacts.length > 0 && (
                 <View style={{ marginBottom: 20, marginTop: 10 }}>
                   <Text style={[G.statusTextSmall, { color: '#E74C3C', letterSpacing: 2, marginBottom: 10, fontWeight: 'bold' }]}>
@@ -425,7 +421,7 @@ const ContactsScreen = ({ navigation, route }) => {
                 </View>
               )}
 
-              {/* 🔐 KLUB: Trvalé a overené identity */}
+              {/* 🔐 KLUB */}
               <Text style={[G.statusTextSmall, { color: '#666', letterSpacing: 2, marginBottom: 5, marginTop: 5 }]}>
                 🔐 KLUB ({sortedContacts.length})
               </Text>
