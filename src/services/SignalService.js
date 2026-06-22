@@ -52,7 +52,8 @@ export const SignalService = {
       });
 
       const resData = await response.json();
-      
+      console.log("[SIGNAL_SERVICE] Surová odpoveď z mraveniska:", resData);
+
       if (resData && (resData.status === "success" || resData.success === true)) {
         return { 
           success: true, 
