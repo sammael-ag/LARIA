@@ -1,12 +1,14 @@
 /**
- * LARIA Signal SCREEN v15.2 (Pure Handshake Engine - High Speed Aligned)
+ * LARIA Signal SCREEN v15.3-STRICT (Pure Handshake Engine - State Automaton Edition)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: TOTAL_PURGE | IRC_BALAST_REMOVED | LAW_SECURE | v15.2
+ * STATUS: TOTAL_PURGE | STATE_AUTOMATON_ALIGNED | LAW_SECURE | SHA_REMOVED | v15.3-STRICT
  * 
  * * SÚLAD S ÚSTAVNÝM ZÁKONOM:
- * - NO IRC PREFIXES: Úplne odstránený starý balast 'Mravec L_' a skracovanie fingov na shortFingDisplay.
+ * - NO IRC PREFIXES: Úplne odstránený starý balast 'Mravec L_' a skracovanie fingov.
  * - FALLBACK TO FING: Ak systém nepozná meno kontaktu, preberá sa čistý 12-znakový unifikovaný tvar 0x...
  * - MSG: Vykresľovanie a mapovanie textov drží striktne posvätné .msg.
+ * - TX_HASH AUTOMATON: Tlačidlá ALLOW a ABORT strieľajú stavy "1" a "2" priamo do parametra txHash!
+ * - CLEAN VAULT: Odstránená parazitná premenná 'sha' pri ukladaní kontaktu.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -57,7 +59,6 @@ const SignalScreen = ({ route, navigation }) => {
     return cleanC === targetFing;
   });
 
-  // 🔥 OPRAVENÉ: Odstránený parazitný prefix Mravec L_ a shortFingDisplay. Fallback je čistý FING.
   const channelName = znamyKontakt?.meno || target?.meno || targetFing || "Laria Handshake";
 
   useEffect(() => {
@@ -74,18 +75,18 @@ const SignalScreen = ({ route, navigation }) => {
       const myFing = vault?.identity?.poznamka || vault?.identity?.fing || '';
       const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
       
-      const res = await SignalService.manageContract('CONFIRM_CONTRACT', {
+      // 🔥 Akcia a payload zosynchronizované so stavovým automatom (strieľame čistú "1" do txHash)
+      const res = await SignalService.manageContract('UPDATE_CONTRACT', {
         fing_a: targetFing,
         fing_b: myCleanFing,
-        status_b: "1" 
+        txHash: "1" 
       });
 
       if (res && res.success) {
-        // 🔥 OPRAVENÉ: Pri uložení kontaktu sa namiesto starých IRC sračiek použije čistý targetFing
+        // 🔥 ULTRA ČISTÉ: sha letela do koša, ukladáme len čisté identifikačné a sieťové údaje
         const vaultResult = await addContact({
           fing: targetFing,
           meno: target?.meno || handshakeMsg?.senderMeno || targetFing,
-          sha: '0', 
           kat: 'Overený partner',
           lok: target?.lok || 'V sieti',
           popis: target?.popis || handshakeMsg?.msg || 'Spojenie nadviazané cez handshake.' 
@@ -109,13 +110,16 @@ const SignalScreen = ({ route, navigation }) => {
   // --- AKCIA: ABORT (ODMIETNUTIE ZMLUVY) ---
   const handleRejectHandshake = async (handshakeMsg) => {
     try {
+      console.log(`[SIGNAL] Ruším zmluvu ABORT pre unifikovaný FING: ${targetFing}`);
+      
       const myFing = vault?.identity?.poznamka || vault?.identity?.fing || '';
       const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
 
-      const res = await SignalService.manageContract('CONFIRM_CONTRACT', {
+      // 🔥 Akcia a payload zosynchronizované so stavovým automatom (strieľame čistú "2" do txHash)
+      const res = await SignalService.manageContract('UPDATE_CONTRACT', {
         fing_a: targetFing,
         fing_b: myCleanFing,
-        status_b: "2" 
+        txHash: "2" 
       });
       
       if (res && res.success) {
@@ -125,6 +129,7 @@ const SignalScreen = ({ route, navigation }) => {
       }
     } catch (err) {
       console.error("ABORT zlyhal:", err);
+      Alert.alert("⚠️ MATRIX ERROR", "Nepodarilo sa zrušiť zmluvu.");
     }
   };
 
@@ -170,7 +175,6 @@ const SignalScreen = ({ route, navigation }) => {
     msg.isHandshake && (msg.status === 'CONFIRMED' || msg.handshakeStatus === 'CONFIRMED')
   ) || target?.isOdomknuty;
 
-  // 💬 FILTRÁCIA ČISTÝCH BLESKOVIEK S JEDNOTNÝM .msg
   const chatMessagesOnly = currentChannelLog
     .filter(msg => !msg.isHandshake)
     .map(msg => ({

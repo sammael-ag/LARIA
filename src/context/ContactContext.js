@@ -1,12 +1,13 @@
 /**
- * LARIA v15.1: ContactContext (Trezor identít - Sovereign Security Core)
+ * LARIA v15.2: ContactContext (Trezor identít - Sovereign Security Core)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
- * Status: CRYSTAL_CORE_INTEGRATED | GATEWAY_SECURED | SECURITY_ALIGNMENT_ACTIVE
+ * Status: CRYSTAL_CORE_INTEGRATED | GATEWAY_SECURED | SECURITY_ALIGNMENT_ACTIVE | BLOCKCHAIN_AWARE
  * 
  * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
  * - FING: Vždy unifikovaný tvar (0x + 10 znakov hex, malé písmená). Všade pod názvom 'fing'.
  * - POPIS: Text profilu/vizitky užívateľa (remeslo, zameranie).
  * - MSG / hMSG: Sprievodné texty a chatové správy prenášané sieťou.
+ * - CONTRACT STATES: Sledovanie stavu zmluvy (0 = PENDING, 1 = SIGNED/ACTIVE, 2 = ABORTED) + txHash.
  * - STRICT SECURITY: Cudzie 'sha' je prísne zakázané prenášať alebo ukladať!
  */
 
@@ -56,7 +57,7 @@ export const ContactProvider = ({ children }) => {
     loadContacts();
   }, []);
 
-  // --- 📡 DYNAMICKÝ DETEKTOR NEZNÁMYCH PEČATÍ (Nový Prijímací Salón) ---
+  // --- 📡 DYNAMICKÝ DETEKTOR NEZNÁMYCH PEČATÍ ---
   const unknownContacts = useMemo(() => {
     if (!incomingRequests) return [];
 
@@ -79,6 +80,8 @@ export const ContactProvider = ({ children }) => {
         lok: 'Čaká na overenie',
         popis: 'Tento profil čaká na schválenie pečaťa.', 
         hMsg: firstMsg?.msg || 'Poslal ti handshake požiadavku...', 
+        contractStatus: 0, // Predvolený stav pre neznámy prichádzajúci kontakt
+        txHash: '',
         temporary: true 
       };
     });
@@ -115,12 +118,11 @@ export const ContactProvider = ({ children }) => {
     );
   };
 
-  // --- 2. UNIVERZÁLNY ZÁPIS PEČATE DO TREZORU (v15.1 - Čistý 0x Spoj) ---
+  // --- 2. UNIVERZÁLNY ZÁPIS PEČATE DO TREZORU (v15.2 - Rozšírený o Blockchain stavy) ---
   const addContact = async (rawData) => {
     try {
       const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
 
-      // Zjednutenie fingu hneď na bráne trezoru (akceptuje fing/id/f z balíka)
       const targetFing = sformatujFing(data.fing || data.id || data.f || data.poznamka || data.key);
       const targetMeno = data.meno || data.m || "Pútnik";
 
@@ -134,19 +136,21 @@ export const ContactProvider = ({ children }) => {
         return { success: false, isDuplicate: true, error: "Túto identitu už v ateliéri máš.", contact: existing };
       }
 
-      // Striktne uzákonená a prečistená štruktúra v lokálnom úložisku mobilu (BEZ SHA!)
+      // Striktne uzákonená a prečistená štruktúra vrátane kontraktov (BEZ SHA!)
       const newContact = {
         fing: targetFing,              
         meno: targetMeno,              
         kat: data.kat || 'Majster',    
         lok: data.lok || 'V sieti',    
-        popis: data.popis || '',       // Vizitka - popis práce/produktov užívateľa
-        gal: data.gal || '',           // Čistý odkaz na galériu (parazitný Signal odstránený)
+        popis: data.popis || '',       
+        gal: data.gal || '',           
         krypt: data.krypt || data.k || '', 
+        contractStatus: data.contractStatus !== undefined ? Number(data.contractStatus) : 0, // 0=Vytvorený, 1=Podpísaný, 2=Zrušený
+        txHash: data.txHash || '',     // Hash blockchain transakcie
         pinned: false,
         addedAt: new Date().toISOString(),
         syncedAt: null,                
-        v: "15.1"
+        v: "15.2"
       };
 
       let updatedContacts;
@@ -159,7 +163,6 @@ export const ContactProvider = ({ children }) => {
         return updatedContacts;
       });
 
-      // Po úspešnom zápise okamžite vyžiadame re-sync vizitky priamo z Matrix matriky
       syncContactWithMatrix(targetFing);
       return { success: true, contact: newContact };
     } catch (e) {
@@ -168,7 +171,43 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- 3. 📡 TELEPATICKÝ LOKÁLNY MOST (QR kód / NFC / Web link) ---
+  // --- 3. DYNAMICKÝ MANAŽMENT STAVU KONTRAKTU (Lokálny zápis po podpise) ---
+  const updateContractStatus = async (fingId, newStatus, txHashStr = '') => {
+    try {
+      const targetFing = sformatujFing(fingId);
+      let wasUpdated = false;
+
+      setContacts(prev => {
+        const updated = prev.map(c => {
+          if (sformatujFing(c.fing) === targetFing) {
+            wasUpdated = true;
+            return {
+              ...c,
+              contractStatus: Number(newStatus),
+              txHash: txHashStr || c.txHash,
+              syncedAt: new Date().toISOString()
+            };
+          }
+          return c;
+        });
+
+        if (wasUpdated) {
+          AsyncStorage.setItem('laria_contacts', JSON.stringify(updated)).catch(e =>
+            console.error("❌ VAULT_CONTRACT_UPDATE_ERROR:", e)
+          );
+        }
+        return updated;
+      });
+
+      console.log(`⛓️ BLOCKCHAIN UZOL: Stav kontraktu pre ${targetFing} zmenený na ${newStatus} [tx: ${txHashStr}]`);
+      return { success: wasUpdated };
+    } catch (e) {
+      console.error("❌ UPDATE_CONTRACT_STATUS_ERROR:", e);
+      return { success: false, error: "Zlyhala úprava kontraktu v trezore." };
+    }
+  };
+
+  // --- 4. 📡 TELEPATICKÝ LOKÁLNY MOST (QR kód / NFC / Web link) ---
   useEffect(() => {
     let unsubscribeTauriFn = null;
 
@@ -224,7 +263,7 @@ export const ContactProvider = ({ children }) => {
     };
   }, [contacts]);
 
-  // --- 4. 📡 MATRIX RE-SYNC (Preleštenie vizitky cez Bránu podľa FING-u) ---
+  // --- 5. 📡 MATRIX RE-SYNC (Preleštenie vizitky a stavov z Matrix registra) ---
   const syncContactWithMatrix = async (fingId) => {
     try {
       const targetFing = sformatujFing(fingId);
@@ -236,7 +275,7 @@ export const ContactProvider = ({ children }) => {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'recover',
-          fing: targetFing // 💎 OPRAVENÉ: Posielame striktne 'fing' namiesto nebezpečného 'sha'
+          fing: targetFing 
         })
       });
 
@@ -255,9 +294,12 @@ export const ContactProvider = ({ children }) => {
                 meno: master.meno || c.meno,
                 kat: master.kat || c.kat,
                 lok: master.lok || c.lok,
-                popis: master.popis || c.popis, // Načítanie popisu práce/produktov
-                gal: master.gal || c.gal,       // Očistená galéria
+                popis: master.popis || c.popis, 
+                gal: master.gal || c.gal,       
                 krypt: master.krypt || c.krypt,
+                // Ak brána posiela aktualizovaný stav kontraktu z reťazca
+                contractStatus: master.contractStatus !== undefined ? Number(master.contractStatus) : c.contractStatus,
+                txHash: master.txHash || c.txHash,
                 syncedAt: new Date().toISOString()
               };
             }
@@ -272,7 +314,7 @@ export const ContactProvider = ({ children }) => {
           return updated;
         });
 
-        console.log(`✅ Identita ${targetFing} bola v trezore úspešne aktualizovaná.`);
+        console.log(`✅ Identita ${targetFing} a zmluvné stavy úspešne preleštené.`);
         return { success: true };
       }
       return { success: false, error: "Identita v Matrixe nenájdená." };
@@ -282,7 +324,7 @@ export const ContactProvider = ({ children }) => {
     }
   };
 
-  // --- 5. POMOCNÉ FUNKCIE (PIN / DELETE) ---
+  // --- 6. POMOCNÉ FUNKCIE (PIN / DELETE) ---
   const togglePin = (fingId) => {
     const targetFing = sformatujFing(fingId);
     setContacts(prev => {
@@ -314,6 +356,7 @@ export const ContactProvider = ({ children }) => {
       deleteContact, 
       togglePin, 
       syncContactWithMatrix,
+      updateContractStatus, // 🔥 EXPOZÍCIA: Nový nástroj pre tvoje ruky, Majster!
       getContactBadgeStatus,  
       clearUnreadBadge        
     }}>

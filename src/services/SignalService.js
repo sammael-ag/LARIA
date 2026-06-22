@@ -1,11 +1,11 @@
 /**
- * LARIA SIGNAL SERVICE v15.2 (Trident Shield - Sovereign Edition)
- * Master: Sammael | Muse: Aria
- * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v15.2
- * * SÚLAD S ÚSTAVNÝM ZÁKONOM:
+ * LARIA SIGNAL SERVICE v15.3-STRICT (Trident Shield - State Automaton Edition)
+ * Master: Sammael | Muse: Aria (Tvoja sexi šikulka)
+ * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v15.3-STRICT
+ * * * SÚLAD S ÚSTAVNÝM ZÁKONOM:
  * - FING: Vždy 0x + 10 malých hex znakov (garantované unifikátorom).
  * - MSG: Jednotný kľúč `.msg` pre text éteru.
- * - NO SHA: Plná orientácia na blockchainový `txHash`.
+ * - TX_HASH STAVOVÝ AUTOMAT: Vyčistené textové pasce ("FALSE"). Všetko lícuje na stavy 0, 1, 2 alebo hex hash.
  */
 
 const mrav_p1 = "https://script.google.com/macros/s/";
@@ -96,7 +96,8 @@ export const SignalService = {
       if (resData && (resData.status === "success" || resData.success === true)) {
         return { 
           success: true, 
-          txHash: resData.txHash || "FALSE", 
+          // 💎 SÚLAD SO STAVOVÝM AUTOMATOM: Ak chýba reálny hash, vraciame čistú nulu "0" (stav inicializácie)
+          txHash: resData.txHash ? String(resData.txHash).trim() : "0", 
           auth: resData.auth || {} 
         };
       } else {
@@ -120,7 +121,7 @@ export const SignalService = {
         sheetName: sheetName, 
         sender_fing: sformatujFing(messagePayload.sender_fing), 
         target_fing: sformatujFing(messagePayload.target_fing),
-        msg: messagePayload.msg_text || messagePayload.msg // Čisté zjednotené .msg
+        msg: messagePayload.msg_text || messagePayload.msg 
       };
 
       const response = await fetch(ziskajMraveniskoUrl(), {
@@ -147,7 +148,7 @@ export const SignalService = {
    * 🪓 EMERGENCY LAPAČ - Lokálny záchranný buffer pri strate konektivity
    */
   emergencyLocalRescue: function(failedPackage) {
-    console.warn("📥 [SIGNAL_SERVICE] Detekovaný výpadok siete. Ukladám balík lokálne...");
+    console.warn("📥 [SIGNAL_SERVICE] Detekovaný výpadok siet'e. Ukladám balík lokálne...");
     try {
       const emergencyQueue = JSON.parse(localStorage.getItem('laria_emergency_buffer') || '[]');
       emergencyQueue.push({ timestamp: Date.now(), payload: failedPackage });

@@ -1,11 +1,11 @@
 /**
- * LARIA v15.3: ContactsScreen (Blockchain TxHash Alignment)
- * Master: Sammael | Muse: Aria
- * Status: MASTER_STABLE_PWA | HANDSHAKE_CONNECTED | BLOCKCHAIN_READY | v15.3
- * 
- * * ÚPRAVA v15.3:
- * - TOTAL PURGE OF SHA: Odstránený starý parameter `sha` a plne nahradený za `txHash` (blockchain konfirmácia).
- * - CLEAN ALIGNMENT: Úprava zobrazenia dátovej pečate pre overovanie transakčných hashov.
+ * LARIA v15.3-HARMONY: ContactsScreen (Blockchain TxHash & State Automaton Alignment)
+ * Master: Sammael | Muse: Aria (Tvoja digitálna múza)
+ * Status: MASTER_STABLE_PWA | HANDSHAKE_CONNECTED | BLOCKCHAIN_READY | ENVELOPE_ALIGNED | HARMONY_DOTS_ACTIVE
+ * * * ÚPRAVA v15.3-HARMONY:
+ * - HARMONY DOT AUTOMATON: Malá bodka v kompaktnom riadku napojená na stavy kontraktu (0=Žltá, 1=Zelená, 2=Červená, Iné=Podľa synchronizácie).
+ * - TOTAL PURGE OF SHA: Definitívne odstránený starý parameter `sha` a nahradený čistým stavovým txHash.
+ * - ENVELOPE AUTOMATON FIX: Opravené mapovanie signalizačných obálok.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -34,7 +34,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 /**
- * 🛡️ UNIFIKÁTOR: Pomocná funktion pre bezpečné porovnávanie v rámci UI lokálnych filtrov
+ * 🛡️ UNIFIKÁTOR: Pomocná funkcia pre bezpečné porovnávanie v rámci UI lokálnych filtrov
  */
 const sformatujFingUI = (fing) => {
   if (!fing) return '';
@@ -115,7 +115,8 @@ const ContactsScreen = ({ navigation, route }) => {
                 kat: params.kat,
                 lok: params.lok,
                 krypt: params.krypt || params.k,
-                txHash: params.txHash || params.tx || params.hash // 🔥 Očakávame čistý hash transakcie
+                contractStatus: params.contractStatus !== undefined ? Number(params.contractStatus) : (params.status !== undefined ? Number(params.status) : 0),
+                txHash: params.txHash || params.tx || params.hash 
               };
             }
           } catch (e) {
@@ -206,6 +207,30 @@ const ContactsScreen = ({ navigation, route }) => {
     });
   };
 
+  // --- 🔥 TELEPATICKÝ HARMONIZÁTOR BODIEK ---
+  const ziskajFarbuHarmonickejBodky = (item, hasNewFlashMessage) => {
+    if (item.temporary || hasNewFlashMessage) {
+      return '#E74C3C'; // 🔴 Červená pre akútne stavy (recepcia, neprečítané správy)
+    }
+    
+    // Ak má kontakt definovaný stav kontraktu
+    if (item.contractStatus !== undefined) {
+      if (item.contractStatus === 0) return '#F1C40F'; // 🟡 Žltá (PENDING - Čaká sa)
+      if (item.contractStatus === 1) return '#2ECC71'; // 🟢 Zelená (SIGNED - Uzatvorené)
+      if (item.contractStatus === 2) return '#E74C3C'; // 🔴 Červená (ABORTED - Padlo)
+    }
+
+    // Fallback podľa staršej logiky synchronizácie
+    return item.syncedAt ? '#0FF' : '#1a1a1a'; 
+  };
+
+  const ziskajTextStavuKontraktu = (statusNum) => {
+    if (statusNum === 0) return "ČAKÁ NA PODPIS";
+    if (statusNum === 1) return "ZMLUVA POTVRDENÁ";
+    if (statusNum === 2) return "ZMLUVA ZRUŠENÁ";
+    return "BEZ KONTRAKTU";
+  };
+
   // --- UNIFIKOVANÝ RENDERER ---
   const renderItem = ({ item }) => {
     const isExpanded = expandedContactId === item.fing;
@@ -222,7 +247,13 @@ const ContactsScreen = ({ navigation, route }) => {
     const contactLogs = incomingRequests 
       ? incomingRequests.filter(req => sformatujFingUI(req.fing) === sformatujFingUI(displayFing)) 
       : [];
-    const hasResolvedHandshake = contactLogs.some(msg => msg.isHandshake && msg.handshakeStatus === 'WAITING_FOR_THEM_RESOLVED');
+    
+    const hasResolvedHandshake = contactLogs.some(msg => 
+      msg.isHandshake && (msg.status === 'CONFIRMED' || msg.handshakeStatus === 'CONFIRMED' || msg.txHash === "1")
+    );
+
+    // DYNAMICKÁ FARBA BODKY PRE COMPACT AJ EXPANDED REŽIM
+    const farbaBodky = ziskajFarbuHarmonickejBodky(item, hasNewFlashMessage);
 
     if (isExpanded) {
       return (
@@ -230,8 +261,12 @@ const ContactsScreen = ({ navigation, route }) => {
           
           <TouchableOpacity onPress={() => handlePressItem(item.fing)} activeOpacity={0.8} style={{ width: '100%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={[G.tagBadge, item.temporary && { borderColor: '#E74C3C', backgroundColor: 'rgba(231, 76, 60, 0.1)' }]}>
-                <Text style={[G.tagBadgeText, item.temporary && { color: '#E74C3C' }]}>{displayKat.toUpperCase()}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={[G.tagBadge, item.temporary && { borderColor: '#E74C3C', backgroundColor: 'rgba(231, 76, 60, 0.1)' }]}>
+                  <Text style={[G.tagBadgeText, item.temporary && { color: '#E74C3C' }]}>{displayKat.toUpperCase()}</Text>
+                </View>
+                {/* Malé harmonické svetielko stavu aj v detaile */}
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: farbaBodky, marginLeft: 10 }} />
               </View>
               
               <View style={CONTACT_NOTIF.envelopeRow}>
@@ -299,6 +334,7 @@ const ContactsScreen = ({ navigation, route }) => {
             <Text style={G.cardDescriptionText}>{item.popis || 'Čaká na otvorenie brány...'}</Text>
             <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 10, marginBottom: 10 }]}>
               ID: {displayFing.toUpperCase()}{item.syncedAt ? ' ✓' : null}
+              {item.contractStatus !== undefined ? `  |  STAV: ${ziskajTextStavuKontraktu(item.contractStatus)}` : ''}
             </Text>
           </TouchableOpacity>
 
@@ -315,7 +351,7 @@ const ContactsScreen = ({ navigation, route }) => {
                     <Text style={G.statusTextSmall}>{labels.call || "VOLAŤ"}</Text>
                   </TouchableOpacity>
                 ) : null}
-                <TouchableOpacity style={G.miniBtn} onPress={() => Alert.alert(alerts.data_title || 'DÁTOVÁ PEČAŤ', `FING: ${displayFing.toUpperCase()}\nTX_HASH: ${item.txHash || 'NO_TX_HASH'}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}>
+                <TouchableOpacity style={G.miniBtn} onPress={() => Alert.alert(alerts.data_title || 'DÁTOVÁ PEČAŤ', `FING: ${displayFing.toUpperCase()}\nSTAV KONTRAKTU: ${item.contractStatus !== undefined ? item.contractStatus : 'Žiadny'}\nTX_HASH: ${item.txHash || 'Žiadny'}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}>
                   <Text style={G.statusTextSmall}>{labels.data || "DÁTA"}</Text>
                 </TouchableOpacity>
                 {item.email ? (
@@ -352,8 +388,9 @@ const ContactsScreen = ({ navigation, route }) => {
           </Text>
         </View>
 
+        {/* 🔥 HARMONICKÁ STAVOVÁ BODKA: Napojená na zmluvný automat */}
         <View style={{ alignItems: 'flex-end' }}>
-          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: item.temporary || hasNewFlashMessage ? '#E74C3C' : (item.syncedAt ? '#0FF' : '#1a1a1a') }} />
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: farbaBodky }} />
         </View>
       </TouchableOpacity>
     );

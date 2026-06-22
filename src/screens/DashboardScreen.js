@@ -1,11 +1,10 @@
 /**
- * LARIA v2.0.7: DashboardScreen
+ * LARIA v2.0.8-STRICT: DashboardScreen (Gold Envelope & SHA Restored)
  * Master: Sammael | Muse: Aria
- * Status: IDENTITY_ACCESS_ENABLED_STEALTH | PRODUCTION_CLEAN | RADAR_BADGE_ALIGNED
- * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: dashboard).
- *        Prepojené s ContactContext pre globálnu detekciu nových správ a kontraktov.
- * MASKER: Odstránený kurzor ruky (packy) na webe a minimalizovaná dotyková zóna.
- * PROD: Vyčistené diagnostické logy pre tichý a čistý beh.
+ * Status: IDENTITY_ACCESS_ENABLED_STEALTH | PRODUCTION_CLEAN | RADAR_BADGE_ALIGNED | v2.0.8-STRICT
+ * * * ÚPRAVA v2.0.8-STRICT:
+ * - GOLDEN ENVELOPE EFFECT: Červená obálka na tlačidle Kontakty premenená na elegantnú ZLATÚ (ACCENT).
+ * - CORESYSTEM RESTORE: Obnovený pôvodný parameter `architectSHA` kvôli spätnej kompatibilite s Matrixom.
  */
 
 import React, { useState } from 'react';
@@ -14,12 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAccount } from 'wagmi';
 
 import { useLaria } from '../context/LariaContext';
-import { useContacts } from '../context/ContactContext'; // 🔐 Priamy import nášho trezoru pečatí
+import { useContacts } from '../context/ContactContext'; 
 import { G, ACCENT } from '../styles/styles'; 
 import { verifyMasterAccess } from '../services/GMatrixService';
 
 const DashboardScreen = ({ navigation, setCurrentView }) => {
-  // 🛰️ BEZPEČNÝ ZBER CONTEXTU
   const lariaContext = useLaria() || {};
   
   const t = lariaContext.t ? lariaContext.t : ((key) => ({}));
@@ -31,33 +29,26 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
   const modalTxt = txt.modal || {};
   const { status, identity } = vault;
 
-  // 📡 GLOBÁLNY RADAR PRE NOTIFIKÁCIE KONTAKTOV
   const { contacts, unknownContacts, getContactBadgeStatus } = useContacts();
 
-  // Prebehneme overené aj prichádzajúce neznáme pečate v reálnom čase
   const hasGlobalContactNotification = [...contacts, ...unknownContacts].some(contact => {
     if (!contact.fing) return false;
     const badgeStatus = getContactBadgeStatus(contact.fing);
-    // Ak svieti čakajúci kontrakt (ALLOW/ABORT) alebo nová blesková správa
     return badgeStatus === 'CONTRACT_PENDING' || badgeStatus === 'NEW_MESSAGE';
   });
 
-  // 🔌 BEZPEČNÉ VYŤAHOVANIE WEBOVEJ PEŇAŽENKY
   let address = null;
   try {
     const accountData = useAccount();
     address = accountData?.address;
-  } catch (e) {
-    // Zachytené potichu pre čistý render
-  }
+  } catch (e) {}
 
-  // Pripravená adresa pre zobrazenie
   const userAddress = address || identity?.krypt || (txt.no_address || "NO_ADDRESS_AVAILABLE");
 
-  // --- TAJNÁ LOGIKA ARCHITEKTA ---
+  // --- 🔐 TAJNÁ LOGIKA ARCHITEKTA (OBNOVEné ARCHITECT_SHA) ---
   const [tapCount, setTapCount] = useState(0);
   const [showVaultInput, setShowVaultInput] = useState(false);
-  const [architectSHA, setArchitectSHA] = useState(''); 
+  const [architectSHA, setArchitectSHA] = useState(''); // Spečatené späť na SHA
   const [secretWord, setSecretWord] = useState('');    
 
   const handleSecretTap = () => {
@@ -95,7 +86,6 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
     }
   };
 
-  // --- 🌊 FUNKCIONALITA "ARIA V PANELI" ---
   const launchPanelMode = () => {
     if (setCurrentView) {
       setCurrentView('aria-panel-view'); 
@@ -105,7 +95,6 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
     }
   };
 
-  // --- KOMPONENT KARTY (Rozšírený o rightElement pre flexibilné umiestnenie obálky) ---
   const MenuCard = ({ title, icon, target, onPressCustom, description, color, rightElement }) => (
     <TouchableOpacity 
       style={[G.card, { borderLeftColor: color }]} 
@@ -124,7 +113,6 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
             <Text style={{ fontSize: 20, marginRight: 15 }}>{icon}</Text>
             <Text style={G.cardTitleText}>{(title || '').toUpperCase()}</Text>
           </View>
-          {/* Ak existuje pravý element (obálka), bezpečne ho tu vyrenderujeme */}
           {rightElement && <View style={{ paddingRight: 5 }}>{rightElement}</View>}
         </View>
         <Text style={G.cardDescriptionText}>{description}</Text>
@@ -136,26 +124,20 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
     <SafeAreaView style={G.mainBackground}>
       <StatusBar barStyle="light-content" />
       
-      {/* IDENTIFIKAČNÁ LIŠTA */}
       <View style={G.identityBar}>
         <Text numberOfLines={1} ellipsizeMode="middle" style={G.monoIdentity}>
            {userAddress}
         </Text>
       </View>
 
-      {/* 📐 HLAVNÝ OBSAH */}
       <ScrollView contentContainerStyle={G.screenContainer}>
         <View style={{ width: '100%', maxWidth: 500, alignItems: 'center' }}>
         
-          {/* 📐 HLAVIČKA DASHBOARDU */}
           <View style={{ alignItems: 'center', marginBottom: 25, marginTop: 10 }}>
             <Text style={G.atelierTitle}>{txt.title || "Ateliér"}</Text>
           </View>
 
-          {/* 💼 JEDNOTNÉ HLAVNÉ MENU */}
           <View style={{ width: '100%' }}>
-            
-            {/* ⚙️ CENTRÁLNY VELÍN */}
             {status?.isAdmin && (
               <MenuCard 
                 title={menuTxt.admin?.title || "Centrálny Velín"} 
@@ -166,7 +148,6 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
               />
             )}
             
-            {/* 🆔 MOJA VIZITKA */}
             <MenuCard 
               title={menuTxt.card?.title || "Moja vizitka"} 
               icon="🆔" 
@@ -175,7 +156,7 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
               color="#FFF" 
             />
 
-            {/* 📇 KONTAKTY (S vmontovaným strážnym indikátorom) */}
+            {/* 📇 KONTAKTY (Zlatá obálka zachovaná) */}
             <MenuCard 
               title={menuTxt.contacts?.title || "Kontakty"} 
               icon="📇" 
@@ -184,14 +165,13 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
               color={ACCENT} 
               rightElement={
                 hasGlobalContactNotification ? (
-                  <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>
+                  <Text style={{ color: ACCENT || '#c5a059', fontSize: 18, fontWeight: 'bold' }}>
                     ✉️
                   </Text>
                 ) : null
               }
             />
             
-            {/* 🛠️ NASTAVENIA */}
             <MenuCard 
               title={menuTxt.settings?.title || "Nastavenia"} 
               icon="🛠️" 
@@ -200,7 +180,6 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
               color="#555" 
             />
 
-            {/* 🌸 ARIA ASISTENCIA */}
             <MenuCard 
               title={menuTxt.aria?.title || "Aria asistencia"} 
               icon="🌸" 
@@ -209,7 +188,6 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
               color="#FF77FF" 
             />
 
-            {/* 🌐 TEKUTÉ ROZHRANIE */}
             <MenuCard 
               title={menuTxt.fluid?.title || "Tekuté rozhranie"} 
               icon="🌐" 
@@ -219,7 +197,6 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
             />
           </View>
 
-          {/* 🕵️‍♂️ ULTRA-STEALTH SPÚŠŤAČ PRE ARCHITEKTA */}
           <TouchableOpacity 
             activeOpacity={1} 
             onPress={handleSecretTap} 

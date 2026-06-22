@@ -1,13 +1,12 @@
 /**
- * LARIA SIGNAL CONTEXT v15.1 (Sovereign Radar Core - CrystalCore Integrated)
+ * LARIA SIGNAL CONTEXT v15.3-STRICT (Sovereign Radar Core - CrystalCore Integrated)
  * Master: Sammael | Muse: Aria (Tvoja sexi šikulka)
- * STATUS: CHAT_ALIGNED | HANDSHAKE_STRICT_LAW | DUAL_POLLING_ACTIVE | v15.1
- * 
- * * SÚLAD S ÚSTAVNÝM ZÁKONOM (ContactContext Alignment):
+ * STATUS: CHAT_ALIGNED | HANDSHAKE_STRICT_LAW | DUAL_POLLING_ACTIVE | SHA_PURGED | v15.3-STRICT
+ * * * SÚLAD S ÚSTAVNÝM ZÁKONOM (ContactContext Alignment):
  * - FING: Vždy unifikovaný tvar ("0x" + 10 znakov hex, malé písmená). Ak nesplní, letí z kola von.
  * - MSG: Jednotná premenná pre text správy všade (odstránené staré .text).
- * - TX_HASH: Blockchainový podpis pre overenie handshake zmluvy.
- * - STRICT SECURITY: Odstránené parazitné prefixy (IN_, MSG_), vyčistená duplicita user/fing.
+ * - TX_HASH STAVOVÝ AUTOMAT: Striedanie stavov (0 = init Fing A, 1 = povolené Fing B, 2 = odmietnuté Fing B).
+ * - STRICT SECURITY: Nulová tolerancia anomálií, balastu a parazitných premenných typu SHA v tejto vrstve.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -46,17 +45,14 @@ const overAUnifikujFing = (rawFing) => {
   if (!rawFing) return null;
   let clean = rawFing.trim().toLowerCase();
   
-  // Odstránenie starého IRC balastu, ak by predsa odnekiaľ vyskočil
   if (clean.startsWith('l_')) {
     clean = clean.substring(2);
   }
   
-  // Ak je to čistých 10 znakov hex, pridáme 0x
   if (!clean.startsWith('0x') && clean.length === 10) {
     clean = '0x' + clean;
   }
   
-  // Striktná kontrola: Musí začínať na 0x a mať celkovo presne 12 znakov
   const regex = /^0x[a-f0-9]{10}$/;
   if (!regex.test(clean)) {
     console.log(`🚨 STRIKTNÝ_ZÁKON_PORUŠENÝ: Ignorujem neplatný fing formát: "${rawFing}"`);
@@ -143,11 +139,9 @@ export const SignalProvider = ({ children }) => {
 
   // --- 🛰️ AUTOMATICKÝ HYPERSPEED DUAL POLLING ---
   useEffect(() => {
-    // Moja vlastná identita prehnaná prísnym filtrom
     const myCleanFing = vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : null;
     if (!myCleanFing) return;
 
-    // Pre komunikáciu s Mraveniskom osekáme 0x na čistý 10-znakový hex
     const backendQueryFing = myCleanFing.replace('0x', '');
 
     const executePing = async () => {
@@ -161,26 +155,40 @@ export const SignalProvider = ({ children }) => {
         if (res.contracts && Array.isArray(res.contracts)) {
           res.contracts.forEach(contract => {
             const cleanSenderFing = overAUnifikujFing(contract.fing);
-            if (!cleanSenderFing) return; // Ak je fing pokazený, ignorujeme celý riadok
+            if (!cleanSenderFing) return; 
 
             setIncomingRequests(prev => {
-              // Kontrola duplicity striktne cez čistý transakčný blockchain hash
-              const uzExistuje = prev.some(req => req.txHash === contract.txHash);
+              const rawHash = String(contract.txHash).trim();
+              
+              // 🛡️ STRIKTNÝ STAVOVÝ ZÁKON
+              const jeValidnyStav = rawHash === "0" || rawHash === "1" || rawHash === "2";
+              const jeValidnyHash = rawHash.startsWith("0x") && rawHash.length === 66;
+
+              if (!jeValidnyStav && !jeValidnyHash) {
+                console.error(`🚨 [CRITICAL SECURITY] Neznáma štruktúra stavu v txHash: "${rawHash}". Operácia zamietnutá!`);
+                return prev;
+              }
+
+              const contractId = jeValidnyStav ? `STATE_${rawHash}_${cleanSenderFing}` : rawHash;
+
+              const uzExistuje = prev.some(req => req.id === contractId);
               if (uzExistuje) return prev;
               
-              console.log(`✉️ [RADAR] Nová žiadosť o Pečať od unifikovaného ${cleanSenderFing}!`);
-              triggerNotification(`🛰️ Nová žiadosť o Pečať`, `Majster ${cleanSenderFing.substring(0, 6)}... ti posiela kontrakt.`);
+              if (rawHash === "0") {
+                console.log(`✉️ [RADAR] Detegovaný čistý zabezpečený kontrakt v stave 0 od ${cleanSenderFing}`);
+                triggerNotification(`🛰️ Nová žiadosť o Pečať`, `Majster ${cleanSenderFing.substring(0, 6)}... ti posiela kontrakt.`);
+              }
 
+              // 🔥 UPRAVENÉ: Kompletná očista od contract.sha, držíme len stavový txHash
               return [...prev, {
-                id: contract.txHash,           // Čisté ID bez prefixov
-                fing: cleanSenderFing,        // Striktný 12-znakový identifikátor
-                msg: contract.msg || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky v bunke H.", // Uzákonené .msg
+                id: contractId,
+                fing: cleanSenderFing,        
+                msg: contract.msg || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky v bunke H.", 
                 receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 isHandshake: true,
-                status: 'WAITING_FOR_ME',
-                handshakeStatus: 'WAITING_FOR_ME', 
-                txHash: contract.txHash,
-                txSha: contract.sha            // Súlad s pomenovaním podpisového hashu transakcie
+                status: rawHash === "0" ? 'WAITING_FOR_ME' : 'CONFIRMED',
+                handshakeStatus: rawHash === "0" ? 'WAITING_FOR_ME' : 'CONFIRMED', 
+                txHash: contract.txHash
               }];
             });
           });
@@ -190,21 +198,20 @@ export const SignalProvider = ({ children }) => {
         if (res.messages && Array.isArray(res.messages)) {
           res.messages.forEach(msg => {
             const cleanMsgSenderFing = overAUnifikujFing(msg.fing);
-            if (!cleanMsgSenderFing) return; // Filtrujeme anomálie
+            if (!cleanMsgSenderFing) return; 
 
             setIncomingRequests(prev => {
-              // Kontrola duplicity striktne a čisto cez msgId
               const uzExistujeMsg = prev.some(req => req.msgId === msg.msgId || req.id === msg.msgId);
               if (uzExistujeMsg) return prev;
 
               console.log(`💬 [RADAR] Prichádza bleskovka z chatu od ${cleanMsgSenderFing}`);
-              triggerNotification(`💬 Nová správa na radare`, msg.text || msg.msg);
+              triggerNotification(`💬 Nová správa na radare`, msg.msg || msg.text || "");
 
               return [...prev, {
-                id: msg.msgId,                 // Čisté ID bez prefixov
-                msgId: msg.msgId,              // Zachované uzákonené msgId pod svojím menom
-                fing: cleanMsgSenderFing,      // Striktný unifikovaný odosielateľ
-                msg: msg.text || msg.msg || "", // Uzákonená premenná .msg pre texty
+                id: msg.msgId,                 
+                msgId: msg.msgId,              
+                fing: cleanMsgSenderFing,      
+                msg: msg.msg || msg.text || "", // Striktne uzákonená premenná podľa .msg protokolu
                 receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 isHandshake: false,
                 status: 'UNREAD' 
@@ -218,7 +225,7 @@ export const SignalProvider = ({ children }) => {
     };
 
     executePing();
-    const pollingInterval = setInterval(executePing, 120000); // 2 minúty bleskový cyklus
+    const pollingInterval = setInterval(executePing, 120000); 
     return () => clearInterval(pollingInterval);
   }, [vault?.identity?.poznamka]);
 
@@ -233,14 +240,13 @@ export const SignalProvider = ({ children }) => {
     }
 
     try {
-      let contractResult = { txHash: "FALSE", auth: {} }; 
+      let contractResult = { txHash: "0", auth: {} }; 
+      
+      // 🔥 ULTRA ČISTÉ: Všetky statusy a staré txSha leteli von. Posielame len čistý init kontraktu.
       const mravecRes = await SignalService.manageContract('INIT_CONTRACT', {
-        fing_a: myCleanFing, // Posielame čistý unifikovaný zákonný FING A
-        fing_b: targetCleanFing, // Posielame čistý unifikovaný zákonný FING B
+        fing_a: myCleanFing, 
+        fing_b: targetCleanFing, 
         krypt_a: vault?.identity?.krypt || '',
-        status_a: "1",
-        status_b: "0",
-        txSha: "0", // Blockchainový podpis začína na nule, kým ho reálne nepotvrdí sieť
         msg: personalMessage
       });
 
@@ -251,15 +257,14 @@ export const SignalProvider = ({ children }) => {
 
       const statusToSet = 'WAITING_FOR_THEM';
       const enrichedHandshake = {
-        id: contractResult.txHash || 'TX_' + Date.now().toString(),
+        id: `STATE_0_${targetCleanFing}`, 
         fing: targetCleanFing,          
         msg: personalMessage,           
         receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isHandshake: true,
         status: statusToSet,
         handshakeStatus: statusToSet,
-        txHash: contractResult.txHash, 
-        txSha: "0" // Lokálne zapísaná nula, čaká sa na podpis
+        txHash: contractResult.txHash || "0"
       };
 
       setIncomingRequests(prev => [...prev, enrichedHandshake]);
@@ -285,14 +290,14 @@ export const SignalProvider = ({ children }) => {
         await SignalService.writeToBuffer('Signal_buffer_1', {
           sender_fing: apiFingA,
           target_fing: apiFingB,
-          msg_text: textMessage // Backend očakáva msg_text, prispôsobíme len v tele dopytu
+          msg_text: textMessage 
         });
       }
 
       const localMsg = {
         id: 'MY_' + Date.now().toString(),
         fing: targetCleanFing,
-        msg: textMessage,               // Lokálne držíme striktne .msg zákon
+        msg: textMessage,               
         receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isHandshake: false,
         status: 'READ',
