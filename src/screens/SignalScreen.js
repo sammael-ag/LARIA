@@ -168,7 +168,7 @@ const SignalScreen = ({ route, navigation }) => {
   
   const isContractApproved = currentChannelLog.some(msg => 
     msg.isHandshake && (msg.status === 'CONFIRMED' || msg.handshakeStatus === 'CONFIRMED')
-  ) || target?.isOdomknuty || !!znamyKontakt;
+  ) || target?.isOdomknuty;
 
   // 💬 FILTRÁCIA ČISTÝCH BLESKOVIEK S JEDNOTNÝM .msg
   const chatMessagesOnly = currentChannelLog
