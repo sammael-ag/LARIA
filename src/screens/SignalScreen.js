@@ -1,11 +1,11 @@
 /**
- * LARIA Signal SCREEN v15.3-STRICT (Pure Handshake Engine - State Automaton Edition)
+ * LARIA Signal SCREEN v15.4-STRICT (Pure Handshake Engine - State Automaton Edition)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: CRYSTAL_CORE_CLEANED | NO_PATCHES | STRICT_STATE_MAPPING | v15.3-STRICT
+ * STATUS: RADAR_ALIGNMENT_OK | NO_PATCHES | STRICT_STATE_MAPPING | v15.4-STRICT
  * 
  * * SÚLAD S ÚSTAVNÝM ZÁKONOM (SignalContext & ContactContext Realignment):
  * - NO HYBRIDS / STRICT ID: ID kontraktu a hľadaný kľúč je výhradne čistý unifikovaný fing partnera.
- * - STRICT STATE AUTOMATON: Mapovanie režimov obrazovky prebieha cez prísne číselný req.contractStatus (0, 1, 2).
+ * - STRICT STATE AUTOMATON: Mapovanie režimov obrazovky prebieha cez prísne číselný req.contractStatus (0, 1, 2) a príznak msg.isIncoming.
  * - NO TEXT FALLBACKS: Úplne odstránený starý balast textových stavov ('WAITING_FOR_ME', atď.).
  * - MSG: Vykresľovanie textov drží prísne jednotnú premennú .msg.
  */
@@ -179,20 +179,23 @@ const SignalScreen = ({ route, navigation }) => {
     ? incomingRequests.filter(req => req.fing && req.fing.trim().toLowerCase() === targetFing) 
     : [];
   
-  // Kontrakt na radare pre tento fing, ktorý má stav 0 (Čaká sa)
-  const pendingHandshake = currentChannelLog.find(msg => msg.isHandshake && msg.contractStatus === 0);
-
-  // Zisťujeme, či sme iniciátorom my (podľa prítomnosti lokálneho odeslania) alebo partner
-  // Ak existuje v pamäti lokálna správa pred schválením, čakáme na nich, inak čakajú oni na nás
-  const bolOdoslanyNami = pendingHandshake && pendingHandshake.txHash !== "0" && !pendingHandshake.msgId; 
-
-  const pendingIncomingHandshake = pendingHandshake && !bolOdoslanyNami;
-  const pendingOutgoingHandshake = pendingHandshake && bolOdoslanyNami;
+  // Hľadáme handshake zmluvu v našom logu pre tento konkrétny fing
+  const liveHandshake = currentChannelLog.find(msg => msg.isHandshake);
   
-  // 🔥 ROZHODNUTIE O SCHVÁLENÍ: Buď je v pamäti stav 1, alebo ho pozná priamo vizitka z trezoru
-  const isContractApproved = currentChannelLog.some(msg => 
-    msg.isHandshake && msg.contractStatus === 1
-  ) || (znamyKontakt && Number(znamyKontakt.contractStatus) === 1) || target?.isOdomknuty;
+  // 🛡️ 1. ROZHODNUTIE O SCHVÁLENÍ: Buď hovorí radar 1, alebo trezor striktne 1, alebo je natvrdo odomknutý
+  const isContractApproved = (liveHandshake && liveHandshake.contractStatus === 1) || 
+                             (znamyKontakt && Number(znamyKontakt.contractStatus) === 1) || 
+                             target?.isOdomknuty === true;
+
+  // 2. Kontrola, či je v stave čakania (0)
+  const hasPendingHandshake = (liveHandshake && liveHandshake.contractStatus === 0) || 
+                              (znamyKontakt && Number(znamyKontakt.contractStatus) === 0);
+
+  // 🔄 SMEROVÁ INTELIGENCIA: Ak prišiel z radaru s flagom isIncoming a čaká -> musí visieť panel pre mňa
+  const pendingIncomingHandshake = hasPendingHandshake && liveHandshake?.isIncoming && !isContractApproved;
+  
+  // Ak čaká, ale nie je prichádzajúci (odoslali sme ho my odtiaľto) -> čakáme my na nich
+  const pendingOutgoingHandshake = hasPendingHandshake && !pendingIncomingHandshake && !isContractApproved;
 
   const chatMessagesOnly = currentChannelLog
     .filter(msg => !msg.isHandshake)
@@ -230,20 +233,20 @@ const SignalScreen = ({ route, navigation }) => {
             <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', padding: 20, borderRadius: 6, width: '100%' }}>
               <Text style={[G.statusTextSmall, { color: '#E74C3C', marginBottom: 10, textTransform: 'uppercase', fontWeight: 'bold' }]}>⚠️ Prichádzajúca Pečať (Bunka H):</Text>
               <Text style={[G.cardDescriptionText, { color: '#fff', marginBottom: 25, fontSize: 15, lineHeight: 22, textAlign: 'left' }]}>
-                {pendingIncomingHandshake.msg} 
+                {liveHandshake?.msg || "Žiadosť o bezpečné prepojenie."} 
               </Text>
               
               <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
                 <TouchableOpacity 
                   style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnReject, { flex: 1, paddingVertical: 14 }]} 
-                  onPress={() => handleRejectHandshake(pendingIncomingHandshake)}
+                  onPress={() => handleRejectHandshake(liveHandshake)}
                 >
                   <Text style={[HANDSHAKE_PANEL.buttonText, { color: '#E74C3C' }]}>[ ABORT ]</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
                   style={[HANDSHAKE_PANEL.button, { flex: 1, paddingVertical: 14, backgroundColor: 'rgba(197, 160, 89, 0.15)', borderColor: ACCENT || '#c5a059', borderWidth: 1, alignItems: 'center', borderRadius: 4 }]} 
-                  onPress={() => handleAcceptHandshake(pendingIncomingHandshake)}
+                  onPress={() => handleAcceptHandshake(liveHandshake)}
                 >
                   <Text style={[HANDSHAKE_PANEL.buttonText, { color: ACCENT || '#c5a059', fontWeight: 'bold' }]}>[ ALLOW ]</Text>
                 </TouchableOpacity>
