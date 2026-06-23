@@ -1,12 +1,13 @@
 /**
- * LARIA Signal SCREEN v15.6-STRICT (Pure Handshake Engine - State Automaton Edition)
+ * LARIA Signal SCREEN v15.7-STRICT (Pure Handshake Engine - State Automaton Edition)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: MONOLITH_IDENTITY_INTEGRATED | NO_PATCHES | STRICT_STATE_MAPPING | v15.6-STRICT
+ * STATUS: MONOLITH_IDENTITY_INTEGRATED | NO_PATCHES | STRICT_STATE_MAPPING | v15.7-STRICT
  * * * SÚLAD S ÚSTAVNÝM ZÁKONOM (Monolith Handshake & Polarity Alignment):
  * - SYMETRICKÝ ČISTÝ MONOLIT: Pri iniciácii sa odosielajú iba čisté dáta identity. Stavové premenné (status, hash) riadi výhradne Matrix!
  * - DIRECTION AWARE: Plne využíva premennú 'isIncoming' z kontextu pre presné prepólovanie panelov.
  * - STRICT STATE AUTOMATON: Mapovanie režimov obrazovky prebieha cez prísne číselný req.contractStatus (0, 1, 2).
  * - MSG: Vykresľovanie textov drží prísne jednotnú premennú .msg, v ktorej tečie vyčistený JSON balík.
+ * - MATRIX STATE PRIORITY FIX: Živý kontrakt z radaru má absolútnu prednosť pred lokálnym trezorom, aby sa nezasekával ALLOW panel.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -231,12 +232,15 @@ const SignalScreen = ({ route, navigation }) => {
     } catch(e) {}
   }
   
-  const isContractApproved = (liveHandshake && liveHandshake.contractStatus === 1) || 
-                             (znamyKontakt && Number(znamyKontakt.contractStatus) === 1) || 
-                             target?.isOdomknuty === true;
+  // 🛡️ MATRIX PRIORITY FIX: Ak existuje živý handshake v sieti, riadime sa striktne ním! 
+  // Lokálne premenné (ako target.isOdomknuty alebo staré zostatky v trezore) ho nesmú obísť.
+  const isContractApproved = liveHandshake 
+    ? liveHandshake.contractStatus === 1 
+    : ((znamyKontakt && Number(znamyKontakt.contractStatus) === 1) || target?.isOdomknuty === true);
 
-  const hasPendingHandshake = (liveHandshake && liveHandshake.contractStatus === 0) || 
-                              (znamyKontakt && Number(znamyKontakt.contractStatus) === 0);
+  const hasPendingHandshake = liveHandshake 
+    ? liveHandshake.contractStatus === 0 
+    : (znamyKontakt && Number(znamyKontakt.contractStatus) === 0);
 
   const pendingIncomingHandshake = hasPendingHandshake && liveHandshake?.isIncoming === true && !isContractApproved;
   const pendingOutgoingHandshake = hasPendingHandshake && liveHandshake?.isIncoming === false && !isContractApproved;
@@ -325,7 +329,7 @@ const SignalScreen = ({ route, navigation }) => {
                   Signal_CHAT.messageRow,
                   isMyMessage ? Signal_CHAT.alignRight : Signal_CHAT.alignLeft,
                   { marginTop: isSameUserAsPrevious ? 1 : 10 }
-                ]}> {/* 🛡️ FIX: Vyčistené zatúlané slovo tracking! */}
+                ]}>
                   
                   {!isSameUserAsPrevious && (
                     <Text style={[
