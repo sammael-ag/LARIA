@@ -1,12 +1,11 @@
 /**
- * LARIA Signal SCREEN v15.4-STRICT (Pure Handshake Engine - State Automaton Edition)
+ * LARIA Signal SCREEN v15.5-STRICT (Pure Handshake Engine - State Automaton Edition)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: RADAR_ALIGNMENT_OK | NO_PATCHES | STRICT_STATE_MAPPING | v15.4-STRICT
- * 
- * * SÚLAD S ÚSTAVNÝM ZÁKONOM (SignalContext & ContactContext Realignment):
- * - NO HYBRIDS / STRICT ID: ID kontraktu a hľadaný kľúč je výhradne čistý unifikovaný fing partnera.
- * - STRICT STATE AUTOMATON: Mapovanie režimov obrazovky prebieha cez prísne číselný req.contractStatus (0, 1, 2) a príznak msg.isIncoming.
- * - NO TEXT FALLBACKS: Úplne odstránený starý balast textových stavov ('WAITING_FOR_ME', atď.).
+ * STATUS: POLARITY_FIXED | NO_PATCHES | STRICT_STATE_MAPPING | v15.5-STRICT
+ * * * SÚLAD S ÚSTAVNÝM ZÁKONOM (SignalContext Alignment):
+ * - DIRECTION AWARE: Plne využíva novú premennú 'isIncoming' z kontextu pre presné prepólovanie panelov.
+ * - STRICT STATE AUTOMATON: Mapovanie režimov obrazovky prebieha cez prísne číselný req.contractStatus (0, 1, 2).
+ * - NO TEXT FALLBACKS: Úplne odstránený starý balast textových stavov.
  * - MSG: Vykresľovanie textov drží prísne jednotnú premennú .msg.
  */
 
@@ -74,7 +73,6 @@ const SignalScreen = ({ route, navigation }) => {
       const myFing = vault?.identity?.poznamka || vault?.identity?.fing || '';
       const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
       
-      // 🔥 Strieľame čistú "1" do txHash (Podpísané/Aktívne)
       const res = await SignalService.manageContract('UPDATE_CONTRACT', {
         fing_a: targetFing,
         fing_b: myCleanFing,
@@ -82,7 +80,6 @@ const SignalScreen = ({ route, navigation }) => {
       });
 
       if (res && res.success) {
-        // Zápis do lokálneho trezoru s počiatočným stavom 1
         const vaultResult = await addContact({
           fing: targetFing,
           meno: target?.meno || handshakeMsg?.senderMeno || targetFing,
@@ -97,7 +94,6 @@ const SignalScreen = ({ route, navigation }) => {
           console.log(`[SIGNAL] Pečať ${targetFing} úspešne uzamknutá v klube.`);
         }
 
-        // 🔥 UZÁKONENÉ: Preklápame stav v SignalContext aj ContactContext na surové číslo 1
         resolveHandshakeStatus(handshakeMsg.id, 1);
         if (typeof updateContractStatus === 'function') {
           await updateContractStatus(targetFing, 1, "1");
@@ -121,7 +117,6 @@ const SignalScreen = ({ route, navigation }) => {
       const myFing = vault?.identity?.poznamka || vault?.identity?.fing || '';
       const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
 
-      // 🔥 Strieľame čistú "2" do txHash (Odmietnuté/Zrušené)
       const res = await SignalService.manageContract('UPDATE_CONTRACT', {
         fing_a: targetFing,
         fing_b: myCleanFing,
@@ -129,7 +124,6 @@ const SignalScreen = ({ route, navigation }) => {
       });
       
       if (res && res.success) {
-        // 🔥 UZÁKONENÉ: Preklápame stav v oboch contextoch na surové číslo 2
         resolveHandshakeStatus(handshakeMsg.id, 2);
         if (typeof updateContractStatus === 'function') {
           await updateContractStatus(targetFing, 2, "2");
@@ -179,23 +173,24 @@ const SignalScreen = ({ route, navigation }) => {
     ? incomingRequests.filter(req => req.fing && req.fing.trim().toLowerCase() === targetFing) 
     : [];
   
-  // Hľadáme handshake zmluvu v našom logu pre tento konkrétny fing
+  // Hľadáme handshake zmluvu pre tohto konkrétneho partnera
   const liveHandshake = currentChannelLog.find(msg => msg.isHandshake);
   
-  // 🛡️ 1. ROZHODNUTIE O SCHVÁLENÍ: Buď hovorí radar 1, alebo trezor striktne 1, alebo je natvrdo odomknutý
+  // 🛡️ 1. ROZHODNUTIE O SCHVÁLENÍ: Musí byť stav 1 v logu alebo v trezore
   const isContractApproved = (liveHandshake && liveHandshake.contractStatus === 1) || 
                              (znamyKontakt && Number(znamyKontakt.contractStatus) === 1) || 
                              target?.isOdomknuty === true;
 
-  // 2. Kontrola, či je v stave čakania (0)
+  // 2. Zisťujeme, či zmluva visí v čakacom stave (stav 0)
   const hasPendingHandshake = (liveHandshake && liveHandshake.contractStatus === 0) || 
                               (znamyKontakt && Number(znamyKontakt.contractStatus) === 0);
 
-  // 🔄 SMEROVÁ INTELIGENCIA: Ak prišiel z radaru s flagom isIncoming a čaká -> musí visieť panel pre mňa
-  const pendingIncomingHandshake = hasPendingHandshake && liveHandshake?.isIncoming && !isContractApproved;
+  // 🔄 KĽÚČOVÉ PREPÓLOVANIE: Využívame novú premennú 'isIncoming' priamo z kontextu!
+  // Ak zmluva čaká a bola označená ako PRICHÁDZAJÚCA (isIncoming: true) -> Manfred poslal tebe
+  const pendingIncomingHandshake = hasPendingHandshake && liveHandshake?.isIncoming === true && !isContractApproved;
   
-  // Ak čaká, ale nie je prichádzajúci (odoslali sme ho my odtiaľto) -> čakáme my na nich
-  const pendingOutgoingHandshake = hasPendingHandshake && !pendingIncomingHandshake && !isContractApproved;
+  // Ak zmluva čaká, ale NIE JE prichádzajúca (isIncoming: false) -> Sammael poslal Manfredovi a čaká na neho
+  const pendingOutgoingHandshake = hasPendingHandshake && liveHandshake?.isIncoming === false && !isContractApproved;
 
   const chatMessagesOnly = currentChannelLog
     .filter(msg => !msg.isHandshake)

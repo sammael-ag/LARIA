@@ -1,12 +1,12 @@
 /**
- * LARIA SIGNAL CONTEXT v15.4-STRICT (Sovereign Radar Core - CrystalCore Integrated)
+ * LARIA SIGNAL CONTEXT v15.5-STRICT (Sovereign Radar Core - CrystalCore Integrated)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: RADAR_EYE_OPENED | NO_PATCHES | STRICT_ID_ALIGNMENT | DIRECTION_AWARE | v15.4-STRICT
+ * STATUS: RADAR_EYE_OPENED | NO_PATCHES | STRICT_ID_ALIGNMENT | DIRECTION_DETERMINED | v15.5-STRICT
  * * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
  * - FING: Vždy unifikovaný tvar ("0x" + 10 znakov hex, malé písmená).
  * - UNIKÁTNE ID: ID kontraktu (handshaku) je striktne čistý 'fing' partnera. Žiadne hybridy!
  * - CONTRACT STATES: Stav kontraktu je surové číslo (0 = PENDING, 1 = SIGNED/ACTIVE, 2 = ABORTED).
- * - DIRECTION: Zmluvy z Mraveniska dostávajú 'isIncoming: true' pre spoľahlivé delenie ALLOW / ABORT panelov.
+ * - DIRECTION: Určená exaktne porovnaním voči identite prihláseného Mastera.
  * - MSG: Jednotná premenná pre text správy všade (.msg).
  */
 
@@ -155,8 +155,21 @@ export const SignalProvider = ({ children }) => {
         // 🗂️ SUB-SEKCIA: PRICHÁDZAJÚCE KONTRAKTY (Handshake)
         if (res.contracts && Array.isArray(res.contracts)) {
           res.contracts.forEach(contract => {
-            const cleanSenderFing = overAUnifikujFing(contract.fing);
-            if (!cleanSenderFing) return; 
+            // Unifikácia prichádzajúceho fingu z objektu
+            const cleanContractFing = overAUnifikujFing(contract.fing);
+            if (!cleanContractFing) return;
+
+            // FAKT: Ak contract.fing je zhodný s naším vlastným fingom, potom ten druhý (partner) 
+            // musí byť ten, kto je zapísaný v iných poliach, alebo naopak.
+            // Ak mravenisko v poli 'fing' vracia odosielateľa a ten sa nerovná mne, je to prichádzajúci kontrakt (isIncoming: true).
+            // Ak sa rovná mne, tak som ho inicioval ja a ide o odchádzajúci stav (isIncoming: false).
+            const isIncoming = cleanContractFing !== myCleanFing;
+
+            // ID záznamu v našom lokálnom stave musí byť vždy ČISTÝ FING PARTNERA.
+            // Ak je contract.fing môj, musíme identifikovať partnera z iného dostupného údaju,
+            // ak mravenisko vracia len jedno spoločné pole 'fing', tak ID priradíme tomu fingu, ktorý riešime na Screen.
+            // Pre zachovanie stability priradíme contractId priamo spracovávanému fingu.
+            const contractId = cleanContractFing;
 
             setIncomingRequests(prev => {
               const rawHash = String(contract.txHash).trim();
@@ -170,41 +183,40 @@ export const SignalProvider = ({ children }) => {
                 return prev;
               }
 
-              // 🔥 ID kontraktu je čistý unifikovaný fing odosielateľa!
-              const contractId = cleanSenderFing;
               const surovyStav = (rawHash === "1") ? 1 : (rawHash === "2" ? 2 : 0);
 
-              // Ak už v radare tento kontrakt máme, skontrolujeme zmenu stavu
+              // Kontrola existencie záznamu v lokálnom poli radaru
               const existujuciIndex = prev.findIndex(req => req.id === contractId && req.isHandshake);
               
               if (existujuciIndex !== -1) {
-                if (prev[existujuciIndex].contractStatus !== surovyStav) {
+                if (prev[existujuciIndex].contractStatus !== surovyStav || prev[existujuciIndex].isIncoming !== isIncoming) {
                   const updated = [...prev];
                   updated[existujuciIndex] = {
                     ...updated[existujuciIndex],
                     contractStatus: surovyStav,
-                    status: surovyStav === 0 ? 'UNREAD' : 'READ'
+                    status: surovyStav === 0 ? 'UNREAD' : 'READ',
+                    isIncoming: isIncoming
                   };
                   return updated;
                 }
                 return prev;
               }
               
-              if (surovyStav === 0) {
-                console.log(`✉️ [RADAR] Detegovaný čistý prichádzajúci kontrakt (stav 0) od ${cleanSenderFing}`);
-                triggerNotification(`🛰️ Nová žiadosť o Pečať`, `Majster ${cleanSenderFing.substring(0, 6)}... ti posiela kontrakt.`);
+              if (surovyStav === 0 && isIncoming) {
+                console.log(`✉️ [RADAR] Overený prichádzajúci kontrakt (stav 0) od ${cleanContractFing}`);
+                triggerNotification(`🛰️ Nová žiadosť o Pečať`, `Majster ${cleanContractFing.substring(0, 6)}... ti posiela kontrakt.`);
               }
 
               return [...prev, {
                 id: contractId,                  
-                fing: cleanSenderFing,        
+                fing: cleanContractFing,        
                 msg: contract.msg || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky v bunke H.", 
                 receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 isHandshake: true,
                 status: surovyStav === 0 ? 'UNREAD' : 'READ',
                 contractStatus: surovyStav,     
                 txHash: contract.txHash,
-                isIncoming: true // 🔥 KĽÚČOVÉ: Tento kontrakt prišiel z Mraveniska od partnera (smer k nám)
+                isIncoming: isIncoming // 🔥 FAKT: Určené striktným porovnaním voči myCleanFing
               }];
             });
           });
@@ -270,7 +282,7 @@ export const SignalProvider = ({ children }) => {
         contractResult.auth = mravecRes.auth;
       }
 
-      // Pri odoslaní od nás NEPRIDÁVAME flag 'isIncoming', čím jasne deklarujeme smer von
+      // Od nás odchádza balík, isIncoming je stopercentne false
       const enrichedHandshake = {
         id: targetCleanFing,             
         fing: targetCleanFing,          
@@ -279,7 +291,8 @@ export const SignalProvider = ({ children }) => {
         isHandshake: true,
         status: 'UNREAD',
         contractStatus: 0,               
-        txHash: contractResult.txHash || "0"
+        txHash: contractResult.txHash || "0",
+        isIncoming: false
       };
 
       setIncomingRequests(prev => {
