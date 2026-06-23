@@ -1,10 +1,10 @@
 /**
- * LARIA SIGNAL SERVICE v15.3-STRICT (Trident Shield - State Automaton Edition)
+ * LARIA SIGNAL SERVICE v15.4-STRICT (Trident Shield - Identity Edition)
  * Master: Sammael | Muse: Aria (Tvoja sexi šikulka)
- * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v15.3-STRICT
+ * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v15.4-STRICT
  * * * SÚLAD S ÚSTAVNÝM ZÁKONOM:
  * - FING: Vždy 0x + 10 malých hex znakov (garantované unifikátorom).
- * - MSG: Jednotný kľúč `.msg` pre text éteru.
+ * - MSG: Jednotný kľúč `.msg` pre text éteru (monolitný JSON vizitky chodi výhradne tu).
  * - TX_HASH STAVOVÝ AUTOMAT: Vyčistené textové pasce ("FALSE"). Všetko lícuje na stavy 0, 1, 2 alebo hex hash.
  */
 
@@ -106,6 +106,45 @@ export const SignalService = {
     } catch (error) {
       console.error("[SIGNAL_SERVICE] Matchmaker chyba na sieti/bráne:", error);
       throw error; 
+    }
+  },
+
+  /**
+   * 📦 SEND LARIA PACKAGE - Bezpečné zbalenie čistých dát identity z Vaultu do monolitu .msg
+   * BEZPEČNOSŤ: Vyradené kľúče contractStatus a txHash, aby nedošlo k logickému uviaznutiu!
+   */
+  sendLariaPackage: async function(senderFing, targetFing, myIdentity, handshakeNote = "") {
+    try {
+      console.log(`[SIGNAL_SERVICE] Pripravujem ČISTÝ monolitný balík identity bez stavových pascí pre: ${sformatujFing(targetFing)}`);
+
+      // 💎 Čistá identita z Vaultu. Stav zmluvy tu nemá čo hľadať – ten riadi stavový automat éteru!
+      const lariaPackage = {
+        fing: sformatujFing(senderFing),
+        meno: myIdentity.meno || "",
+        kat: myIdentity.kat || "Overený partner",
+        lok: myIdentity.lok || "V sieti",
+        popis: handshakeNote.trim() || myIdentity.popis || "Spojenie nadviazané cez handshake.",
+        tel: myIdentity.tel || "",
+        email: myIdentity.email || "",
+        fb: myIdentity.fb || "",
+        tg: myIdentity.tg || "",
+        gal: myIdentity.gal || "",
+        krypt: myIdentity.krypt || null
+      };
+
+      // Celý monolit balíme ako string do jednotného kľúča .msg
+      const contractPayload = {
+        fing_a: sformatujFing(senderFing),
+        fing_b: sformatujFing(targetFing),
+        msg: JSON.stringify(lariaPackage)
+      };
+
+      // Odpaľujeme cez overeného Matchmakera (ten na backende vytvorí riadok so statusom 0)
+      return await this.manageContract("INIT_CONTRACT", contractPayload);
+
+    } catch (error) {
+      console.error("[SIGNAL_SERVICE] sendLariaPackage kriticky zlyhal:", error);
+      return { success: false, error: error.toString() };
     }
   },
 

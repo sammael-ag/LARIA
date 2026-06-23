@@ -1,7 +1,7 @@
 /**
- * LARIA SIGNAL CONTEXT v15.5-STRICT (Sovereign Radar Core - CrystalCore Integrated)
+ * LARIA SIGNAL CONTEXT v15.6-STRICT (Sovereign Radar Core - CrystalCore Integrated)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: RADAR_EYE_OPENED | NO_PATCHES | STRICT_ID_ALIGNMENT | DIRECTION_DETERMINED | v15.5-STRICT
+ * STATUS: RADAR_EYE_OPENED | NO_PATCHES | STRICT_ID_ALIGNMENT | DIRECTION_DETERMINED | v15.6-STRICT
  * * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
  * - FING: Vždy unifikovaný tvar ("0x" + 10 znakov hex, malé písmená).
  * - UNIKÁTNE ID: ID kontraktu (handshaku) je striktne čistý 'fing' partnera. Žiadne hybridy!
@@ -77,7 +77,6 @@ export const SignalProvider = ({ children }) => {
     
     setIncomingRequests(prev => prev.filter(req => {
       if (req.fing !== cleanTargetFing) return true;
-      // Držíme len tie kontrakty, ktoré ešte čakajú na vyriešenie (stav 0)
       if (req.isHandshake && req.contractStatus === 0) return true;
       if (!req.isHandshake && req.status === 'UNREAD') return true;
       return false;
@@ -117,7 +116,7 @@ export const SignalProvider = ({ children }) => {
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         if (existingStatus !== 'granted') await Notifications.requestPermissionsAsync();
       } catch (e) {
-        console.log('[SIGNAL] Push systém mimo prevádzky.');
+        console.log('[SIGNAL] Push systém mimo prevDKy.');
       }
     };
     setupNotifications();
@@ -150,25 +149,15 @@ export const SignalProvider = ({ children }) => {
       try {
         const res = await SignalService.checkMyContracts(backendQueryFing);
         
-        if (!res || res.status !== "success") return;
+        if (!res || res.success === false) return;
           
         // 🗂️ SUB-SEKCIA: PRICHÁDZAJÚCE KONTRAKTY (Handshake)
         if (res.contracts && Array.isArray(res.contracts)) {
           res.contracts.forEach(contract => {
-            // Unifikácia prichádzajúceho fingu z objektu
             const cleanContractFing = overAUnifikujFing(contract.fing);
             if (!cleanContractFing) return;
 
-            // FAKT: Ak contract.fing je zhodný s naším vlastným fingom, potom ten druhý (partner) 
-            // musí byť ten, kto je zapísaný v iných poliach, alebo naopak.
-            // Ak mravenisko v poli 'fing' vracia odosielateľa a ten sa nerovná mne, je to prichádzajúci kontrakt (isIncoming: true).
-            // Ak sa rovná mne, tak som ho inicioval ja a ide o odchádzajúci stav (isIncoming: false).
             const isIncoming = cleanContractFing !== myCleanFing;
-
-            // ID záznamu v našom lokálnom stave musí byť vždy ČISTÝ FING PARTNERA.
-            // Ak je contract.fing môj, musíme identifikovať partnera z iného dostupného údaju,
-            // ak mravenisko vracia len jedno spoločné pole 'fing', tak ID priradíme tomu fingu, ktorý riešime na Screen.
-            // Pre zachovanie stability priradíme contractId priamo spracovávanému fingu.
             const contractId = cleanContractFing;
 
             setIncomingRequests(prev => {
@@ -185,7 +174,6 @@ export const SignalProvider = ({ children }) => {
 
               const surovyStav = (rawHash === "1") ? 1 : (rawHash === "2" ? 2 : 0);
 
-              // Kontrola existencie záznamu v lokálnom poli radaru
               const existujuciIndex = prev.findIndex(req => req.id === contractId && req.isHandshake);
               
               if (existujuciIndex !== -1) {
@@ -216,7 +204,7 @@ export const SignalProvider = ({ children }) => {
                 status: surovyStav === 0 ? 'UNREAD' : 'READ',
                 contractStatus: surovyStav,     
                 txHash: contract.txHash,
-                isIncoming: isIncoming // 🔥 FAKT: Určené striktným porovnaním voči myCleanFing
+                isIncoming: isIncoming 
               }];
             });
           });
@@ -257,9 +245,9 @@ export const SignalProvider = ({ children }) => {
     return () => clearInterval(pollingInterval);
   }, [vault?.identity?.poznamka]);
 
-  // --- 🛠️ ODOSLANIE BALÍKA (Vytvorenie kontraktu cez Mravenisko) ---
-  const sendLariaPackage = async (targetFing, personalMessage) => {
-    const myCleanFing = vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : '0x0000000000';
+  // --- 🛠️ ODOSLANIE BALÍKA (Vytvorenie kontraktu cez Mravenisko - v15.6-STRICT) ---
+  const sendLariaPackage = async (senderFing, targetFing, myIdentity, handshakeNote = "") => {
+    const myCleanFing = overAUnifikujFing(senderFing) || (vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : '0x0000000000');
     const targetCleanFing = overAUnifikujFing(targetFing);
     
     if (!targetCleanFing) {
@@ -268,30 +256,26 @@ export const SignalProvider = ({ children }) => {
     }
 
     try {
-      let contractResult = { txHash: "0", auth: {} }; 
-      
-      const mravecRes = await SignalService.manageContract('INIT_CONTRACT', {
-        fing_a: myCleanFing, 
-        fing_b: targetCleanFing, 
-        krypt_a: vault?.identity?.krypt || '',
-        msg: personalMessage
-      });
+      // 💎 Voláme prečistenú funkciu zo SignalService, ktorá balí kompletný 9-položkový monolit
+      const mravecRes = await SignalService.sendLariaPackage(myCleanFing, targetCleanFing, myIdentity, handshakeNote);
 
+      let txHashResult = "0";
       if (mravecRes && mravecRes.success) {
-        contractResult.txHash = mravecRes.txHash;
-        contractResult.auth = mravecRes.auth;
+        txHashResult = mravecRes.txHash || "0";
+      } else {
+        return { success: false, error: "Mravenisko odmietlo balík." };
       }
 
       // Od nás odchádza balík, isIncoming je stopercentne false
       const enrichedHandshake = {
         id: targetCleanFing,             
         fing: targetCleanFing,          
-        msg: personalMessage,           
+        msg: handshakeNote.trim() || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky v bunke H.", 
         receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isHandshake: true,
         status: 'UNREAD',
         contractStatus: 0,               
-        txHash: contractResult.txHash || "0",
+        txHash: txHashResult,
         isIncoming: false
       };
 

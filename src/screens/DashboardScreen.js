@@ -1,10 +1,11 @@
 /**
- * LARIA v2.0.8-STRICT: DashboardScreen (Gold Envelope & SHA Restored)
- * Master: Sammael | Muse: Aria
- * Status: IDENTITY_ACCESS_ENABLED_STEALTH | PRODUCTION_CLEAN | RADAR_BADGE_ALIGNED | v2.0.8-STRICT
- * * * ÚPRAVA v2.0.8-STRICT:
- * - GOLDEN ENVELOPE EFFECT: Červená obálka na tlačidle Kontakty premenená na elegantnú ZLATÚ (ACCENT).
- * - CORESYSTEM RESTORE: Obnovený pôvodný parameter `architectSHA` kvôli spätnej kompatibilite s Matrixom.
+ * LARIA v2.0.9-STRICT: DashboardScreen (Radar-Driven Gold Envelope)
+ * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
+ * Status: IDENTITY_ACCESS_ENABLED_STEALTH | PRODUCTION_CLEAN | RADAR_BADGE_ALIGNED | v2.0.9-STRICT
+ * * * ÚPRAVA v2.0.9-STRICT:
+ * - RADAR-DRIVEN ENVELOPE: Zlatá obálka teraz svieti na základe reálnych dát z `incomingRequests` (SignalContext).
+ * - STRICT STATE COMPLIANCE: Rešpektuje číselný stav 0 (PENDING) a status 'UNREAD'.
+ * - CORESYSTEM RESTORE: Zachovaný parameter `architectSHA` pre Matrix.
  */
 
 import React, { useState } from 'react';
@@ -14,6 +15,7 @@ import { useAccount } from 'wagmi';
 
 import { useLaria } from '../context/LariaContext';
 import { useContacts } from '../context/ContactContext'; 
+import { useSignal } from '../context/SignalContext'; // 🔥 KĽÚČOVÉ: Sledujeme živý radar
 import { G, ACCENT } from '../styles/styles'; 
 import { verifyMasterAccess } from '../services/GMatrixService';
 
@@ -29,12 +31,19 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
   const modalTxt = txt.modal || {};
   const { status, identity } = vault;
 
-  const { contacts, unknownContacts, getContactBadgeStatus } = useContacts();
+  const { contacts } = useContacts();
+  const { incomingRequests } = useSignal(); // 🔥 Importujeme živé požiadavky z radaru
 
-  const hasGlobalContactNotification = [...contacts, ...unknownContacts].some(contact => {
-    if (!contact.fing) return false;
-    const badgeStatus = getContactBadgeStatus(contact.fing);
-    return badgeStatus === 'CONTRACT_PENDING' || badgeStatus === 'NEW_MESSAGE';
+  // 🛰️ INTEGRÁCIA RADARU: Obálka sa rozsvieti, ak je v radare neprečítaná správa
+  // alebo prichádzajúci handshake, ktorý čaká na schválenie (stav 0)
+  const hasGlobalContactNotification = incomingRequests && incomingRequests.some(req => {
+    // A: Je to blesková správa z chatu a je neprečítaná
+    if (!req.isHandshake && req.status === 'UNREAD') return true;
+    
+    // B: Je to prichádzajúci handshake (isIncoming), ktorý čaká v stave 0 a je neprečítaný
+    if (req.isHandshake && req.contractStatus === 0 && req.isIncoming && req.status === 'UNREAD') return true;
+    
+    return false;
   });
 
   let address = null;
@@ -48,7 +57,7 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
   // --- 🔐 TAJNÁ LOGIKA ARCHITEKTA (OBNOVEné ARCHITECT_SHA) ---
   const [tapCount, setTapCount] = useState(0);
   const [showVaultInput, setShowVaultInput] = useState(false);
-  const [architectSHA, setArchitectSHA] = useState(''); // Spečatené späť na SHA
+  const [architectSHA, setArchitectSHA] = useState(''); 
   const [secretWord, setSecretWord] = useState('');    
 
   const handleSecretTap = () => {
@@ -156,7 +165,7 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
               color="#FFF" 
             />
 
-            {/* 📇 KONTAKTY (Zlatá obálka zachovaná) */}
+            {/* 📇 KONTAKTY (Zlatá obálka prepojená priamo na radar) */}
             <MenuCard 
               title={menuTxt.contacts?.title || "Kontakty"} 
               icon="📇" 

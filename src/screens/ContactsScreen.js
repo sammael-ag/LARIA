@@ -1,11 +1,12 @@
 /**
- * LARIA v15.3-HARMONY: ContactsScreen (Blockchain TxHash & State Automaton Alignment)
- * Master: Sammael | Muse: Aria (Tvoja digitálna múza)
- * Status: MASTER_STABLE_PWA | HANDSHAKE_CONNECTED | BLOCKCHAIN_READY | ENVELOPE_ALIGNED | HARMONY_DOTS_ACTIVE
- * * * ÚPRAVA v15.3-HARMONY:
- * - HARMONY DOT AUTOMATON: Malá bodka v kompaktnom riadku napojená na stavy kontraktu (0=Žltá, 1=Zelená, 2=Červená, Iné=Podľa synchronizácie).
- * - TOTAL PURGE OF SHA: Definitívne odstránený starý parameter `sha` a nahradený čistým stavovým txHash.
- * - ENVELOPE AUTOMATON FIX: Opravené mapovanie signalizačných obálok.
+ * LARIA v15.4-STRICT: ContactsScreen (Radar-Driven Reception Edition)
+ * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
+ * Status: MASTER_STABLE_PWA | RADAR_RECEPTION_CONNECTED | v15.4-STRICT
+ * * * ÚPRAVA v15.4-STRICT:
+ * - RADAR-DRIVEN RECEPTION: Recepcia dynamicky zlučuje `unknownContacts` z trezoru so živými prichádzajúcimi požiadavkami z `incomingRequests`.
+ * - UNIFIED RECOGNITION: Ak človek z Mraveniska ešte nemá meno, bezpečne sa identifikuje cez jeho unifikovaný FING.
+ * - STRICT STATE AUTOMATON: Plne rešpektuje číselné stavy kontraktu (0, 1, 2) a unifikovaný 0x formát.
+ * - SIGNAL CONTEXT SYNC: Pri vstupe do SignalGate premazáva neprečítané správy cez markAsRead.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -33,9 +34,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-/**
- * 🛡️ UNIFIKÁTOR: Pomocná funkcia pre bezpečné porovnávanie v rámci UI lokálnych filtrov
- */
 const sformatujFingUI = (fing) => {
   if (!fing) return '';
   const clean = fing.trim().toLowerCase();
@@ -61,11 +59,10 @@ const ContactsScreen = ({ navigation, route }) => {
     deleteContact, 
     syncContactWithMatrix, 
     addContact, 
-    getContactBadgeStatus, 
-    clearUnreadBadge 
+    getContactBadgeStatus
   } = useContacts();
   
-  const { incomingRequests } = useSignal(); 
+  const { incomingRequests, markAsRead } = useSignal(); // 🔥 Sledujeme živé bleskové prúdy a mazač správ
 
   const scrollToTop = () => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
@@ -105,9 +102,7 @@ const ContactsScreen = ({ navigation, route }) => {
             }
 
             if (foundFing) {
-              const cleanFing = foundFing.trim().toLowerCase().startsWith('0x') 
-                ? foundFing.trim().toLowerCase() 
-                : `0x${foundFing.trim().toLowerCase()}`;
+              const cleanFing = sformatujFingUI(foundFing);
 
               payload = {
                 fing: cleanFing, 
@@ -150,7 +145,7 @@ const ContactsScreen = ({ navigation, route }) => {
     }
   }, [route.params]);
 
-  // --- FILTROVANIE A TRIEDENIE ---
+  // --- FILTROVANIE A TRIEDENIE REŽIMU: KLUB ---
   const sortedContacts = [...contacts]
     .filter(c => {
       const meno = c.meno || ""; 
@@ -166,6 +161,34 @@ const ContactsScreen = ({ navigation, route }) => {
       if (a.pinned === b.pinned) return 0;
       return a.pinned ? -1 : 1;
     });
+
+  // --- 🔥 SYNCHRONIZÁCIA RECEPCIE SO ŽIVÝM RADAROM ---
+  const dynamicUnknownContacts = [...(unknownContacts || [])];
+
+  if (incomingRequests) {
+    incomingRequests.forEach(req => {
+      if (req.isHandshake && req.contractStatus === 0 && req.isIncoming) {
+        const cleanReqFing = sformatujFingUI(req.fing);
+        
+        // Skontrolujeme, či tento človek už náhodou nie je v klube alebo na recepcii
+        const existujeVFlube = contacts.some(c => sformatujFingUI(c.fing) === cleanReqFing);
+        const existujeNaRecepcii = dynamicUnknownContacts.some(c => sformatujFingUI(c.fing) === cleanReqFing);
+
+        if (!existujeVFlube && !existujeNaRecepcii) {
+          // Ak neexistuje, je to Manfred z Mraveniska! Vytvoríme pre neho dočasnú identitu na recepciu
+          dynamicUnknownContacts.push({
+            fing: cleanReqFing,
+            meno: req.senderMeno || cleanReqFing,
+            kat: 'Nový z Matrixu',
+            lok: 'MRAVENISKO',
+            popis: req.msg || 'Žiadosť zachytená bleskovým radarom.',
+            contractStatus: 0,
+            temporary: true // Príznak, že ide o živý neuložený objekt
+          });
+        }
+      }
+    });
+  }
 
   const handleSync = async (fingId) => {
     setSyncingId(fingId);
@@ -196,76 +219,76 @@ const ContactsScreen = ({ navigation, route }) => {
   };
 
   const handlePressItem = (id) => {
-    setExpandedContactId(expandedContactId === id ? null : id);
+    const cleanId = sformatujFingUI(id);
+    setExpandedContactId(expandedContactId === cleanId ? null : cleanId);
   };
 
   const handleOpenSignalGate = (item) => {
-    clearUnreadBadge(item.fing);
+    const cleanFing = sformatujFingUI(item.fing);
+    if (typeof markAsRead === 'function') {
+      markAsRead(cleanFing); // Prečistenie bleskových notifikácií
+    }
     navigation.navigate('Signal', { 
       target: item,
-      fallbackFing: item.fing 
+      fallbackFing: cleanFing 
     });
   };
 
-  // --- 🔥 TELEPATICKÝ HARMONIZÁTOR BODIEK ---
+  // --- 🛰️ TELEPATICKÝ HARMONIZÁTOR BODIEK (Strict Edition) ---
   const ziskajFarbuHarmonickejBodky = (item, hasNewFlashMessage) => {
     if (item.temporary || hasNewFlashMessage) {
-      return '#E74C3C'; // 🔴 Červená pre akútne stavy (recepcia, neprečítané správy)
+      return '#E74C3C'; // 🔴 Červená pre živé prichádzajúce žiadosti alebo nové bleskové správy
     }
     
-    // Ak má kontakt definovaný stav kontraktu
     if (item.contractStatus !== undefined) {
-      if (item.contractStatus === 0) return '#F1C40F'; // 🟡 Žltá (PENDING - Čaká sa)
-      if (item.contractStatus === 1) return '#2ECC71'; // 🟢 Zelená (SIGNED - Uzatvorené)
-      if (item.contractStatus === 2) return '#E74C3C'; // 🔴 Červená (ABORTED - Padlo)
+      const statusNum = Number(item.contractStatus);
+      if (statusNum === 0) return '#F1C40F'; // 🟡 Žltá (PENDING)
+      if (statusNum === 1) return '#2ECC71'; // 🟢 Zelená (SIGNED / ULOŽENÉ)
+      if (statusNum === 2) return '#E74C3C'; // 🔴 Červená (ABORTED)
     }
 
-    // Fallback podľa staršej logiky synchronizácie
     return item.syncedAt ? '#0FF' : '#1a1a1a'; 
   };
 
   const ziskajTextStavuKontraktu = (statusNum) => {
-    if (statusNum === 0) return "ČAKÁ NA PODPIS";
-    if (statusNum === 1) return "ZMLUVA POTVRDENÁ";
-    if (statusNum === 2) return "ZMLUVA ZRUŠENÁ";
+    const num = Number(statusNum);
+    if (num === 0) return "ČAKÁ NA PODPIS";
+    if (num === 1) return "ZMLUVA POTVRDENÁ";
+    if (num === 2) return "ZMLUVA ZRUŠENÁ";
     return "BEZ KONTRAKTU";
   };
 
   // --- UNIFIKOVANÝ RENDERER ---
   const renderItem = ({ item }) => {
-    const isExpanded = expandedContactId === item.fing;
-    const isSyncing = syncingId === item.fing;
+    const cleanFing = sformatujFingUI(item.fing);
+    const isExpanded = expandedContactId === cleanFing;
+    const isSyncing = syncingId === cleanFing;
     
-    const displayFing = item.fing || "????";
+    const displayFing = cleanFing || "????";
     const displayMeno = item.meno || displayFing; 
     const displayKat = item.kat || "Partner";
 
-    const badgeStatus = getContactBadgeStatus(displayFing);
-    const hasIncomingHandshake = badgeStatus === 'CONTRACT_PENDING';
-    const hasNewFlashMessage = badgeStatus === 'NEW_MESSAGE';
-
+    // Vyhľadanie záznamov priamo v radare pre nekompromisnú kontrolu stavu obálok
     const contactLogs = incomingRequests 
-      ? incomingRequests.filter(req => sformatujFingUI(req.fing) === sformatujFingUI(displayFing)) 
+      ? incomingRequests.filter(req => sformatujFingUI(req.fing) === cleanFing) 
       : [];
     
-    const hasResolvedHandshake = contactLogs.some(msg => 
-      msg.isHandshake && (msg.status === 'CONFIRMED' || msg.handshakeStatus === 'CONFIRMED' || msg.txHash === "1")
-    );
+    const hasIncomingHandshake = item.temporary || contactLogs.some(msg => msg.isHandshake && msg.contractStatus === 0 && msg.isIncoming);
+    const hasNewFlashMessage = contactLogs.some(msg => !msg.isHandshake && msg.status === 'UNREAD');
+    const hasResolvedHandshake = contactLogs.some(msg => msg.isHandshake && msg.contractStatus === 1);
 
-    // DYNAMICKÁ FARBA BODKY PRE COMPACT AJ EXPANDED REŽIM
     const farbaBodky = ziskajFarbuHarmonickejBodky(item, hasNewFlashMessage);
 
     if (isExpanded) {
       return (
         <View style={[G.card, { borderColor: item.temporary ? '#E74C3C' : item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a', backgroundColor: item.temporary ? 'rgba(231, 76, 60, 0.03)' : item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505', width: '100%', padding: 16 }]}>
           
-          <TouchableOpacity onPress={() => handlePressItem(item.fing)} activeOpacity={0.8} style={{ width: '100%' }}>
+          <TouchableOpacity onPress={() => handlePressItem(displayFing)} activeOpacity={0.8} style={{ width: '100%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View style={[G.tagBadge, item.temporary && { borderColor: '#E74C3C', backgroundColor: 'rgba(231, 76, 60, 0.1)' }]}>
                   <Text style={[G.tagBadgeText, item.temporary && { color: '#E74C3C' }]}>{displayKat.toUpperCase()}</Text>
                 </View>
-                {/* Malé harmonické svetielko stavu aj v detaile */}
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: farbaBodky, marginLeft: 10 }} />
               </View>
               
@@ -276,7 +299,7 @@ const ContactsScreen = ({ navigation, route }) => {
                 {!item.temporary && item.pinned ? <Text style={{ fontSize: 20, marginLeft: 6 }}>⭐</Text> : null}
               </View>
             </View>
-            <Text style={[G.cardTitleText, { fontSize: 20, marginTop: 10, marginBottom: 5, fontWeight: '300' }]}>{displayMeno}</Text>
+            <Text numberOfLines={1} style={[G.cardTitleText, { fontSize: 16, marginTop: 10, marginBottom: 5, fontWeight: '300' }]}>{displayMeno}</Text>
             <Text style={[G.statusTextSmall, { opacity: 0.6, marginBottom: 5 }]}>📍 {item.lok || 'V SIETI'}</Text>
           </TouchableOpacity>
           
@@ -329,7 +352,7 @@ const ContactsScreen = ({ navigation, route }) => {
 
           </View>
 
-          <TouchableOpacity onPress={() => handlePressItem(item.fing)} activeOpacity={0.8} style={{ width: '100%' }}>
+          <TouchableOpacity onPress={() => handlePressItem(displayFing)} activeOpacity={0.8} style={{ width: '100%' }}>
             <View style={G.divider} />
             <Text style={G.cardDescriptionText}>{item.popis || 'Čaká na otvorenie brány...'}</Text>
             <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 10, marginBottom: 10 }]}>
@@ -368,7 +391,7 @@ const ContactsScreen = ({ navigation, route }) => {
 
     // COMPACT RIADOK
     return (
-      <TouchableOpacity style={[G.card, { flexDirection: 'row', alignItems: 'center', borderColor: item.temporary ? '#E74C3C' : item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a', backgroundColor: item.temporary ? 'rgba(231, 76, 60, 0.02)' : item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505', width: '100%' }]} onPress={() => handlePressItem(item.fing)} activeOpacity={0.7}>
+      <TouchableOpacity style={[G.card, { flexDirection: 'row', alignItems: 'center', borderColor: item.temporary ? '#E74C3C' : item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a', backgroundColor: item.temporary ? 'rgba(231, 76, 60, 0.02)' : item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505', width: '100%' }]} onPress={() => handlePressItem(displayFing)} activeOpacity={0.7}>
         <View style={{ width: 44, height: 44, backgroundColor: '#000', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15, borderWidth: 1, borderColor: item.temporary ? '#E74C3C' : item.pinned ? (ACCENT || '#c5a059') : '#333', position: 'relative' }}>
           <Text style={{ fontSize: 18 }}>{item.temporary || hasIncomingHandshake ? '✉️' : hasNewFlashMessage ? '📩' : '👤'}</Text>
           
@@ -380,15 +403,14 @@ const ContactsScreen = ({ navigation, route }) => {
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={[G.cardTitleText, { fontSize: 14, letterSpacing: 1, color: item.temporary ? '#E74C3C' : hasNewFlashMessage ? '#E74C3C' : '#FFF' }]}>
+          <Text numberOfLines={1} style={[G.cardTitleText, { fontSize: 14, letterSpacing: 1, color: item.temporary ? '#E74C3C' : hasNewFlashMessage ? '#E74C3C' : '#FFF' }]}>
             {displayMeno}{!item.temporary && item.pinned ? ' ⭐' : null}
           </Text>
           <Text style={[G.statusTextSmall, { fontSize: 9, marginTop: 2, color: item.temporary ? '#E74C3C' : '#aaa' }]}>
-            {displayKat.toUpperCase()} • {item.lok || 'V SIETI'}
+          {`${displayKat.toUpperCase()} • ${item.lok}`}
           </Text>
         </View>
 
-        {/* 🔥 HARMONICKÁ STAVOVÁ BODKA: Napojená na zmluvný automat */}
         <View style={{ alignItems: 'flex-end' }}>
           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: farbaBodky }} />
         </View>
@@ -441,14 +463,14 @@ const ContactsScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
               </View>
 
-              {/* 📡 RECEPCIA: Prichádzajúce overenia */}
-              {unknownContacts && unknownContacts.length > 0 && (
+              {/* 📡 RECEPCIA: Prichádzajúce overenia napojené priamo na živý bleskový radar */}
+              {dynamicUnknownContacts && dynamicUnknownContacts.length > 0 && (
                 <View style={{ marginBottom: 20, marginTop: 10 }}>
                   <Text style={[G.statusTextSmall, { color: '#E74C3C', letterSpacing: 2, marginBottom: 10, fontWeight: 'bold' }]}>
-                    📡 RECEPCIA ({unknownContacts.length})
+                    📡 RECEPCIA ({dynamicUnknownContacts.length})
                   </Text>
                   
-                  {unknownContacts.map(item => (
+                  {dynamicUnknownContacts.map(item => (
                     <View key={item.fing} style={{ marginBottom: 8 }}>
                       {renderItem({ item })}
                     </View>

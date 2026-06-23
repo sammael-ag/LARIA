@@ -1,12 +1,12 @@
 /**
- * LARIA Signal SCREEN v15.5-STRICT (Pure Handshake Engine - State Automaton Edition)
+ * LARIA Signal SCREEN v15.6-STRICT (Pure Handshake Engine - State Automaton Edition)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: POLARITY_FIXED | NO_PATCHES | STRICT_STATE_MAPPING | v15.5-STRICT
- * * * SÚLAD S ÚSTAVNÝM ZÁKONOM (SignalContext Alignment):
- * - DIRECTION AWARE: Plne využíva novú premennú 'isIncoming' z kontextu pre presné prepólovanie panelov.
+ * STATUS: MONOLITH_IDENTITY_INTEGRATED | NO_PATCHES | STRICT_STATE_MAPPING | v15.6-STRICT
+ * * * SÚLAD S ÚSTAVNÝM ZÁKONOM (Monolith Handshake & Polarity Alignment):
+ * - SYMETRICKÝ ČISTÝ MONOLIT: Pri iniciácii sa odosielajú iba čisté dáta identity. Stavové premenné (status, hash) riadi výhradne Matrix!
+ * - DIRECTION AWARE: Plne využíva premennú 'isIncoming' z kontextu pre presné prepólovanie panelov.
  * - STRICT STATE AUTOMATON: Mapovanie režimov obrazovky prebieha cez prísne číselný req.contractStatus (0, 1, 2).
- * - NO TEXT FALLBACKS: Úplne odstránený starý balast textových stavov.
- * - MSG: Vykresľovanie textov drží prísne jednotnú premennú .msg.
+ * - MSG: Vykresľovanie textov drží prísne jednotnú premennú .msg, v ktorej tečie vyčistený JSON balík.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -29,7 +29,9 @@ import { useContacts } from '../context/ContactContext.js';
 import { SignalService } from '../services/SignalService.js';
 
 const SignalScreen = ({ route, navigation }) => {
-  const { t, vault } = useLaria(); 
+  // 🔥 Načítavame kompletný stav laria z LariaContext (obsahuje celú tvoju identitu)
+  const laria = useLaria(); 
+  const { vault } = laria;
   const { contacts, addContact, updateContractStatus } = useContacts(); 
   const [note, setNote] = useState('');
   const [chatInput, setChatInput] = useState('');
@@ -65,33 +67,75 @@ const SignalScreen = ({ route, navigation }) => {
     }
   }, [targetFing, incomingRequests]);
 
+  /**
+   * 📦 POMOCNÝ MONOLITNÝ STAVITEL: Zbalí kompletné vnútro LariaContextu bez osekávania dát
+   */
+  const zostavMojeMonolitneData = (aktualnaPoznamka = '') => {
+    const idSource = vault?.identity || laria || {};
+    const myFing = idSource.poznamka || idSource.fing || '';
+    const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
+
+    return {
+      fing: myCleanFing, // Vlastný unifikovaný fing majiteľa
+      meno: idSource.meno || 'Sammael',
+      kat: idSource.kat || 'Majster',
+      lok: idSource.lok || 'V sieti',
+      popis: aktualnaPoznamka || idSource.popis || 'Spojenie nadviazané cez handshake.',
+      tel: idSource.tel || '',
+      email: idSource.email || '',
+      fb: idSource.fb || '',
+      tg: idSource.tg || '',
+      gal: idSource.gal || '',
+      krypt: idSource.krypt || null
+    };
+  };
+
   // --- AKCIA: ALLOW (POTVRDENIE ZMLUVY & ZÁPIS DO TREZORU) ---
   const handleAcceptHandshake = async (handshakeMsg) => {
     try {
       console.log(`[SIGNAL] Schvaľujem zmluvu ALLOW pre unifikovaný FING: ${targetFing}`);
       
-      const myFing = vault?.identity?.poznamka || vault?.identity?.fing || '';
-      const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
+      const mojeData = zostavMojeMonolitneData();
       
+      // Do Matrix správy pre protistranu pribalíme celú vizitku ako čistý objekt bez stavových pascí
       const res = await SignalService.manageContract('UPDATE_CONTRACT', {
         fing_a: targetFing,
-        fing_b: myCleanFing,
-        txHash: "1" 
+        fing_b: mojeData.fing,
+        txHash: "1",
+        payload: JSON.stringify(mojeData)
       });
 
       if (res && res.success) {
+        let manfredData = {};
+        try {
+          if (handshakeMsg?.payload) {
+            manfredData = typeof handshakeMsg.payload === 'string' ? JSON.parse(handshakeMsg.payload) : handshakeMsg.payload;
+          } else if (handshakeMsg?.msg && handshakeMsg.msg.startsWith('{')) {
+            manfredData = JSON.parse(handshakeMsg.msg);
+          }
+        } catch(e) {
+          console.log("[SIGNAL] Nepodarilo sa dekódovať monolit protistrany, použijem ploché parametre.");
+        }
+
+        // 🛡️ BEZPEČNOSŤ: Stav a hash vstrekujeme natvrdo z Matrixu, neberieme ho z vnútra parsu
         const vaultResult = await addContact({
           fing: targetFing,
-          meno: target?.meno || handshakeMsg?.senderMeno || targetFing,
-          kat: 'Overený partner',
-          lok: target?.lok || 'V sieti',
-          popis: target?.popis || handshakeMsg?.msg || 'Spojenie nadviazané cez handshake.',
-          contractStatus: 1,
-          txHash: "1"
+          meno: manfredData.meno || target?.meno || handshakeMsg?.senderMeno || targetFing,
+          kat: manfredData.kat || target?.kat || 'Overený partner',
+          lok: manfredData.lok || target?.lok || 'V sieti',
+          popis: manfredData.popis || target?.popis || manfredData.handshakeNote || handshakeMsg?.msg || 'Spojenie nadviazané cez handshake.',
+          tel: manfredData.tel || '',
+          email: manfredData.email || '',
+          fb: manfredData.fb || '',
+          tg: manfredData.tg || '',
+          gal: manfredData.gal || target?.gal || '',
+          krypt: manfredData.krypt || null,
+          contractStatus: 1, // Pevný schválený stav zmluvy
+          txHash: "1"        // Pevný hash zmluvy
         });
 
         if (vaultResult && vaultResult.success) {
-          console.log(`[SIGNAL] Pečať ${targetFing} úspešne uzamknutá v klube.`);
+          console.log(`[SIGNAL] Kompletný monolit ${targetFing} úspešne uzamknutý v klube.`);
         }
 
         resolveHandshakeStatus(handshakeMsg.id, 1);
@@ -99,7 +143,7 @@ const SignalScreen = ({ route, navigation }) => {
           await updateContractStatus(targetFing, 1, "1");
         }
 
-        Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Brána otvorená a kontakt uložený.");
+        Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Brána otvorená a kompletná vizitka uložená.");
       } else {
         throw new Error("Brána odmietla potvrdenie kontraktu.");
       }
@@ -113,13 +157,11 @@ const SignalScreen = ({ route, navigation }) => {
   const handleRejectHandshake = async (handshakeMsg) => {
     try {
       console.log(`[SIGNAL] Ruším zmluvu ABORT pre unifikovaný FING: ${targetFing}`);
-      
-      const myFing = vault?.identity?.poznamka || vault?.identity?.fing || '';
-      const myCleanFing = myFing.trim().toLowerCase().startsWith('0x') ? myFing.trim().toLowerCase() : `0x${myFing.trim().toLowerCase()}`;
+      const mojeData = zostavMojeMonolitneData();
 
       const res = await SignalService.manageContract('UPDATE_CONTRACT', {
         fing_a: targetFing,
-        fing_b: myCleanFing,
+        fing_b: mojeData.fing,
         txHash: "2" 
       });
       
@@ -138,14 +180,19 @@ const SignalScreen = ({ route, navigation }) => {
     }
   };
 
-  // --- INICIÁCIA A ODOSLANIE PRVÉHO HANDSHAKE ---
+  // --- INICIÁCIA A ODOSLANIE PRVÉHO HANDSHAKE (Monolith Edition) ---
   const handleInitiateHandshake = async () => {
     const finalNote = note.trim() || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky v bunke H.";
-    console.log(`[SIGNAL] Odosielam prvotný handshake pre: ${targetFing}`);
+    console.log(`[SIGNAL] Odosielam prvotný monolitný handshake pre: ${targetFing}`);
     
-    const res = await sendLariaPackage(targetFing, finalNote);
+    // Zostavíme čisté dáta identity
+    const kompletnyBalik = zostavMojeMonolitneData(finalNote);
+    
+    // 💎 SÚLAD SO SIGNAL_SERVICE v15.4: Posielame čisté parametre. Servis ich sám zabalí do .msg kľúča
+    const res = await sendLariaPackage(kompletnyBalik.fing, targetFing, kompletnyBalik, finalNote);
     if (res && res.success) {
       setNote(''); 
+      Alert.alert("MATRIX", "Tvoj kompletný profil bol bezpečne odoslaný na schválenie.");
     } else {
       Alert.alert("Chyba", "Nepodarilo sa odoslať balík cez Matrix.");
     }
@@ -173,23 +220,25 @@ const SignalScreen = ({ route, navigation }) => {
     ? incomingRequests.filter(req => req.fing && req.fing.trim().toLowerCase() === targetFing) 
     : [];
   
-  // Hľadáme handshake zmluvu pre tohto konkrétneho partnera
   const liveHandshake = currentChannelLog.find(msg => msg.isHandshake);
+
+  // 🛡️ PARSOVANIE TEXTU SPRÁVY AK PRIŠIEL MONOLIT
+  let zobrazenaSpravaHandshake = liveHandshake?.msg || "Žiadosť o bezpečné prepojenie.";
+  if (liveHandshake?.msg && liveHandshake.msg.startsWith('{')) {
+    try {
+      const parsnutyMonolit = JSON.parse(liveHandshake.msg);
+      zobrazenaSpravaHandshake = parsnutyMonolit.popis || parsnutyMonolit.handshakeNote || "Žiadosť o bezpečné prepojenie.";
+    } catch(e) {}
+  }
   
-  // 🛡️ 1. ROZHODNUTIE O SCHVÁLENÍ: Musí byť stav 1 v logu alebo v trezore
   const isContractApproved = (liveHandshake && liveHandshake.contractStatus === 1) || 
                              (znamyKontakt && Number(znamyKontakt.contractStatus) === 1) || 
                              target?.isOdomknuty === true;
 
-  // 2. Zisťujeme, či zmluva visí v čakacom stave (stav 0)
   const hasPendingHandshake = (liveHandshake && liveHandshake.contractStatus === 0) || 
                               (znamyKontakt && Number(znamyKontakt.contractStatus) === 0);
 
-  // 🔄 KĽÚČOVÉ PREPÓLOVANIE: Využívame novú premennú 'isIncoming' priamo z kontextu!
-  // Ak zmluva čaká a bola označená ako PRICHÁDZAJÚCA (isIncoming: true) -> Manfred poslal tebe
   const pendingIncomingHandshake = hasPendingHandshake && liveHandshake?.isIncoming === true && !isContractApproved;
-  
-  // Ak zmluva čaká, ale NIE JE prichádzajúca (isIncoming: false) -> Sammael poslal Manfredovi a čaká na neho
   const pendingOutgoingHandshake = hasPendingHandshake && liveHandshake?.isIncoming === false && !isContractApproved;
 
   const chatMessagesOnly = currentChannelLog
@@ -228,7 +277,7 @@ const SignalScreen = ({ route, navigation }) => {
             <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', padding: 20, borderRadius: 6, width: '100%' }}>
               <Text style={[G.statusTextSmall, { color: '#E74C3C', marginBottom: 10, textTransform: 'uppercase', fontWeight: 'bold' }]}>⚠️ Prichádzajúca Pečať (Bunka H):</Text>
               <Text style={[G.cardDescriptionText, { color: '#fff', marginBottom: 25, fontSize: 15, lineHeight: 22, textAlign: 'left' }]}>
-                {liveHandshake?.msg || "Žiadosť o bezpečné prepojenie."} 
+                {zobrazenaSpravaHandshake} 
               </Text>
               
               <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
@@ -276,7 +325,7 @@ const SignalScreen = ({ route, navigation }) => {
                   Signal_CHAT.messageRow,
                   isMyMessage ? Signal_CHAT.alignRight : Signal_CHAT.alignLeft,
                   { marginTop: isSameUserAsPrevious ? 1 : 10 }
-                ]}>
+                ]}> {/* 🛡️ FIX: Vyčistené zatúlané slovo tracking! */}
                   
                   {!isSameUserAsPrevious && (
                     <Text style={[
