@@ -3,12 +3,13 @@
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
  * Status: MASTER_STABLE_PWA | RADAR_CLEAN_RECEPTION | LIGHTWEIGHT_MULTIPORT | v15.7-REALIGNED
  * * * PREHĽAD ZMIEN:
- * - MULTIPORT RE-ALIGNED: Pôvodný bleskový dekodér URL parametrov pre maximálnu úsporu QR/NFC prenosu.
+ * - MULTIPORT RE-ALIGNED: Pôvodný bleskový dekodér URL parametrov pre maximálu úsporu QR/NFC prenosu.
  * - RADAR IDENTIFIKÁCIA: Pred-handshake fáza uprednostňuje prichádzajúce reálne meno pred strohým fingerprintom.
  * - INTELLIGENT CLEAN RECEPTION: Odstránená systémová vata ("čaká na handshake"). Popis sa zobrazuje podmienene:
  *   prioritne profesijný popis, sekundárne sprievodná správa (kurzívou v úvodzovkách), inak zostáva karta čistá a úzka.
  * - SECURITY BLOCK: Skryté pokročilé dátové/sociálne tlačidlá pre dočasné kontakty na Recepcii, kým neprebehne handshake.
  * - HARMONIZED ENVELOPES (FIX): Obálka už chápe realitu. Akonáhle contractStatus === 1, dočasné stavy ustúpia zelenej pečati.
+ * - PWA HARMONIZATION (FIX): Tlačidlá KÔŠ a DÁTA kompletne harmonizované pre webové (confirm/alert) aj mobilné (Alert.alert) prostredie.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -126,17 +127,26 @@ const ContactsScreen = ({ navigation, route }) => {
 
           if (result.success) {
             const menoOznam = result.contact?.meno || "Identita";
-            Alert.alert(
-              "PEČAŤ PRIJATÁ", 
-              `Identita ${menoOznam.toUpperCase()} bola bezpečne zapísaná. Systém na pozadí preveruje Matrix...`
-            );
+            if (Platform.OS === 'web') {
+              alert(`PEČAŤ PRIJATÁ\n\nIdentita ${menoOznam.toUpperCase()} bola bezpečne zapísaná. Systém na pozadí preveruje Matrix...`);
+            } else {
+              Alert.alert(
+                "PEČAŤ PRIJATÁ", 
+                `Identita ${menoOznam.toUpperCase()} bola bezpečne zapísaná. Systém na pozadí preveruje Matrix...`
+              );
+            }
           } else if (result.isDuplicate) {
-            Alert.alert(
-              "ATELIÉR INFO", 
-              `Identitu [ ${result.contact?.meno || 'Identita'} ] už vo svojom trezore bezpečne držíš.`
-            );
+            if (Platform.OS === 'web') {
+              alert(`ATELIÉR INFO\n\nIdentitu [ ${result.contact?.meno || 'Identita'} ] už vo svojom trezore bezpečne držíš.`);
+            } else {
+              Alert.alert(
+                "ATELIÉR INFO", 
+                `Identitu [ ${result.contact?.meno || 'Identita'} ] už vo svojom trezore bezpečne držíš.`
+              );
+            }
           } else {
-            Alert.alert("INFO", result.error || "Chyba pri overovaní pečate.");
+            if (Platform.OS === 'web') alert(`INFO\n\n${result.error || "Chyba pri overovaní pečate."}`);
+            else Alert.alert("INFO", result.error || "Chyba pri overovaní pečate.");
           }
         }
 
@@ -205,9 +215,11 @@ const ContactsScreen = ({ navigation, route }) => {
     setSyncingId(null);
 
     if (result.success) {
-      Alert.alert("MATRIX SYNC", "Identita bola úspešne preleštená čerstvými dátami z tabuľky.");
+      if (Platform.OS === 'web') alert("MATRIX SYNC\n\nIdentita bola úspešne preleštená čerstvými dátami z tabuľky.");
+      else Alert.alert("MATRIX SYNC", "Identita bola úspešne preleštená čerstvými dátami z tabuľky.");
     } else {
-      Alert.alert("CHYBA SPOJENIA", result.error || "Matrix neodpovedá.");
+      if (Platform.OS === 'web') alert(`CHYBA SPOJENIA\n\n${result.error || "Matrix neodpovedá."}`);
+      else Alert.alert("CHYBA SPOJENIA", result.error || "Matrix neodpovedá.");
     }
   };
 
@@ -217,14 +229,18 @@ const ContactsScreen = ({ navigation, route }) => {
       await deleteContact(fingId);
     } catch (error) {
       console.error("❌ ERROR VYMAZANIA:", error);
-      Alert.alert("Chyba", "Nepodarilo sa odstrániť identitu.");
+      if (Platform.OS === 'web') alert("Chyba\n\nNepodarilo sa odstrániť identitu.");
+      else Alert.alert("Chyba", "Nepodarilo sa odstrániť identitu.");
     }
   };
 
   const openLink = (url) => {
     if (!url) return;
     const cleanUrl = url.startsWith('http') ? url : `https://${url}`;
-    Linking.openURL(cleanUrl).catch(() => Alert.alert("Chyba", "Nepodarilo sa otvoriť odkaz."));
+    Linking.openURL(cleanUrl).catch(() => {
+      if (Platform.OS === 'web') alert("Chyba\n\nNepodarilo sa otvoriť odkaz.");
+      else Alert.alert("Chyba", "Nepodarilo sa otvoriť odkaz.");
+    });
   };
 
   const handlePressItem = (id) => {
@@ -281,7 +297,6 @@ const ContactsScreen = ({ navigation, route }) => {
       ? incomingRequests.filter(req => sformatujFingUI(req.fing) === cleanFing) 
       : [];
     
-    // 🔥 INTELIGENTNÝ HARMONIZÁTOR STAVOV: Ak už je kontrakt potvrdený (status 1), stará nula ani temporary príznak nesmú vyvolať červenú obálku.
     const hasResolvedHandshake = contactLogs.some(msg => msg.isHandshake && Number(msg.contractStatus) === 1) || Number(item.contractStatus) === 1;
     const hasIncomingHandshake = !hasResolvedHandshake && (item.temporary || contactLogs.some(msg => msg.isHandshake && Number(msg.contractStatus) === 0 && msg.isIncoming));
     const hasNewFlashMessage = contactLogs.some(msg => !msg.isHandshake && msg.status === 'UNREAD');
@@ -312,23 +327,34 @@ const ContactsScreen = ({ navigation, route }) => {
             <Text style={[G.statusTextSmall, { opacity: 0.6, marginBottom: 5 }]}>📍 {item.lok || 'V SIETI'}</Text>
           </TouchableOpacity>
           
+          {/* OVLÁDACÍ PANEL KARTY (Kôš, Synchronizácia, Správa, Pin) */}
           <View style={{ flexDirection: 'row', height: 45, borderWidth: 1, borderColor: '#1a1a1a', borderRadius: 8, marginTop: 10, marginBottom: 5, backgroundColor: 'transparent' }}>
             
+            {/* 🗑️ TLAČIDLO: KÔŠ / ODMIETNUŤ (Zosynchronizované pre PWA/Mobil) */}
             <TouchableOpacity 
               style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} 
               onPress={() => {
                 const txtMsg = item.temporary ? `Naozaj odmietnuť žiadosť od ${displayMeno}?` : `Naozaj vymazať identitu [ ${displayMeno.toUpperCase()} ]?`;
-                Alert.alert(
-                  item.temporary ? "Odmietnuť žiadosť" : "Vymazať kontakt",
-                  txtMsg,
-                  [
-                    { text: "Zrušiť", style: "cancel" },
-                    { text: item.temporary ? "Odmietnuť" : "Vymazať", style: "destructive", onPress: () => handleDeleteContact(displayFing) }
-                  ]
-                );
+                const titleMsg = item.temporary ? "Odmietnuť žiadosť" : "Vymazať kontakt";
+
+                if (Platform.OS === 'web') {
+                  const potvrdene = window.confirm(`${titleMsg}\n\n${txtMsg}`);
+                  if (potvrdene) {
+                    handleDeleteContact(displayFing);
+                  }
+                } else {
+                  Alert.alert(
+                    titleMsg,
+                    txtMsg,
+                    [
+                      { text: "Zrušiť", style: "cancel" },
+                      { text: item.temporary ? "Odmietnuť" : "Vymazať", style: "destructive", onPress: () => handleDeleteContact(displayFing) }
+                    ]
+                  );
+                }
               }} 
               activeOpacity={0.5}
-            >
+            >         
               <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>🗑️</Text>
             </TouchableOpacity>
 
@@ -386,6 +412,7 @@ const ContactsScreen = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
 
+          {/* SEKCE ADVANCED SÍTĚ (Len ak kontakt nie je temporary) */}
           {!item.temporary && (
             <>
               <View style={[G.actionRow, { marginTop: 5 }]}>
@@ -399,9 +426,24 @@ const ContactsScreen = ({ navigation, route }) => {
                     <Text style={G.statusTextSmall}>{labels.call || "VOLAŤ"}</Text>
                   </TouchableOpacity>
                 ) : null}
-                <TouchableOpacity style={G.miniBtn} onPress={() => Alert.alert(alerts.data_title || 'DÁTOVÁ PEČAŤ', `FING: ${displayFing.toUpperCase()}\nSTAV KONTRAKTU: ${item.contractStatus !== undefined ? item.contractStatus : 'Žiadny'}\nTX_HASH: ${item.txHash || 'Žiadny'}\nKRYPT: ${item.krypt || 'Neaktívny'}`)}>
+
+                {/* 🛡️ TLAČIDLO: DÁTA (Zosynchronizované pre PWA/Mobil) */}
+                <TouchableOpacity 
+                  style={G.miniBtn} 
+                  onPress={() => {
+                    const titleMsg = alerts.data_title || 'DÁTOVÁ PEČAŤ';
+                    const bodyMsg = `FING: ${displayFing.toUpperCase()}\nSTAV KONTRAKTU: ${item.contractStatus !== undefined ? item.contractStatus : 'Žiadny'}\nTX_HASH: ${item.txHash || 'Žiadny'}\nKRYPT: ${item.krypt || 'Neaktívny'}`;
+
+                    if (Platform.OS === 'web') {
+                      alert(`${titleMsg}\n\n${bodyMsg}`);
+                    } else {
+                      Alert.alert(titleMsg, bodyMsg);
+                    }
+                  }}
+                >
                   <Text style={G.statusTextSmall}>{labels.data || "DÁTA"}</Text>
                 </TouchableOpacity>
+
                 {item.email ? (
                   <TouchableOpacity style={G.miniBtn} onPress={() => Linking.openURL(`mailto:${item.email}`)}>
                     <Text style={G.statusTextSmall}>{labels.email || "EMAIL"}</Text>
