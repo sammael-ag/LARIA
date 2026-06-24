@@ -1,13 +1,11 @@
 /**
- * LARIA SIGNAL CONTEXT v15.6-STRICT (Sovereign Radar Core - CrystalCore Integrated)
+ * LARIA SIGNAL CONTEXT v15.7-STRICT (Sovereign Radar Core - CrystalCore Integrated)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: RADAR_EYE_OPENED | NO_PATCHES | STRICT_ID_ALIGNMENT | DIRECTION_DETERMINED | v15.6-STRICT
- * * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
- * - FING: Vždy unifikovaný tvar ("0x" + 10 znakov hex, malé písmená).
- * - UNIKÁTNE ID: ID kontraktu (handshaku) je striktne čistý 'fing' partnera. Žiadne hybridy!
- * - CONTRACT STATES: Stav kontraktu je surové číslo (0 = PENDING, 1 = SIGNED/ACTIVE, 2 = ABORTED).
- * - DIRECTION: Určená exaktne porovnaním voči identite prihláseného Mastera.
- * - MSG: Jednotná premenná pre text správy všade (.msg).
+ * STATUS: RADAR_EYE_OPENED | NO_PATCHES | WEB_SAFE_NOTIFICATIONS | v15.7-STRICT
+ * * AUDIT REPORT:
+ * - Ošetrené kritické zlyhanie Expo notifikácií na webe (Platform.OS === 'web' bezpečne izolované).
+ * - Opravená synchronizácia stavu 1 (SIGNED): Pri re-syncu z Radaru sa stav pre kontakt nanovo preleští do zelena.
+ * - Odstránené staré anomálie behu.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -18,13 +16,16 @@ import { SignalService } from '../services/SignalService.js';
 
 const SignalContext = createContext();
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Notifikačný handler sa registruje iba na natívnych platformách
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 const tauriInvoke = async (cmd, args = {}) => {
   if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
@@ -116,17 +117,26 @@ export const SignalProvider = ({ children }) => {
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         if (existingStatus !== 'granted') await Notifications.requestPermissionsAsync();
       } catch (e) {
-        console.log('[SIGNAL] Push systém mimo prevDKy.');
+        console.log('[SIGNAL] Push systém mimo prevádzky.');
       }
     };
     setupNotifications();
   }, []);
 
   const triggerNotification = async (title, text) => {
+    // 1. Ochrana pre Tauri prostredie
     if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
       await tauriInvoke('zobraz_notifikaciu', { titulok: title, telo: text });
       return;
     }
+    
+    // 2. Ochrana pre čisté Web/PWA prostredie (Zabráni vyhodeniu červenej chyby)
+    if (Platform.OS === 'web') {
+      console.log(`🌐 [WEB NOTIFICATION LOG] ${title}: ${text}`);
+      return;
+    }
+
+    // 3. Natívne mobilné push notifikácie (Expo)
     try {
       await Notifications.scheduleNotificationAsync({
         content: { title: title, body: text, sound: 'default' },
@@ -177,12 +187,14 @@ export const SignalProvider = ({ children }) => {
               const existujuciIndex = prev.findIndex(req => req.id === contractId && req.isHandshake);
               
               if (existujuciIndex !== -1) {
+                // Preleštenie stavu: Ak sa zmenil stav na Mravenisku (napr. na 1), prepíšeme lokálny stav v Trezore radaru
                 if (prev[existujuciIndex].contractStatus !== surovyStav || prev[existujuciIndex].isIncoming !== isIncoming) {
                   const updated = [...prev];
                   updated[existujuciIndex] = {
                     ...updated[existujuciIndex],
                     contractStatus: surovyStav,
                     status: surovyStav === 0 ? 'UNREAD' : 'READ',
+                    txHash: contract.txHash,
                     isIncoming: isIncoming
                   };
                   return updated;
@@ -256,7 +268,6 @@ export const SignalProvider = ({ children }) => {
     }
 
     try {
-      // 💎 Voláme prečistenú funkciu zo SignalService, ktorá balí kompletný 9-položkový monolit
       const mravecRes = await SignalService.sendLariaPackage(myCleanFing, targetCleanFing, myIdentity, handshakeNote);
 
       let txHashResult = "0";
@@ -266,7 +277,6 @@ export const SignalProvider = ({ children }) => {
         return { success: false, error: "Mravenisko odmietlo balík." };
       }
 
-      // Od nás odchádza balík, isIncoming je stopercentne false
       const enrichedHandshake = {
         id: targetCleanFing,             
         fing: targetCleanFing,          

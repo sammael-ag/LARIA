@@ -1,12 +1,13 @@
 /**
- * LARIA v15.4-STRICT: ContactsScreen (Radar-Driven Reception Edition)
- * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * Status: MASTER_STABLE_PWA | RADAR_RECEPTION_CONNECTED | v15.4-STRICT
- * * * ÚPRAVA v15.4-STRICT:
- * - RADAR-DRIVEN RECEPTION: Recepcia dynamicky zlučuje `unknownContacts` z trezoru so živými prichádzajúcimi požiadavkami z `incomingRequests`.
- * - UNIFIED RECOGNITION: Ak človek z Mraveniska ešte nemá meno, bezpečne sa identifikuje cez jeho unifikovaný FING.
- * - STRICT STATE AUTOMATON: Plne rešpektuje číselné stavy kontraktu (0, 1, 2) a unifikovaný 0x formát.
- * - SIGNAL CONTEXT SYNC: Pri vstupe do SignalGate premazáva neprečítané správy cez markAsRead.
+ * LARIA v15.7-REALIGNED: ContactsScreen (Barefoot Precision Edition)
+ * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
+ * Status: MASTER_STABLE_PWA | RADAR_CLEAN_RECEPTION | LIGHTWEIGHT_MULTIPORT | v15.7-REALIGNED
+ * * * PREHĽAD ZMIEN:
+ * - MULTIPORT RE-ALIGNED: Pôvodný bleskový dekodér URL parametrov pre maximálnu úsporu QR/NFC prenosu.
+ * - RADAR IDENTIFIKÁCIA: Pred-handshake fáza uprednostňuje prichádzajúce reálne meno pred strohým fingerprintom.
+ * - INTELLIGENT CLEAN RECEPTION: Odstránená systémová vata ("čaká na handshake"). Popis sa zobrazuje podmienene:
+ *   prioritne profesijný popis, sekundárne sprievodná správa (kurzívou v úvodzovkách), inak zostáva karta čistá a úzka.
+ * - SECURITY BLOCK: Skryté pokročilé dátové/sociálne tlačidlá pre dočasné kontakty na Recepcii, kým neprebehne handshake.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -62,13 +63,13 @@ const ContactsScreen = ({ navigation, route }) => {
     getContactBadgeStatus
   } = useContacts();
   
-  const { incomingRequests, markAsRead } = useSignal(); // 🔥 Sledujeme živé bleskové prúdy a mazač správ
+  const { incomingRequests, markAsRead } = useSignal(); 
 
   const scrollToTop = () => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
-  // --- 🛰️ UNIFIKOVANÝ MULTIPORT ---
+  // --- 🛰️ UNIFIKOVANÝ MULTIPORT (Pôvodný ultra-ľahký a úsporný transfer) ---
   useEffect(() => {
     if (route.params?.newContact || route.params?.scannedUrl) {
       const processIncomingPayload = async () => {
@@ -119,7 +120,7 @@ const ContactsScreen = ({ navigation, route }) => {
           }
         }
 
-        if (payload) {
+        if (payload && payload.fing) {
           const result = await addContact(payload);
 
           if (result.success) {
@@ -145,7 +146,7 @@ const ContactsScreen = ({ navigation, route }) => {
     }
   }, [route.params]);
 
-  // --- FILTROVANIE A TRIEDENIE REŽIMU: KLUB ---
+  // --- FILTROVANIE A TRIEDENIE ---
   const sortedContacts = [...contacts]
     .filter(c => {
       const meno = c.meno || ""; 
@@ -162,7 +163,7 @@ const ContactsScreen = ({ navigation, route }) => {
       return a.pinned ? -1 : 1;
     });
 
-  // --- 🔥 SYNCHRONIZÁCIA RECEPCIE SO ŽIVÝM RADAROM ---
+  // --- 🔥 SYNCHRONIZÁCIA RECEPCIE SO ŽIVÝM RADAROM (Základné verejné info) ---
   const dynamicUnknownContacts = [...(unknownContacts || [])];
 
   if (incomingRequests) {
@@ -170,20 +171,31 @@ const ContactsScreen = ({ navigation, route }) => {
       if (req.isHandshake && req.contractStatus === 0 && req.isIncoming) {
         const cleanReqFing = sformatujFingUI(req.fing);
         
-        // Skontrolujeme, či tento človek už náhodou nie je v klube alebo na recepcii
         const existujeVFlube = contacts.some(c => sformatujFingUI(c.fing) === cleanReqFing);
         const existujeNaRecepcii = dynamicUnknownContacts.some(c => sformatujFingUI(c.fing) === cleanReqFing);
 
         if (!existujeVFlube && !existujeNaRecepcii) {
-          // Ak neexistuje, je to Manfred z Mraveniska! Vytvoríme pre neho dočasnú identitu na recepciu
+          // Uprednostníme reálne prichádzajúce meno pred strohým ID fingerprintom, ak je dostupné
+          const zobrazovaneMeno = req.senderMeno && req.senderMeno.trim() !== '' ? req.senderMeno : cleanReqFing;
+
+          // 🧠 INTELIGENTNÉ UX ROZHODNUTIE:
+          // Ak existuje reálny profesijný popis z Matrixu, použi ten. 
+          // Ak nie, ale je tu správa, ukážeme ju ako dočasný popis. Ak nie je nič, zostane undefined (čistá karta).
+          let docasnyPopis = undefined;
+          if (req.popis && req.popis.trim() !== '') {
+            docasnyPopis = req.popis;
+          } else if (req.msg && req.msg.trim() !== '') {
+            docasnyPopis = `“${req.msg}”`; 
+          }
+
           dynamicUnknownContacts.push({
             fing: cleanReqFing,
-            meno: req.senderMeno || cleanReqFing,
+            meno: zobrazovaneMeno,
             kat: 'Nový z Matrixu',
             lok: 'MRAVENISKO',
-            popis: req.msg || 'Žiadosť zachytená bleskovým radarom.',
+            popis: docasnyPopis, 
             contractStatus: 0,
-            temporary: true // Príznak, že ide o živý neuložený objekt
+            temporary: true 
           });
         }
       }
@@ -226,7 +238,7 @@ const ContactsScreen = ({ navigation, route }) => {
   const handleOpenSignalGate = (item) => {
     const cleanFing = sformatujFingUI(item.fing);
     if (typeof markAsRead === 'function') {
-      markAsRead(cleanFing); // Prečistenie bleskových notifikácií
+      markAsRead(cleanFing); 
     }
     navigation.navigate('Signal', { 
       target: item,
@@ -234,17 +246,17 @@ const ContactsScreen = ({ navigation, route }) => {
     });
   };
 
-  // --- 🛰️ TELEPATICKÝ HARMONIZÁTOR BODIEK (Strict Edition) ---
+  // --- 🛰️ TELEPATICKÝ HARMONIZÁTOR BODIEK ---
   const ziskajFarbuHarmonickejBodky = (item, hasNewFlashMessage) => {
     if (item.temporary || hasNewFlashMessage) {
-      return '#E74C3C'; // 🔴 Červená pre živé prichádzajúce žiadosti alebo nové bleskové správy
+      return '#E74C3C'; 
     }
     
     if (item.contractStatus !== undefined) {
       const statusNum = Number(item.contractStatus);
-      if (statusNum === 0) return '#F1C40F'; // 🟡 Žltá (PENDING)
-      if (statusNum === 1) return '#2ECC71'; // 🟢 Zelená (SIGNED / ULOŽENÉ)
-      if (statusNum === 2) return '#E74C3C'; // 🔴 Červená (ABORTED)
+      if (statusNum === 0) return '#F1C40F'; 
+      if (statusNum === 1) return '#2ECC71'; 
+      if (statusNum === 2) return '#E74C3C'; 
     }
 
     return item.syncedAt ? '#0FF' : '#1a1a1a'; 
@@ -268,7 +280,6 @@ const ContactsScreen = ({ navigation, route }) => {
     const displayMeno = item.meno || displayFing; 
     const displayKat = item.kat || "Partner";
 
-    // Vyhľadanie záznamov priamo v radare pre nekompromisnú kontrolu stavu obálok
     const contactLogs = incomingRequests 
       ? incomingRequests.filter(req => sformatujFingUI(req.fing) === cleanFing) 
       : [];
@@ -309,7 +320,14 @@ const ContactsScreen = ({ navigation, route }) => {
               style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} 
               onPress={() => {
                 const txtMsg = item.temporary ? `Naozaj odmietnuť žiadosť od ${displayMeno}?` : `Naozaj vymazať identitu [ ${displayMeno.toUpperCase()} ]?`;
-                if (window.confirm(txtMsg)) handleDeleteContact(displayFing);
+                Alert.alert(
+                  item.temporary ? "Odmietnuť žiadosť" : "Vymazať kontakt",
+                  txtMsg,
+                  [
+                    { text: "Zrušiť", style: "cancel" },
+                    { text: item.temporary ? "Odmietnuť" : "Vymazať", style: "destructive", onPress: () => handleDeleteContact(displayFing) }
+                  ]
+                );
               }} 
               activeOpacity={0.5}
             >
@@ -354,13 +372,24 @@ const ContactsScreen = ({ navigation, route }) => {
 
           <TouchableOpacity onPress={() => handlePressItem(displayFing)} activeOpacity={0.8} style={{ width: '100%' }}>
             <View style={G.divider} />
-            <Text style={G.cardDescriptionText}>{item.popis || 'Čaká na otvorenie brány...'}</Text>
-            <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 10, marginBottom: 10 }]}>
+            
+            {/* 🧠 CHYTRÝ POPIS PODĽA ARIA (UX CLEAN STATE): Schová sa kompletne, ak v ňom nič nie je */}
+            {item.popis ? (
+              <Text style={[
+                G.cardDescriptionText, 
+                item.temporary && item.popis.startsWith('“') && { fontStyle: 'italic', opacity: 0.7 }
+              ]}>
+                {item.popis}
+              </Text>
+            ) : null}
+
+            <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: item.popis ? 10 : 2, marginBottom: 10 }]}>
               ID: {displayFing.toUpperCase()}{item.syncedAt ? ' ✓' : null}
               {item.contractStatus !== undefined ? `  |  STAV: ${ziskajTextStavuKontraktu(item.contractStatus)}` : ''}
             </Text>
           </TouchableOpacity>
 
+          {/* 🔐 PÔVODNÝ ČISTÝ STAV PRE OVERENÉ KONTAKTY (Zabránenie zobrazenia pred handshakeom) */}
           {!item.temporary && (
             <>
               <View style={[G.actionRow, { marginTop: 5 }]}>
@@ -407,7 +436,7 @@ const ContactsScreen = ({ navigation, route }) => {
             {displayMeno}{!item.temporary && item.pinned ? ' ⭐' : null}
           </Text>
           <Text style={[G.statusTextSmall, { fontSize: 9, marginTop: 2, color: item.temporary ? '#E74C3C' : '#aaa' }]}>
-          {`${displayKat.toUpperCase()} • ${item.lok}`}
+            {`${displayKat.toUpperCase()} • ${item.lok}`}
           </Text>
         </View>
 
@@ -463,7 +492,7 @@ const ContactsScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
               </View>
 
-              {/* 📡 RECEPCIA: Prichádzajúce overenia napojené priamo na živý bleskový radar */}
+              {/* 📡 RECEPCIA */}
               {dynamicUnknownContacts && dynamicUnknownContacts.length > 0 && (
                 <View style={{ marginBottom: 20, marginTop: 10 }}>
                   <Text style={[G.statusTextSmall, { color: '#E74C3C', letterSpacing: 2, marginBottom: 10, fontWeight: 'bold' }]}>

@@ -1,10 +1,10 @@
 /**
- * LARIA v15.3-STRICT: ContactContext (Trezor identít - Sovereign Security Core)
+ * LARIA v15.5-STRICT: ContactContext (Trezor identít - Sovereign Security Core)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * Status: CRYSTAL_CORE_CLEANED | NO_PATCHES | STRICT_ID_ALIGNMENT | v15.3-STRICT
- * 
- * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
- * - FING: Vždy unifikovaný tvar (0x + malé písmená). Všade pod názvom 'fing'.
+ * Status: CRYSTAL_CORE_CLEANED | MONOLITH_JSON_ALIGNED | v15.5-STRICT
+ * * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
+ * - MONOLITHIC JSON ALIGNMENT: Plne lícuje a preberá štruktúru zo SignalScreen. Rozbaľuje 
+ * kompletné portfólio (tel, email, fb, tg, gal, krypt) na Recepcii aj pri ostrom zápise.
  * - POPIS: Čistý text profilu z vizitky. ŽIADNE nahrádzanie chatovými správami (msg)!
  * - CONTRACT STATES: Sledovanie stavu zmluvy surovým číslom (0 = PENDING, 1 = SIGNED/ACTIVE, 2 = ABORTED).
  * - UNIKÁTNE ID: ID kontraktu je na celom frontende striktne čistý 'fing' partnera.
@@ -56,11 +56,11 @@ export const ContactProvider = ({ children }) => {
     loadContacts();
   }, []);
 
-  // --- 📡 DYNAMICKÝ DETEKTOR NEZNÁMYCH PEČATÍ (v15.3 - Čistý Masív) ---
+  // --- 📡 DYNAMICKÝ DETEKTOR NEZNÁMYCH PEČATÍ (v15.5-STRICT) ---
   const unknownContacts = useMemo(() => {
     if (!incomingRequests) return [];
 
-    // Striktne a bez záplat vyťahujeme iba čistý unifikovaný fing odosielateľa kontraktu
+    // Striktne vyťahujeme iba čistý unifikovaný fing odosielateľa kontraktu
     const uniqueIncomingFings = [...new Set(incomingRequests.map(req => {
       return req.fing ? sformatujFing(req.fing) : null;
     }))].filter(Boolean);
@@ -72,35 +72,53 @@ export const ContactProvider = ({ children }) => {
 
     return unknownFings.map(fing => {
       const firstMsg = incomingRequests.find(req => sformatujFing(req.fing) === fing);
+      
+      let parsedPayload = null;
+      let rawMsgText = firstMsg?.msg || '';
 
+      // 🔥 💎 ROZBALENIE MONOLITNÉHO JSON BALÍKA
+      if (rawMsgText && (rawMsgText.trim().startsWith('{') || rawMsgText.trim().startsWith('['))) {
+        try {
+          parsedPayload = JSON.parse(rawMsgText);
+        } catch (e) {
+          console.log(`⚠️ HANDSHAKE_PARSING_INFO: Obsah msg pre ${fing} vyzerá ako objekt, ale nie je to validný JSON.`);
+        }
+      }
+
+      // Kompletné zlícovanie s dátovým modelom zo SignalScreen pre Recepciu
       return {
         fing: fing,                           
-        meno: `Kontakt ${fing.substring(0, 8).toUpperCase()}...`, // Krajší osek pre prehľadnosť
-        kat: 'Pútnik v sieti',
-        lok: 'Čaká na overenie',
-        popis: '', // 🔥 VYMETENÝ BORDEL: Profil zostáva čistý, žiadna zámena so správou msg!
-        hMsg: firstMsg?.msg || 'Poslal ti handshake požiadavku...', 
-        contractStatus: 0, // Surový počiatočný stav zmluvy z mraveniska (0 = Čaká)
+        meno: parsedPayload?.meno || parsedPayload?.name || `Kontakt ${fing.substring(0, 8).toUpperCase()}...`, 
+        kat: parsedPayload?.kat || parsedPayload?.category || 'Pútnik v sieti',
+        lok: parsedPayload?.lok || parsedPayload?.location || 'Čaká na overenie',
+        popis: parsedPayload?.popis || parsedPayload?.bio || '', 
+        tel: parsedPayload?.tel || '',
+        email: parsedPayload?.email || '',
+        fb: parsedPayload?.fb || '',
+        tg: parsedPayload?.tg || '',
+        gal: parsedPayload?.gal || '',
+        krypt: parsedPayload?.krypt || null,
+        hMsg: parsedPayload ? "Kompletná monolitná vizitka doručená." : rawMsgText || 'Poslal ti handshake požiadavku...', 
+        contractStatus: 0, 
         txHash: firstMsg?.txHash || '0',
-        id: fing, // 🔥 ŽIADNE MAGICKÉ STRINGS: ID kontraktu je samotný čistý fing partnera!
+        id: fing, 
         temporary: true 
       };
     });
   }, [incomingRequests, contacts]);
 
-  // --- 🛠️ INTERAKCIA S RADAR BADGES (Vymetený prach) ---
+  // --- 🛠️ INTERAKCIA S RADAR BADGES ---
   const getContactBadgeStatus = (contactFing) => {
     if (!contactFing) return null;
     const targetFing = sformatujFing(contactFing);
     const match = incomingRequests.find(req => sformatujFing(req.fing) === targetFing);
 
     if (match) {
-      // Porovnávame čisté stavy z mraveniska
       if (match.isHandshake && (match.status === "0" || match.contractStatus === 0)) {
-        return 'CONTRACT_PENDING'; // Žltá bodka - čaká na schválenie
+        return 'CONTRACT_PENDING'; 
       }
       if (!match.isHandshake && match.status === 'UNREAD') {
-        return 'NEW_MESSAGE'; // Červená bodka - nová správa
+        return 'NEW_MESSAGE'; 
       }
     }
     return null;
@@ -120,7 +138,7 @@ export const ContactProvider = ({ children }) => {
     );
   };
 
-  // --- 2. UNIVERZÁLNY ZÁPIS PEČATE DO TREZORU (Čistý orez) ---
+  // --- 2. UNIVERZÁLNY ZÁPIS PEČATE DO TREZORU (Zlícovaný s Monolitom) ---
   const addContact = async (rawData) => {
     try {
       const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
@@ -137,21 +155,25 @@ export const ContactProvider = ({ children }) => {
         return { success: false, isDuplicate: true, error: "Túto identitu už v ateliéri máš.", contact: existing };
       }
 
-      // Striktne uzákonená štruktúra bez parazitných premenných a záplat
+      // 🔥 Tu sa láme chlieb: Prepíšeme kompletné, neosekané monolitné dáta do trezoru
       const newContact = {
         fing: targetFing,              
         meno: targetMeno,              
         kat: data.kat || 'Majster',    
         lok: data.lok || 'V sieti',    
-        popis: data.popis || '', // 🔥 Ukladá sa výhradne skutočný profil z vizitky      
+        popis: data.popis || '',      
+        tel: data.tel || '',           
+        email: data.email || '',       
+        fb: data.fb || '',             
+        tg: data.tg || '',             
         gal: data.gal || '',           
-        krypt: data.krypt || '', 
-        contractStatus: data.contractStatus !== undefined ? Number(data.contractStatus) : 0, // Po schválení cez ALLOW nastavujeme rovno stav 1 (Podpísaný)
+        krypt: data.krypt || null,     
+        contractStatus: data.contractStatus !== undefined ? Number(data.contractStatus) : 0, 
         txHash: data.txHash || '',     
         pinned: false,
         addedAt: new Date().toISOString(),
         syncedAt: null,                
-        v: "15.3-STRICT"
+        v: "15.5-STRICT"
       };
 
       let updatedContacts;
@@ -296,6 +318,10 @@ export const ContactProvider = ({ children }) => {
                 kat: master.kat || c.kat,
                 lok: master.lok || c.lok,
                 popis: master.popis || c.popis, 
+                tel: master.tel || c.tel,       // 🔥 Synchronizácia chráni monolitické polia
+                email: master.email || c.email,
+                fb: master.fb || c.fb,
+                tg: master.tg || c.tg,
                 gal: master.gal || c.gal,       
                 krypt: master.krypt || c.krypt,
                 contractStatus: master.contractStatus !== undefined ? Number(master.contractStatus) : c.contractStatus,
