@@ -1,10 +1,11 @@
 /**
- * LARIA v15.5-STRICT: ContactContext (Trezor identít - Sovereign Security Core)
+ * LARIA v15.7-REALIGNED: ContactContext (Trezor identít - Sovereign Security Core)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * Status: CRYSTAL_CORE_CLEANED | MONOLITH_JSON_ALIGNED | v15.5-STRICT
+ * Status: CRYSTAL_CORE_CLEANED | FILTERED_MATRIX_SYNC | v15.7-REALIGNED
  * * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
- * - MONOLITHIC JSON ALIGNMENT: Plne lícuje a preberá štruktúru zo SignalScreen. Rozbaľuje 
- * kompletné portfólio (tel, email, fb, tg, gal, krypt) na Recepcii aj pri ostrom zápise.
+ * - INTELLIGENT MATRIX RE-SYNC: Modrá šípečka chráni lokálny trezor. Ak z Matrixu príde
+ *   prázdne pole (napr. z dôvodu vymazania objektu msg po priradení txHash), staré údaje 
+ *   v trezore sa NEPREPISUJÚ. Prepíše ich iba vtedy, ak sú nové dáta rozdielne a neprázdne.
  * - POPIS: Čistý text profilu z vizitky. ŽIADNE nahrádzanie chatovými správami (msg)!
  * - CONTRACT STATES: Sledovanie stavu zmluvy surovým číslom (0 = PENDING, 1 = SIGNED/ACTIVE, 2 = ABORTED).
  * - UNIKÁTNE ID: ID kontraktu je na celom frontende striktne čistý 'fing' partnera.
@@ -26,7 +27,7 @@ const ziskajBranaUrl = () => {
 };
 
 /**
- * 🛡️ UNIFIKÁTOR: Garantuje striktný formát FING-u (0x + malé písmená)
+ * 🛡️ UNIFIKATOR: Garantuje striktný formát FING-u (0x + malé písmená)
  */
 const sformatujFing = (fing) => {
   if (!fing) return '';
@@ -56,7 +57,7 @@ export const ContactProvider = ({ children }) => {
     loadContacts();
   }, []);
 
-  // --- 📡 DYNAMICKÝ DETEKTOR NEZNÁMYCH PEČATÍ (v15.5-STRICT) ---
+  // --- 📡 DYNAMICKÝ DETEKTOR NEZNÁMYCH PEČATÍ (v15.7-REALIGNED) ---
   const unknownContacts = useMemo(() => {
     if (!incomingRequests) return [];
 
@@ -155,7 +156,7 @@ export const ContactProvider = ({ children }) => {
         return { success: false, isDuplicate: true, error: "Túto identitu už v ateliéri máš.", contact: existing };
       }
 
-      // 🔥 Tu sa láme chlieb: Prepíšeme kompletné, neosekané monolitné dáta do trezoru
+      // Prepíšeme kompletné, neosekané monolitné dáta do trezoru
       const newContact = {
         fing: targetFing,              
         meno: targetMeno,              
@@ -173,7 +174,7 @@ export const ContactProvider = ({ children }) => {
         pinned: false,
         addedAt: new Date().toISOString(),
         syncedAt: null,                
-        v: "15.5-STRICT"
+        v: "15.7-REALIGNED"
       };
 
       let updatedContacts;
@@ -286,7 +287,7 @@ export const ContactProvider = ({ children }) => {
     };
   }, [contacts]);
 
-  // --- 5. 📡 MATRIX RE-SYNC (Preleštenie vizitky z registra) ---
+  // --- 5. 📡 MATRIX RE-SYNC (Inteligentné preleštenie s ochranou prázdnych polí) ---
   const syncContactWithMatrix = async (fingId) => {
     try {
       const targetFing = sformatujFing(fingId);
@@ -312,20 +313,22 @@ export const ContactProvider = ({ children }) => {
           const updated = prev.map(c => {
             if (sformatujFing(c.fing) === targetFing) {
               wasUpdated = true;
+              
+              // 🔥 OCHRANNÝ ŠTÍT ARIA: Prepíšeme iba vtedy, ak z Matrixu reálne prišla hodnota. Ak je pole prázdne alebo nedefinované, chránime a držíme starý lokálny údaj z trezoru.
               return {
                 ...c,
-                meno: master.meno || c.meno,
-                kat: master.kat || c.kat,
-                lok: master.lok || c.lok,
-                popis: master.popis || c.popis, 
-                tel: master.tel || c.tel,       // 🔥 Synchronizácia chráni monolitické polia
-                email: master.email || c.email,
-                fb: master.fb || c.fb,
-                tg: master.tg || c.tg,
-                gal: master.gal || c.gal,       
-                krypt: master.krypt || c.krypt,
+                meno: (master.meno && master.meno.trim() !== '') ? master.meno : c.meno,
+                kat: (master.kat && master.kat.trim() !== '') ? master.kat : c.kat,
+                lok: (master.lok && master.lok.trim() !== '') ? master.lok : c.lok,
+                popis: (master.popis && master.popis.trim() !== '') ? master.popis : c.popis, 
+                tel: (master.tel && master.tel.trim() !== '') ? master.tel : c.tel,       
+                email: (master.email && master.email.trim() !== '') ? master.email : c.email,
+                fb: (master.fb && master.fb.trim() !== '') ? master.fb : c.fb,
+                tg: (master.tg && master.tg.trim() !== '') ? master.tg : c.tg,
+                gal: (master.gal && master.gal.trim() !== '') ? master.gal : c.gal,       
+                krypt: master.krypt !== undefined && master.krypt !== null ? master.krypt : c.krypt,
                 contractStatus: master.contractStatus !== undefined ? Number(master.contractStatus) : c.contractStatus,
-                txHash: master.txHash || c.txHash,
+                txHash: (master.txHash && master.txHash.trim() !== '') ? master.txHash : c.txHash,
                 syncedAt: new Date().toISOString()
               };
             }
@@ -340,7 +343,7 @@ export const ContactProvider = ({ children }) => {
           return updated;
         });
 
-        console.log(`✅ Identita ${targetFing} a zmluvné stavy úspešne preleštené.`);
+        console.log(`✅ Identita ${targetFing} inteligentne synchronizovaná. Prázdne polia z Matrixu boli odfiltrované.`);
         return { success: true };
       }
       return { success: false, error: "Identita v Matrixe nenájdená." };

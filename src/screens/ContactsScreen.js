@@ -8,6 +8,7 @@
  * - INTELLIGENT CLEAN RECEPTION: Odstránená systémová vata ("čaká na handshake"). Popis sa zobrazuje podmienene:
  *   prioritne profesijný popis, sekundárne sprievodná správa (kurzívou v úvodzovkách), inak zostáva karta čistá a úzka.
  * - SECURITY BLOCK: Skryté pokročilé dátové/sociálne tlačidlá pre dočasné kontakty na Recepcii, kým neprebehne handshake.
+ * - HARMONIZED ENVELOPES (FIX): Obálka už chápe realitu. Akonáhle contractStatus === 1, dočasné stavy ustúpia zelenej pečati.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -175,12 +176,8 @@ const ContactsScreen = ({ navigation, route }) => {
         const existujeNaRecepcii = dynamicUnknownContacts.some(c => sformatujFingUI(c.fing) === cleanReqFing);
 
         if (!existujeVFlube && !existujeNaRecepcii) {
-          // Uprednostníme reálne prichádzajúce meno pred strohým ID fingerprintom, ak je dostupné
           const zobrazovaneMeno = req.senderMeno && req.senderMeno.trim() !== '' ? req.senderMeno : cleanReqFing;
 
-          // 🧠 INTELIGENTNÉ UX ROZHODNUTIE:
-          // Ak existuje reálny profesijný popis z Matrixu, použi ten. 
-          // Ak nie, ale je tu správa, ukážeme ju ako dočasný popis. Ak nie je nič, zostane undefined (čistá karta).
           let docasnyPopis = undefined;
           if (req.popis && req.popis.trim() !== '') {
             docasnyPopis = req.popis;
@@ -284,9 +281,10 @@ const ContactsScreen = ({ navigation, route }) => {
       ? incomingRequests.filter(req => sformatujFingUI(req.fing) === cleanFing) 
       : [];
     
-    const hasIncomingHandshake = item.temporary || contactLogs.some(msg => msg.isHandshake && msg.contractStatus === 0 && msg.isIncoming);
+    // 🔥 INTELIGENTNÝ HARMONIZÁTOR STAVOV: Ak už je kontrakt potvrdený (status 1), stará nula ani temporary príznak nesmú vyvolať červenú obálku.
+    const hasResolvedHandshake = contactLogs.some(msg => msg.isHandshake && Number(msg.contractStatus) === 1) || Number(item.contractStatus) === 1;
+    const hasIncomingHandshake = !hasResolvedHandshake && (item.temporary || contactLogs.some(msg => msg.isHandshake && Number(msg.contractStatus) === 0 && msg.isIncoming));
     const hasNewFlashMessage = contactLogs.some(msg => !msg.isHandshake && msg.status === 'UNREAD');
-    const hasResolvedHandshake = contactLogs.some(msg => msg.isHandshake && msg.contractStatus === 1);
 
     const farbaBodky = ziskajFarbuHarmonickejBodky(item, hasNewFlashMessage);
 
@@ -349,7 +347,7 @@ const ContactsScreen = ({ navigation, route }) => {
                 onPress={() => handleOpenSignalGate(item)} 
                 activeOpacity={0.5}
               >
-                {item.temporary || hasIncomingHandshake ? (
+                {hasIncomingHandshake ? (
                   <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>✉️</Text>
                 ) : hasNewFlashMessage ? (
                   <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>📩</Text>
@@ -373,7 +371,6 @@ const ContactsScreen = ({ navigation, route }) => {
           <TouchableOpacity onPress={() => handlePressItem(displayFing)} activeOpacity={0.8} style={{ width: '100%' }}>
             <View style={G.divider} />
             
-            {/* 🧠 CHYTRÝ POPIS PODĽA ARIA (UX CLEAN STATE): Schová sa kompletne, ak v ňom nič nie je */}
             {item.popis ? (
               <Text style={[
                 G.cardDescriptionText, 
@@ -389,7 +386,6 @@ const ContactsScreen = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
 
-          {/* 🔐 PÔVODNÝ ČISTÝ STAV PRE OVERENÉ KONTAKTY (Zabránenie zobrazenia pred handshakeom) */}
           {!item.temporary && (
             <>
               <View style={[G.actionRow, { marginTop: 5 }]}>
@@ -422,7 +418,7 @@ const ContactsScreen = ({ navigation, route }) => {
     return (
       <TouchableOpacity style={[G.card, { flexDirection: 'row', alignItems: 'center', borderColor: item.temporary ? '#E74C3C' : item.pinned ? (ACCENT || '#c5a059') : '#1a1a1a', backgroundColor: item.temporary ? 'rgba(231, 76, 60, 0.02)' : item.pinned ? 'rgba(197, 160, 89, 0.05)' : '#050505', width: '100%' }]} onPress={() => handlePressItem(displayFing)} activeOpacity={0.7}>
         <View style={{ width: 44, height: 44, backgroundColor: '#000', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 15, borderWidth: 1, borderColor: item.temporary ? '#E74C3C' : item.pinned ? (ACCENT || '#c5a059') : '#333', position: 'relative' }}>
-          <Text style={{ fontSize: 18 }}>{item.temporary || hasIncomingHandshake ? '✉️' : hasNewFlashMessage ? '📩' : '👤'}</Text>
+          <Text style={{ fontSize: 18 }}>{hasIncomingHandshake ? '✉️' : hasNewFlashMessage ? '📩' : '👤'}</Text>
           
           {hasResolvedHandshake && (
             <View style={CONTACT_NOTIF.compactAvatarBadgeContainer}>
