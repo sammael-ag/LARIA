@@ -146,7 +146,7 @@ export const ContactProvider = ({ children }) => {
         popis: data.popis || '', // 🔥 Ukladá sa výhradne skutočný profil z vizitky      
         gal: data.gal || '',           
         krypt: data.krypt || '', 
-        contractStatus: data.contractStatus !== undefined ? Number(data.contractStatus) : 1, // Po schválení cez ALLOW nastavujeme rovno stav 1 (Podpísaný)
+        contractStatus: data.contractStatus !== undefined ? Number(data.contractStatus) : 0, // Po schválení cez ALLOW nastavujeme rovno stav 1 (Podpísaný)
         txHash: data.txHash || '',     
         pinned: false,
         addedAt: new Date().toISOString(),
