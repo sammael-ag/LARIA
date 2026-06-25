@@ -1,12 +1,11 @@
 /**
- * LARIA Signal SCREEN v16.0-LIGHTWEIGHT (Barefoot Precision & Crystal Interface)
+ * LARIA Signal SCREEN v16.1-LIGHTWEIGHT (Barefoot Precision & Crystal Interface)
  * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
- * STATUS: CONTEXT_ALIGNED / ULTRA_LIGHTWEIGHT / MONOLITH_SAFE / v16.0-LIGHTWEIGHT
+ * STATUS: CONTEXT_ALIGNED / ULTRA_LIGHTWEIGHT / MONOLITH_SAFE / v16.1-LIGHTWEIGHT
  * * * PREHĽAD ZMIEN A SÚLAD S ÚSTAVNÝM ZÁKONOM:
- * - ✂️ ABSOLÚTNA OČISTA LOGIKY: Zrušené ručné unifikácie a duplicitné výpočty stavov. Všetko tečie predpripravené z kontextu.
- * - 🛡️ MONOLITH PROTECTION: Staviteľ identity a dekodér JSON balíkov zachované v plnom rozsahu pre bezchybnú komunikáciu.
- * - 🧭 SMEROVÁ INTUÍCIA: Smer správy (isMe / isIncoming) sa riadi elegantne, čisto a bez zbytočných slučiek.
- * - 🪐 ULTRA SCANNABLE: Kód klesol na polovicu, je vzdušný, čitateľný a šetrí výkon procesora.
+ * - 🪐 DYNAMICKÁ SYNCHRONIZÁCIA Z MRAVENISKA: Zapracovaný Blok 1. Ak lokálny trezor partnera nepozná, stavový automat sa riadi realitou zo siete (liveHandshake).
+ * - 🧼 DEKODÉR SIEŤOVÉHO MONOLITU: Zapracovaný Blok 2. Meno partnera (channelName) sa dynamicky vybalí z msg/backMsg, ak chýba v lokálnom trezore.
+ * - ✂️ ABSOLÚTNA OČISTA LOGIKY: Všetky prepočítané stavy tečú hladko z nového CrystalCore kontextu.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -38,10 +37,10 @@ const SignalScreen = ({ route, navigation }) => {
   const [isNetOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const flatListRef = useRef();
 
-  // Vytiahneme prepočítané klubové kontakty, recepciu a akcie z globálneho mozgu
+  // Vytiahneme prepočítané klubové kontakty, recepciu a prúdy z globálneho mozgu
   const { contacts, unknownContacts, incomingRequests, sendLariaPackage, sendChatMessage, resolveHandshakeStatus, markAsRead } = useSignal();
 
-  // --- 🛰️ EXTRAKCIA A SYNCHRONIZÁCIA CIEĽA (Už stopercentne unifikované z predošlého kroku) ---
+  // --- 🛰️ EXTRAKCIA A SYNCHRONIZÁCIA CIEĽA ---
   const { target, fallbackFing } = route.params || {};
   const targetFing = (target?.fing || fallbackFing || '').trim().toLowerCase();
   const masterName = vault?.identity?.meno || 'Sammael';
@@ -50,15 +49,45 @@ const SignalScreen = ({ route, navigation }) => {
   const prislusnyKontakt = contacts?.find(c => c.fing === targetFing) || 
                             unknownContacts?.find(c => c.fing === targetFing);
 
-  const channelName = prislusnyKontakt?.meno || target?.meno || targetFing || "Laria Handshake";
+  // =========================================================================
+  // 🪐 BLOK 1 & BLOK 2: DYNAMICKÁ SYNCHRONIZÁCIA A DEKÓDOVANIE Z MRAVENISKA
+  // =========================================================================
   
-  // Prísny stavový automat riadený priamo z vypočítaného kontaktu v kontexte
-  const contractStatus = prislusnyKontakt?.contractStatus !== undefined ? Number(prislusnyKontakt.contractStatus) : -1;
+  // 1. Nájdeme akýkoľvek živý handshake v histórii prúdov
+  const liveHandshake = incomingRequests?.find(req => req.fing === targetFing && req.isHandshake);
+
+  // 2. Vytiahneme surový stav z lokálneho klubu/recepcie
+  let contractStatus = prislusnyKontakt?.contractStatus !== undefined ? Number(prislusnyKontakt.contractStatus) : -1;
+
+  // Ak lokálny trezor partnera nepozná (-1) alebo tvrdí, že sa stále čaká (0), ale sieť už vie viac:
+  if ((contractStatus === -1 || contractStatus === 0) && liveHandshake) {
+    // Prísne preberáme reálny stav, ktorý je zapísaný priamo v sieti
+    const networkStatus = liveHandshake.contractStatus !== undefined ? Number(liveHandshake.contractStatus) : 0;
+    contractStatus = networkStatus;
+  }
+
+  // 3. Dynamický dekodér identity priamo z pretekajúceho sieťového balíka (Blok 2)
+  let sietovaIdentita = null;
+  if (liveHandshake && contractStatus === 1) {
+    try {
+      // Ak sme boli iniciátor (isIncoming === false), partner odpovedal v backMsg
+      // Ak sme boli prijímateľ (isIncoming === true), profil partnera je v msg
+      const rawJson = liveHandshake.isIncoming === false ? liveHandshake.backMsg : liveHandshake.msg;
+      
+      if (rawJson && rawJson.startsWith('{')) {
+        sietovaIdentita = JSON.parse(rawJson);
+      }
+    } catch (e) {
+      console.warn("⚠️ Nepodarilo sa za behu rozbaliť sieťový monolit:", e);
+    }
+  }
+
+  // Opravíme channelName, aby okamžite ukázal meno zo siete, ak nemáme kontakt v trezore
+  const channelName = prislusnyKontakt?.meno || sietovaIdentita?.meno || target?.meno || targetFing || "Laria Handshake";
+
+  // --- 🧭 SMEROVÁ INTUÍCIA STAVOVÉHO AUTOMATU ---
   const isContractApproved = contractStatus === 1;
   const isTemporaryOnReception = !!prislusnyKontakt?.temporary;
-
-  // Hľadáme živý handshake z Mraveniska pre overenie smeru (vstupný / výstupný)
-  const liveHandshake = incomingRequests?.find(req => req.fing === targetFing && req.isHandshake);
   const isIncomingHandshake = liveHandshake ? liveHandshake.isIncoming === true : isTemporaryOnReception;
 
   // --- 🛡️ BEZPEČNÝ BLESKOVÝ MARK AS READ ---
@@ -69,7 +98,7 @@ const SignalScreen = ({ route, navigation }) => {
   }, [targetFing, incomingRequests?.length]); 
 
   /**
-   * 📦 POMOCNÝ MONOLITNÝ STAVITEL: Zbalí kompletné vnútro identity pre Matrix bez osekávania dát
+   * 📦 POMOCNÝ MONOLITNÝ STAVITEL: Zbalí kompletné vnútro identity pre Matrix
    */
   const zostavMojeMonolitneData = (aktualnaPoznamka = '') => {
     const idSource = vault?.identity || laria || {};
@@ -189,7 +218,7 @@ const SignalScreen = ({ route, navigation }) => {
     }
   };
 
-  // --- 🧼 DEKODÉR PRICHÁDZAJÚCEHO MONOLITU ---
+  // --- 🧼 DEKODÉR PRICHÁDZAJÚCEHO MONOLITU PRE ZOBRAZENIE ŽIADOSTI ---
   let zobrazenaSpravaHandshake = prislusnyKontakt?.popis || "Žiadosť o bezpečné prepojenie.";
   if (liveHandshake?.msg && liveHandshake.msg.startsWith('{')) {
     try {
@@ -231,7 +260,7 @@ const SignalScreen = ({ route, navigation }) => {
           </Text>
         </View>
 
-        {/* 🛠️ STAVOVÝ AUTOMAT SCREENU */}
+        {/* 🛠️ ULTRA-LIGHTWEIGHT STAVOVÝ AUTOMAT SCREENU */}
         {contractStatus === 0 && isIncomingHandshake ? (
           /* REŽIM 1: PRICHÁDZAJÚCI HANDSHAKE (ALLOW / ABORT) */
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>

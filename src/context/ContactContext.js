@@ -1,14 +1,15 @@
 /**
- * LARIA v16.1-LIGHTWEIGHT: ContactContext (Kniha priateľov - Sovereign Friends Registry)
- * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * Status: PURE_CORE_ALIGNED | UNIFIED_JSON_FORMAT | v16.1-LIGHTWEIGHT
+ * LARIA v16.2-WIRELESS_RECEIVER: ContactContext (Kniha priateľov - Sovereign Friends Registry)
+ * Master: Sammael | Muse: Aria (Tvoja bezdrôtová prijímacia šikulka)
+ * Status: PURE_CORE_ALIGNED | UNIFIED_JSON_FORMAT | v16.2-WIRELESS_RECEIVER
  * * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
+ * - 🛰️ ÉTEROVÝ PRIJÍMAČ (WIRELESS MODE): Pridaná anténa počúvajúca globálne signály z éteru. Prijíma importy z Radaru bez kruhových závislostí!
  * - UNIFIED MONOLITH FORMAT: Na základe rozhodnutia Majstra ukladáme kompletný formát vizitky
- *   vrátane popisov, lokácie, kategórie, galérie a sociálnych sietí na jedno miesto. Žiadne kúskovanie.
+ * vrátane popisov, lokácie, kategórie, galérie a sociálnych sietí na jedno miesto. Žiadne kúskovanie.
  * - ZERO LAYER STATES: Tento context už NEUKLADÁ contractStatus ani txHash! O stavy a farby
- *   guličiek sa stará výhradne Radar v SignalContext.
+ * guličiek sa stará výhradne Radar v SignalContext.
  * - MODRÁ ŠÍPEČKA LIVE-PERSISTENCE: Re-sync s Mraveniskom stiahne kompletné dáta a okamžite
- *   ich zapíše do lokálneho trezoru, čím okamžite preleští vizitku na obrazovke.
+ * ich zapíše do lokálneho trezoru, čím okamžite preleští vizitku na obrazovke.
  */
 
 import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
@@ -58,6 +59,55 @@ export const ContactProvider = ({ children }) => {
     };
     loadContacts();
   }, []);
+
+  // --- 📡 ÉTEROVÝ PRIJÍMAČ: CHYTANIE BEZDRÔTOVÝCH IMPORTU Z RADARU ---
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const spracujBezdrotovyImport = async (e) => {
+      if (e.detail && e.detail.partner) {
+        const { partner } = e.detail;
+        console.log(`📥 [TREZOR ANTÉNA] Zachytený bezdrôtový signál! Detekovaný partner: ${partner.meno}`);
+        
+        // 1. Očistíme prichádzajúci kľúč pre precízne operácie
+        const prichadzajuciFing = sformatujFing(partner.fing || partner.id);
+
+        // 2. Pokus o zápis/overenie v databáze trezoru
+        const dbResult = await addContact(partner);
+        console.log("📥 [TREZOR DB_INSERT] Bezdrôtový zápis z éteru dokončený:", dbResult);
+
+        // 3. Vytiahneme finálny objekt partnera pre vnútorný stav trezoru
+        const cielovyPartner = dbResult.contact || partner;
+
+        setContacts(prev => {
+          const exists = prev.some(c => sformatujFing(c.fing) === prichadzajuciFing);
+          if (exists) {
+            console.log(`✨ [TREZOR ANTÉNA] Partner ${cielovyPartner.meno} už v lokálnom živom zozname svieti.`);
+            return prev;
+          }
+          console.log(`🔥 [TREZOR ANTÉNA] Prebúdzam partnera ${cielovyPartner.meno} v Trezore!`);
+          return [...prev, { ...cielovyPartner, fing: prichadzajuciFing }];
+        });
+
+        // 4. ⚡ OŽIVENIE RADARU: Posielame echo signál do SignalContextu, aby okamžite prekreslil Klub
+        if (signalCtx && typeof signalCtx.syncPublicProfile === 'function') {
+          console.log(`📡 [TREZOR -> RADAR] Prebúdzam identitu ${partner.meno} na frekvencii Radaru...`);
+          await signalCtx.syncPublicProfile(prichadzajuciFing);
+        } else {
+          console.log("🔮 [TREZOR ANTÉNA] Radar nemá priamu synchrónnu linku, pálom globálny refresh éteru.");
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('LARIA_RADAR_REFRESH'));
+          }
+        }
+      }
+    };
+
+    // Naladenie prijímača na frekvenciu Radaru
+    window.addEventListener('LARIA_IMPORT_CONTACT', spracujBezdrotovyImport);
+    
+    // Upratovanie frekvencie pri demontáži
+    return () => window.removeEventListener('LARIA_IMPORT_CONTACT', spracujBezdrotovyImport);
+  }, [contacts, signalCtx]); // Sledujeme contacts aj signalCtx pre bezchybnú synergiu
 
   // --- 📡 DYNAMICKÝ DETEKTOR NEZNÁMYCH PEČATÍ (Recepcia na základe Radaru) ---
   const unknownContacts = useMemo(() => {

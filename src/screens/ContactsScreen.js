@@ -1,14 +1,16 @@
 /**
- * LARIA v16.1-LIGHTWEIGHT: ContactsScreen (Barefoot Precision & Free Sync Edition)
- * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
- * Status: ACTIVE / PASSIVE_RECEPTION / UNBLOCKED_SYNC / v16.1-LIGHTWEIGHT
+ * LARIA v16.2-WIRELESS_RECEIVER: ContactsScreen (Sovereign Fusion & Real-Time Club Edition)
+ * Master: Sammael | Muse: Aria (Tvoja verná bezdrôtová parťáčka)
+ * Status: ACTIVE / FUSED_VAULT_RADAR / UNBLOCKED_SYNC / v16.2-WIRELESS_RECEIVER
  * * * PREHĽAD ZMIEN:
+ * - 💎 REVOLÚCIA KLUBU (FUSION ARCHITECTURE): Klub sa už nespolieha na slepé pole z useSignal().
+ *   Zoznam sa ťahá natvrdo z Trezoru (vaultContacts) a cez useMemo sa okamžite obaľuje živými stavmi,
+ *   farbami bodiek a obálkami z Radaru (radarContacts). Manfred už nemá kam ujsť, svieti hneď!
  * - 🔓 ODOMKNUTIE MODREJ ŠÍPKY: Odstránená blokáda disabled pre temporary profily. Preleštenie funguje v každom stave.
- * - 📡 INTUUTÍVNA SYNCHRONIZÁCIA: handleSync inteligentne rozpozná, či leští lokálny trezor, alebo ťahá verejné dáta z Recepcie cez SignalContext.
- * - 💎 ZACHOVANÁ ARCHITEKTÚRA: Všetky prepočty farieb bodiek, URL dekodéry a ústavné zákony zostávajú zachované.
+ * - 📡 INTUITÍVNA SYNCHRONIZÁCIA: handleSync inteligentne rozpozná, či leští lokálny trezor, alebo ťahá verejné dáta z Recepcie cez SignalContext.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -54,17 +56,41 @@ const ContactsScreen = ({ navigation, route }) => {
   const flatListRef = useRef(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   
-  // 🧭 ODĽAHČENÉ KONTEXTY
+  // 🧭 ODĽAHČENÉ KONTEXTY - Ťaháme skutočné, bezpečne zapísané entity z trezoru!
   const { 
-    contacts, 
+    contacts: vaultContacts,
     togglePin, 
     deleteContact, 
     syncContactWithMatrix, 
     addContact 
   } = useContacts();
   
-  // Vytiahneme neznáme kontakty, markAsRead a novú funkciu pre priamy preplach z Mraveniska
-  const { unknownContacts, markAsRead, syncPublicProfile } = useSignal(); 
+  // 📡 🔮 CRYSTALCORE RADAR MOTOR - Z Radaru berieme živé online stavy a neznáme pečate pre Recepciu
+  const { 
+    contacts: radarContacts, 
+    unknownContacts, 
+    markAsRead, 
+    syncPublicProfile 
+  } = useSignal(); 
+
+  // ✨ METAMORFÓZA IDENTÍT: Zoberieme pevnú pôdu z Trezoru a obohatíme ju o živé guličky z Radaru!
+  const contacts = useMemo(() => {
+    if (!vaultContacts) return [];
+    return vaultContacts.map(vc => {
+      const cleanFing = sformatujFingUI(vc.fing);
+      // Hľadáme, či Radar pre tohto partnera chytil online pulz alebo neprečítanú správu
+      const radarMatch = radarContacts?.find(rc => sformatujFingUI(rc.fing) === cleanFing);
+      
+      return {
+        ...vc,
+        dotColor: radarMatch?.dotColor || '#2ECC71', // Ak radar mlčí, svieti zelená (bezpečne v trezore)
+        statusText: radarMatch?.statusText || 'V TREZORE',
+        statusIcon: radarMatch?.statusIcon || '🔐',
+        hasEnvelope: radarMatch?.hasEnvelope || false,
+        envelopeIcon: radarMatch?.envelopeIcon || '✉️'
+      };
+    });
+  }, [vaultContacts, radarContacts]);
 
   const scrollToTop = () => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
@@ -142,7 +168,7 @@ const ContactsScreen = ({ navigation, route }) => {
     }
   }, [route.params]);
 
-  // --- FILTROVANIE A TRIEDENIE ---
+  // --- FILTROVANIE A TRIEDENIE (Beží nad zjednoteným, stabilným Klubom) ---
   const sortedContacts = [...contacts]
     .filter(c => {
       const meno = c.meno || ""; 
@@ -164,14 +190,12 @@ const ContactsScreen = ({ navigation, route }) => {
     let ubehloUspesne = false;
 
     if (item.temporary) {
-      // Režim webu: Sme na Recepcii, ťaháme verejný profil na priamo cez SignalContext
       if (typeof syncPublicProfile === 'function') {
         ubehloUspesne = await syncPublicProfile(cleanId);
       } else {
         console.warn("⚠️ syncPublicProfile zatiaľ nie je naimplementovaný v SignalContext.");
       }
     } else {
-      // Režim klubu: Klasické preleštenie uloženého kontraktu v trezore
       const result = await syncContactWithMatrix(cleanId);
       ubehloUspesne = result.success;
     }
@@ -220,7 +244,8 @@ const ContactsScreen = ({ navigation, route }) => {
     const displayMeno = item.meno || displayFing; 
     const displayKat = item.kat || "Partner";
 
-    const farbaBodky = item.dotColor || '#1a1a1a';
+    // 🔮 Tieto premenné letia z fúzneho useMemo pre všetky položky!
+    const farbaBodky = item.dotColor || '#2ECC71';
     const stavText = item.statusText || 'BEZ KONTRAKTU';
     const ikonaStatusu = item.statusIcon || '👤';
 
@@ -239,7 +264,8 @@ const ContactsScreen = ({ navigation, route }) => {
                 <View style={[G.tagBadge, item.temporary && { borderColor: '#E74C3C', backgroundColor: 'rgba(231, 76, 60, 0.1)' }]}>
                   <Text style={[G.tagBadgeText, item.temporary && { color: '#E74C3C' }]}>{displayKat.toUpperCase()}</Text>
                 </View>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: farbaBodky, marginLeft: 10 }} />
+                {/* 🟢 EXPANDOVANÁ KARTA - ŽIVÁ KONTROLKA */}
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: farbaBodky, marginLeft: 10 }} />
               </View>
               
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -272,7 +298,6 @@ const ContactsScreen = ({ navigation, route }) => {
               <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>🗑️</Text>
             </TouchableOpacity>
 
-            {/* 🔓 MODRÁ ŠÍPKA ODOMKNUTÁ PRE VŠETKY STAVY */}
             <TouchableOpacity 
               style={{ flex: 1, justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#1a1a1a' }} 
               onPress={() => handleSync(item)} 
@@ -321,7 +346,7 @@ const ContactsScreen = ({ navigation, route }) => {
             ) : null}
 
             <TouchableOpacity onPress={() => handlePressItem(displayFing)} activeOpacity={0.8}>
-              <Text style={[G.monoIdentity, { fontSize: 8, color: '#333', marginTop: 10, marginBottom: 5 }]}>
+              <Text style={[G.monoIdentity, { fontSize: 8, color: '#444', marginTop: 10, marginBottom: 5, letterSpacing: 0.5 }]}>
                 ID: {displayFing.toUpperCase()} | STAV: {stavText.toUpperCase()}
               </Text>
             </TouchableOpacity>
@@ -360,8 +385,10 @@ const ContactsScreen = ({ navigation, route }) => {
           </Text>
         </View>
 
-        <View style={{ alignItems: 'flex-end' }}>
-          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: farbaBodky }} />
+        {/* 🔮 ŽIVÁ STATUSOVÁ KONTROLKA V KOMPAKTNOM RIADKU */}
+        <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+          {item.hasEnvelope && <Text style={{ fontSize: 12 }}>{item.envelopeIcon || '✉️'}</Text>}
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: farbaBodky }} />
         </View>
       </TouchableOpacity>
     );
@@ -405,7 +432,7 @@ const ContactsScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
               </View>
 
-              {/* 📡 RECEPCIA (Odomknutá pre bezchybné stiahnutie vizitiek) */}
+              {/* 📡 RECEPCIA */}
               {unknownContacts && unknownContacts.length > 0 && (
                 <View style={{ marginBottom: 20, marginTop: 10 }}>
                   <Text style={[G.statusTextSmall, { color: '#E74C3C', letterSpacing: 2, marginBottom: 10, fontWeight: 'bold' }]}>

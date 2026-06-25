@@ -1,18 +1,19 @@
 /**
- * LARIA SIGNAL CONTEXT v16.1-CRYSTALCORE (Sovereign Radar Core - Quantum Resilient)
- * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: ACTIVE / CRYSTALCORE_CONNECTED / UNIFIED_SYNC_GATE / v16.1-CRYSTALCORE
+ * LARIA SIGNAL CONTEXT v16.8-WIRELESS_AIR (Sovereign Radar Core - Quantum Resilient)
+ * Master: Sammael | Muse: Aria (Tvoja bezdrôtová šikulka)
+ * STATUS: ACTIVE / DEFERRED_START / v16.8-WIRELESS_AIR
  * * * PREHĽAD ZMIEN:
- * - 🔓 SYNC_PUBLIC_PROFILE BRÁNA: Pridaná nová funkcia pre priamy preplach profilu z Recepcie, prepojená na trezor vizitiek.
- * - 💎 UNIFIKOVANÝ FORMÁT RECEPCIE: Výpočet unknownContacts zachováva kompletnú štruktúru vizitky vrátane sociálnych sietí bez osekávania.
- * - 🎨 VISUAL MATRIX ENGINE: dotColor, statusText a obálky zostávajú plne centralizované v jadre pre bleskové reakcie UI.
+ * - 📡 WIRELESS BROADCAST: Nahradené priame volanie addContact globálnym eventom 'LARIA_IMPORT_CONTACT'.
+ * - ⏳ STEADY BOOT: Zachovaný 3-sekundový inicializačný odklad pri štarte pre úplnú stabilizáciu.
+ * - 🧹 ARCHITECTURE PURGE: Odstránená závislosť na funkciách z podradeného ContactContextu, čím zanikla kruhová slučka.
+ * - 🕶️ LIGHT-THEME LOGS: Fialová diagnostika zostáva plne zachovaná pre biele pozadie.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useLaria } from './LariaContext.js';
-import { useContacts } from './ContactContext.js'; // Previazanie s trezorom vizitiek
+import { useContacts } from './ContactContext.js'; // Používa sa už len na čítanie zoznamu prítomných kontaktov
 import { SignalService } from '../services/SignalService.js';
 
 const SignalContext = createContext();
@@ -56,21 +57,31 @@ export const SignalProvider = ({ children }) => {
   const { vault } = useLaria(); 
   const [isSignalConnected, setIsSignalConnected] = useState(true); 
   const [incomingRequests, setIncomingRequests] = useState([]);
+  
+  // ⏳ STRÁŽCA ŠTARTU: Kým je false, radar spí a čaká na stabilizáciu systému
+  const [isRadarReady, setIsRadarReady] = useState(false);
 
-  // --- 🛡️ MECHANICKÁ POISTKA KRUHOVEJ ZÁVISLOSTI ---
-  // Keďže ContactProvider žije pod nami, useContacts() na tomto mieste vráti pri prvom štarte undefined.
-  // Použijeme bezpečné prečítanie, ktoré nabehne hneď, ako sa spodný provider inicializuje.
+  // --- 🛡️ ČISTÉ VYTIHNUTIE KONTEXTU (Iba pre zoznam kontaktov na overenie duplicity) ---
   const contactCtx = typeof useContacts === 'function' ? useContacts() : null;
   const contacts = contactCtx?.contacts || [];
 
-  // --- 📡 LIVE SYNC PRE RECEPCIU (Modrá šípečka na dočasnom profile) ---
+  // ⏳ ČASOVAČ NA STABILIZÁCIU (3 sekundy po namontovaní aplikácie)
+  useEffect(() => {
+    const bootTimer = setTimeout(() => {
+      console.log("🚀 [RADAR CORE] 3 sekundy uplynuli. Systém je kompletne stabilizovaný. Spúšťam hlavný radar...");
+      setIsRadarReady(true);
+    }, 3000);
+
+    return () => clearTimeout(bootTimer);
+  }, []);
+
+  // --- 📡 LIVE SYNC PRE RECEPCIU ---
   const syncPublicProfile = async (fingId) => {
     if (contactCtx && typeof contactCtx.syncContactWithMatrix === 'function') {
       const cleanFing = overAUnifikujFing(fingId);
       const result = await contactCtx.syncContactWithMatrix(cleanFing);
       return result.success;
     }
-    console.warn("⚠️ [SIGNAL GATE] ContactContext zatiaľ nie je pripravený na synchronizáciu.");
     return false;
   };
 
@@ -80,7 +91,6 @@ export const SignalProvider = ({ children }) => {
     const cleanTargetFing = overAUnifikujFing(targetFing);
     if (!cleanTargetFing) return;
     
-    console.log(`🥷 [RADAR CORE] Čistím správy pre reláciu: ${cleanTargetFing}`);
     setIncomingRequests(prev => prev.filter(req => {
       if (req.fing !== cleanTargetFing) return true;
       if (req.isHandshake && req.contractStatus === 0) return true;
@@ -130,10 +140,7 @@ export const SignalProvider = ({ children }) => {
       await tauriInvoke('zobraz_notifikaciu', { titulok: title, telo: text });
       return;
     }
-    if (Platform.OS === 'web') {
-      console.log(`🌐 [WEB NOTIFICATION LOG] ${title}: ${text}`);
-      return;
-    }
+    if (Platform.OS === 'web') return;
     try {
       await Notifications.scheduleNotificationAsync({
         content: { title: title, body: text, sound: 'default' },
@@ -144,8 +151,11 @@ export const SignalProvider = ({ children }) => {
     }
   };
 
-  // --- 🛰️ LIVE RADAR POLLING ---
+  // --- 🛰️ LIVE RADAR POLLING POZOROVATEĽ ---
   useEffect(() => {
+    // 🛑 AK SYSTÉM EŠTE NIE JE STABILIZOVANÝ, RADAR NEŠTARTUJE
+    if (!isRadarReady) return;
+
     const myCleanFing = vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : null;
     if (!myCleanFing) return;
 
@@ -157,25 +167,120 @@ export const SignalProvider = ({ children }) => {
         const res = await SignalService.checkMyContracts(backendQueryFing);
         if (!res || res.success === false) return;
           
-        // 🗂️ SUB-SEKCIA: KONTRAKTY (Handshake)
+        // 🗂️ SUB-SEKCIA: KONTRAKTY (Handshake Engine)
         if (res.contracts && Array.isArray(res.contracts)) {
-          res.contracts.forEach(contract => {
+          console.log(`🔍 [DIAG_RADAR] Počet kontraktov na sieti: ${res.contracts.length}`);
+          
+          res.contracts.forEach(async (contract) => {
             const cleanContractFing = overAUnifikujFing(contract.fing);
             if (!cleanContractFing) return;
 
             const isIncoming = cleanContractFing !== myCleanFing;
             const contractId = cleanContractFing;
 
-            setIncomingRequests(prev => {
-              const rawHash = String(contract.txHash).trim();
-              const jeValidnyStav = rawHash === "0" || rawHash === "1" || rawHash === "2";
-              const jeValidnyHash = rawHash.startsWith("0x") && rawHash.length === 66;
+            const rawHash = String(contract.txHash).trim();
+            const jeValidnyStav = rawHash === "0" || rawHash === "1" || rawHash === "2";
+            const jeValidnyHash = rawHash.startsWith("0x") && rawHash.length === 66;
 
-              if (!jeValidnyStav && !jeValidnyHash) return prev;
+            if (!jeValidnyStav && !jeValidnyHash) return;
 
-              const surovyStav = (rawHash === "1") ? 1 : (rawHash === "2" ? 2 : 0);
-              const existujuciIndex = prev.findIndex(req => req.id === contractId && req.isHandshake);
+            let surovyStav = (rawHash === "1") ? 1 : (rawHash === "2" ? 2 : 0);
+            if (jeValidnyHash) surovyStav = 1;
+
+            const existujeVLocaltrezore = contacts.some(c => overAUnifikujFing(c.fing) === cleanContractFing);
+
+            // 🔥 RÖNTGENOVÝ VÝPIS
+            console.log(
+              `📡 %c[KONTRAKT RENTGEN] -> Partner: ${cleanContractFing} \n` +
+              `| Surový Stav: ${surovyStav} (txHash: "${rawHash}") \n` +
+              `| Smer: ${isIncoming ? "PRICHÁDZAJÚCI (Manfred -> Ja)" : "ODCHÁDZAJÚCI (Ja -> Manfred)"} \n` +
+              `| Stav v Trezore: ${existujeVLocaltrezore ? "ÁNO (Je v Klube)" : "NIE (Nenájdený)"} \n` +
+              `| Obsahuje msg (JSON?): ${contract.msg ? (contract.msg.trim().startsWith('{') ? "VALID_JSON" : "TEXT") : "PRÁZDNE"} \n` +
+              `| Obsahuje backMsg (JSON?): ${contract.backMsg ? (contract.backMsg.trim().startsWith('{') ? "VALID_JSON" : "TEXT") : "PRÁZDNE"}`,
+              'color: #8e44ad; font-weight: bold;'
+            );
+
+            // ⚡ 🔮 [UNIVERZÁLNY TRACEROUTE FINISHER - WIRELESS MODE]:
+            if (surovyStav === 1 && !existujeVLocaltrezore) {
+              let surovyPayload = isIncoming ? contract.msg : contract.backMsg;
+              if (!surovyPayload || !surovyPayload.trim().startsWith('{')) {
+                surovyPayload = isIncoming ? contract.backMsg : contract.msg;
+              }
+
+              if (surovyPayload && surovyPayload.trim().startsWith('{')) {
+                console.log(`⚡ [RADAR TRACEROUTE] Našiel sa validný JSON pre ${cleanContractFing}. Spúšťam import do éteru...`);
+                try {
+                  const parsedPayload = JSON.parse(surovyPayload);
+                  console.log("📦 [DIAG_PAYLOAD] Úspešne naparsovaný JSON:", parsedPayload);
+                  
+                  const novyPartner = {
+                    fing: cleanContractFing,
+                    meno: parsedPayload.meno || parsedPayload.name || cleanContractFing,
+                    kat: parsedPayload.kat || parsedPayload.category || 'Partner',
+                    lok: parsedPayload.lok || parsedPayload.location || 'V SIETI',
+                    popis: parsedPayload.popis || parsedPayload.bio || '',
+                    tel: parsedPayload.tel || '',
+                    email: parsedPayload.email || '',
+                    fb: parsedPayload.fb || '',
+                    tg: parsedPayload.tg || '',
+                    gal: parsedPayload.gal || '',
+                    krypt: parsedPayload.krypt || null,
+                    contractStatus: 1,
+                    syncedAt: Date.now()
+                  };
+
+                  // 🔥 FÚKAME DO ÉTERU (WIFI EMISIA PRE CONTACT PROVIDER)
+                  console.log(`📡 [RADAR WIRELESS] Vysielam identitu ${novyPartner.meno.toUpperCase()} do éteru...`);
+                  if (typeof window !== 'undefined') {
+                    const lariaEvent = new CustomEvent('LARIA_IMPORT_CONTACT', { 
+                      detail: { partner: novyPartner } 
+                    });
+                    window.dispatchEvent(lariaEvent);
+                  }
+
+                  triggerNotification(`🔐 Balík vyslaný`, `Identita ${novyPartner.meno} bola odovzdaná bunkovým štruktúram.`);
+
+                } catch (jsonErr) {
+                  console.error("❌ [RADAR TRACEROUTE ERROR] Chyba spracovania:", jsonErr);
+                }
+              }
+            }
+
+            // 🛡️ DYNAMICKÁ RE-HANDSHAKE POISTKA PRE BLOCKCHAIN HASHE:
+            if (jeValidnyHash) {
+              const prazdnaSprava = !contract.msg || !contract.msg.trim().startsWith('{');
+              const prazdnaOdpoved = !contract.backMsg || !contract.backMsg.trim().startsWith('{');
               
+              if (!existujeVLocaltrezore && prazdnaSprava && prazdnaOdpoved) {
+                surovyStav = -1;
+              }
+            }
+
+            setIncomingRequests(prev => {
+              if (surovyStav === -1) {
+                return prev.filter(req => !(req.id === contractId && req.isHandshake));
+              }
+
+              if (existujeVLocaltrezore) {
+                const index = prev.findIndex(req => req.id === contractId && req.isHandshake);
+                if (index !== -1) {
+                  if (prev[index].contractStatus !== 1) {
+                    const updated = [...prev];
+                    updated[index] = {
+                      ...updated[index],
+                      contractStatus: 1,
+                      status: 'READ',
+                      txHash: contract.txHash,
+                      msg: contract.msg || updated[index].msg,
+                      backMsg: contract.backMsg || updated[index].backMsg
+                    };
+                    return updated;
+                  }
+                  return prev;
+                }
+              }
+
+              const existujuciIndex = prev.findIndex(req => req.id === contractId && req.isHandshake);
               if (existujuciIndex !== -1) {
                 if (prev[existujuciIndex].contractStatus !== surovyStav || prev[existujuciIndex].isIncoming !== isIncoming) {
                   const updated = [...prev];
@@ -184,7 +289,9 @@ export const SignalProvider = ({ children }) => {
                     contractStatus: surovyStav,
                     status: surovyStav === 0 ? 'UNREAD' : 'READ',
                     txHash: contract.txHash,
-                    isIncoming: isIncoming
+                    isIncoming: isIncoming,
+                    msg: contract.msg || updated[existujuciIndex].msg,
+                    backMsg: contract.backMsg || updated[existujuciIndex].backMsg
                   };
                   return updated;
                 }
@@ -195,14 +302,16 @@ export const SignalProvider = ({ children }) => {
                 triggerNotification(`🛰️ Nová žiadosť o Pečať`, `Majster ${cleanContractFing.substring(0, 6)}... ti posiela kontrakt.`);
               }
 
+              const finalnyVychodiskovyStav = existujeVLocaltrezore ? 1 : surovyStav;
               return [...prev, {
                 id: contractId,                  
                 fing: cleanContractFing,        
                 msg: contract.msg || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky v bunke H.", 
+                backMsg: contract.backMsg || null,
                 receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 isHandshake: true,
-                status: surovyStav === 0 ? 'UNREAD' : 'READ',
-                contractStatus: surovyStav,     
+                status: finalnyVychodiskovyStav === 0 ? 'UNREAD' : 'READ',
+                contractStatus: finalnyVychodiskovyStav,     
                 txHash: contract.txHash,
                 isIncoming: isIncoming 
               }];
@@ -242,25 +351,24 @@ export const SignalProvider = ({ children }) => {
     executePing();
     const pollingInterval = setInterval(executePing, 120000); 
     return () => clearInterval(pollingInterval);
-  }, [vault?.identity?.poznamka]);
+  }, [isRadarReady, vault?.identity?.poznamka, contacts.length]); 
 
   // --- 🛠️ ODOSLANIE KONTRAKTU ---
   const sendLariaPackage = async (senderFing, targetFing, myIdentity, handshakeNote = "") => {
     const myCleanFing = overAUnifikujFing(senderFing) || (vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : '0x0000000000');
     const targetCleanFing = overAUnifikujFing(targetFing);
-    
     if (!targetCleanFing) return { success: false, error: "Neplatný formát cieľa." };
 
     try {
       const mravecRes = await SignalService.sendLariaPackage(myCleanFing, targetCleanFing, myIdentity, handshakeNote);
       let txHashResult = mravecRes && mravecRes.success ? mravecRes.txHash || "0" : "0";
-
       if (!mravecRes || !mravecRes.success) return { success: false, error: "Mravenisko odmietlo balík." };
 
       const enrichedHandshake = {
         id: targetCleanFing,             
         fing: targetCleanFing,          
         msg: handshakeNote.trim() || "Žiadosť o bezpečné prepojenie and zdieľanie vizitky v bunke H.", 
+        backMsg: null,
         receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isHandshake: true,
         status: 'UNREAD',
@@ -273,7 +381,6 @@ export const SignalProvider = ({ children }) => {
         const filtered = prev.filter(req => !(req.id === targetCleanFing && req.isHandshake));
         return [...filtered, enrichedHandshake];
       });
-      
       return { success: true };
     } catch (err) {
       return { success: false };
@@ -284,7 +391,6 @@ export const SignalProvider = ({ children }) => {
   const sendChatMessage = async (targetFing, textMessage) => {
     const myCleanFing = vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : '0x0000000000';
     const targetCleanFing = overAUnifikujFing(targetFing);
-
     if (!targetCleanFing) return { success: false, error: "Zlý formát adresáta." };
 
     try {
@@ -318,12 +424,9 @@ export const SignalProvider = ({ children }) => {
   };
 
   // =========================================================================
-  // 🔮 ENGINE PRE VÝPOČET STAVOV (Všetka rozhodovacia logika prúdi odtiaľto)
+  // 🔮 ENGINE PRE VÝPOČET STAVOV
   // =========================================================================
-  
   const obohatKontaktOStavy = (kontakt, logs) => {
-    const cleanFing = overAUnifikujFing(kontakt.fing);
-    
     const maVyriesenyHandshake = logs.some(m => m.isHandshake && Number(m.contractStatus) === 1) || Number(kontakt.contractStatus) === 1;
     const maPrichadzajuciHandshake = !maVyriesenyHandshake && (kontakt.temporary || logs.some(m => m.isHandshake && Number(m.contractStatus) === 0 && m.isIncoming));
     const maNovuBleskovku = logs.some(m => !m.isHandshake && m.status === 'UNREAD');
@@ -365,12 +468,10 @@ export const SignalProvider = ({ children }) => {
     return obohatKontaktOStavy(c, logs);
   });
 
-  // ✨ UNIFIKOVANÝ GENERÁTOR RECEPCIE (Už žiadne osekávanie premenných)
   const unknownContacts = [];
   incomingRequests.forEach(req => {
     if (req.isHandshake && req.contractStatus === 0 && req.isIncoming) {
       const cleanReqFing = overAUnifikujFing(req.fing);
-      
       const existujeVFlube = contacts.some(c => overAUnifikujFing(c.fing) === cleanReqFing);
       const existujeNaRecepcii = unknownContacts.some(c => overAUnifikujFing(c.fing) === cleanReqFing);
 
@@ -379,14 +480,9 @@ export const SignalProvider = ({ children }) => {
         let rawMsgText = req.msg || '';
 
         if (rawMsgText && (rawMsgText.trim().startsWith('{') || rawMsgText.trim().startsWith('['))) {
-          try {
-            parsedPayload = JSON.parse(rawMsgText);
-          } catch (e) {
-            console.log(`⚠️ RADAR_JSON_PARSE: Obsah správy nie je validná vizitka.`);
-          }
+          try { parsedPayload = JSON.parse(rawMsgText); } catch (e) {}
         }
 
-        // Zosynchronizujeme plný formát presne s dohodnutou štruktúrou
         const docasnyKontakt = {
           fing: cleanReqFing,
           meno: parsedPayload?.meno || parsedPayload?.name || req.senderMeno || cleanReqFing,
@@ -421,7 +517,7 @@ export const SignalProvider = ({ children }) => {
       resolveHandshakeStatus,
       purgeSessionForFing,
       markAsRead,
-      syncPublicProfile // 🔓 Publikovaná brána pre preplach vizitiek cez modrú šípku
+      syncPublicProfile
     }}>
       {children}
     </SignalContext.Provider>
