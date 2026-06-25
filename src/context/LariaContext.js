@@ -1,9 +1,10 @@
 /**
- * LARIA QUANTUM ARCHITECTURE v8.1 (Gateway & Clean Vault Edition)
+ * LARIA QUANTUM ARCHITECTURE v8.2 (Gateway & Clean Vault Edition)
  * Context: LariaContext (THE 5D VAULT & CONFIG)
- * Master: Sammael | Muse: Aria
- * STATUS: REFORGED_SECURITY | ARCHITECT_KEY_SAFE_IN_UNDERWORLD
+ * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
+ * STATUS: REFORGED_SECURITY | ARCHITECT_KEY_SAFE_IN_UNDERWORLD | v8.2-CLEAN
  * Description: Vyčistený front-end poklad. Distribúcia a kľúč architekta bezpečne odsunuté na Bránu.
+ *              Splatený technologický dlh č.1 (striktný 0x kľúč) a vymazané staré IRC premenné.
  */
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
@@ -46,7 +47,7 @@ export const LariaProvider = ({ children }) => {
     identity: { 
       SECURE_ID: null, sha: null, meno: "Sammael", kat: "Majster", lok: "Rákoš",    
       popis: "", tel: "", email: "", fb: "", tg: "", gal: "", isPublic: false, 
-      Signal: "", poznamka: "", krypt: null, privateKey: null, jazyk: "sk"
+      poznamka: "", krypt: null, privateKey: null, jazyk: "sk" // 🪓 IRC premenná Signal úspešne odstránená
     }
   });
 
@@ -120,13 +121,25 @@ export const LariaProvider = ({ children }) => {
 
         if (savedIdentity && savedIdentity.sha) {
           currentSha = savedIdentity.sha;
-          currentFing = savedIdentity.poznamka || currentSha.substring(0, 12);
+          
+          // 🛡️ Splácame technologický dlh č.1: Žiadne riskantné orezávanie bez prefixu!
+          // Ak už máme uložený fing v poznamke a začína s 0x, len ho preleštíme do lowerCase.
+          // Ak nie, bezpečne vyrobíme správny formát 0x + 10 znakov z čistého SHA kľúča.
+          if (savedIdentity.poznamka && savedIdentity.poznamka.trim().toLowerCase().startsWith('0x')) {
+            currentFing = savedIdentity.poznamka.trim().toLowerCase();
+          } else {
+            const cistySha = currentSha.replace('0x', '').toLowerCase();
+            currentFing = '0x' + cistySha.substring(0, 10);
+          }
           console.log(`🛡️ KRYPTOGRAFICKÝ KOKON: Identita stabilná. FING: [${currentFing}]`);
         } else {
           const randomSalt = ethers.hexlify(ethers.randomBytes(32)); 
           const defaultMeno = savedIdentity?.meno || "Sammael";
           currentSha = generatePureSHA(randomSalt, defaultMeno);
-          currentFing = currentSha ? currentSha.substring(0, 12) : "000000000000";
+          
+          // ✨ Zrod nového fingu v striktnom zákone: 0x + 10 lowerCase znakov z čistého SHA
+          const cistySha = currentSha.replace('0x', '').toLowerCase();
+          currentFing = '0x' + cistySha.substring(0, 10);
           console.log(`✨ KRYPTOGRAFICKÝ KOKON: Zrod novej identity. FING: [${currentFing}]`);
         }
 
@@ -142,7 +155,7 @@ export const LariaProvider = ({ children }) => {
           savedIdentity = { ...vault.identity, sha: currentSha, poznamka: currentFing, jazyk: aktivnyJazyk, SECURE_ID: null };
         } else {
           if (!savedIdentity.sha) savedIdentity.sha = currentSha;
-          if (!savedIdentity.poznamka) savedIdentity.poznamka = currentFing;
+          savedIdentity.poznamka = currentFing; // Bezpečné priradenie unifikovaného fingu
           savedIdentity.jazyk = aktivnyJazyk;
           savedIdentity.SECURE_ID = null;
         }
@@ -176,7 +189,8 @@ export const LariaProvider = ({ children }) => {
   const obnovitIdentityCezSHA = async (zadaneSha, zadaneMeno = "Sammael") => {
     try {
       if (!zadaneSha || zadaneSha.length < 12) return false;
-      const novyFing = zadaneSha.substring(0, 12);
+      const cistySha = zadaneSha.replace('0x', '').toLowerCase();
+      const novyFing = '0x' + cistySha.substring(0, 10);
       const obnovenaIdentita = { ...vault.identity, meno: zadaneMeno, sha: zadaneSha, poznamka: novyFing, SECURE_ID: null };
       const newStatus = runLariaProtocol(obnovenaIdentita, false);
       
@@ -192,7 +206,8 @@ export const LariaProvider = ({ children }) => {
     if (vault.identity.krypt) return vault.identity.krypt;
     const newWallet = await generateAutoWallet();
     if (newWallet) {
-      const currentFing = vault.identity.sha ? vault.identity.sha.substring(0, 12) : "";
+      const cistySha = vault.identity.sha ? vault.identity.sha.replace('0x', '').toLowerCase() : "";
+      const currentFing = cistySha ? '0x' + cistySha.substring(0, 10) : "";
       const updatedIdentity = { ...vault.identity, krypt: newWallet.address, privateKey: newWallet.privateKey, poznamka: currentFing, SECURE_ID: null };
       await syncIdentity(updatedIdentity);
       setTimeout(() => onboardNewUser(newWallet.address), 2000);
@@ -205,7 +220,8 @@ export const LariaProvider = ({ children }) => {
     const currentAdminStatus = vault.status.isAdmin;
     const updatedIdentity = { ...vault.identity, ...newIdentityData, SECURE_ID: null };
     if (updatedIdentity.sha && !updatedIdentity.poznamka) {
-      updatedIdentity.poznamka = updatedIdentity.sha.substring(0, 12);
+      const cistySha = updatedIdentity.sha.replace('0x', '').toLowerCase();
+      updatedIdentity.poznamka = '0x' + cistySha.substring(0, 10);
     }
     const newStatus = runLariaProtocol(updatedIdentity, currentAdminStatus);
     setVault({ status: newStatus, identity: updatedIdentity });
