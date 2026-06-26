@@ -6,7 +6,7 @@
  * - 🛰️ ÉTEROVÝ PRIJÍMAČ (WIRELESS MODE): Pridaná anténa počúvajúca globálne signály z éteru. Prijíma importy z Radaru bez kruhových závislostí!
  * - UNIFIED MONOLITH FORMAT: Na základe rozhodnutia Majstra ukladáme kompletný formát vizitky
  * vrátane popisov, lokácie, kategórie, galérie a sociálnych sietí na jedno miesto. Žiadne kúskovanie.
- * - ZERO LAYER STATES: Tento context už NEUKLADÁ contractStatus ani txHash! O stavy a farby
+ * - ZERO LAYER STATES: Tento context už NEUKLADÁ contractStatus ani txHash! O stavy and farby
  * guličiek sa stará výhradne Radar v SignalContext.
  * - MODRÁ ŠÍPEČKA LIVE-PERSISTENCE: Re-sync s Mraveniskom stiahne kompletné dáta a okamžite
  * ich zapíše do lokálneho trezoru, čím okamžite preleští vizitku na obrazovke.
@@ -83,7 +83,8 @@ export const ContactProvider = ({ children }) => {
           const exists = prev.some(c => sformatujFing(c.fing) === prichadzajuciFing);
           if (exists) {
             console.log(`✨ [TREZOR ANTÉNA] Partner ${cielovyPartner.meno} už v lokálnom živom zozname svieti.`);
-            return prev;
+            // VRACIAME PRELEŠTENÝ STAV: Ak dbResult priniesol zaktualizovaný kontakt, musíme ho v stave vymeniť!
+            return prev.map(c => sformatujFing(c.fing) === prichadzajuciFing ? { ...c, ...cielovyPartner } : c);
           }
           console.log(`🔥 [TREZOR ANTÉNA] Prebúdzam partnera ${cielovyPartner.meno} v Trezore!`);
           return [...prev, { ...cielovyPartner, fing: prichadzajuciFing }];
@@ -192,11 +193,39 @@ export const ContactProvider = ({ children }) => {
       }
 
       const existing = contacts.find(c => sformatujFing(c.fing) === targetFing);
+      
+      // 🔄 INTELIGENTNÉ PRELEŠTENIE PRI DUPLICITE (Zahojenie handshake zádrhelu)
       if (existing) {
-        return { success: false, isDuplicate: true, error: "Túto identitu už v ateliéri máš.", contact: existing };
+        console.log(`🔄 [TREZOR] Identita ${targetFing} už existuje. Spúšťam inteligentné preleštenie čerstvými dátami z éteru...`);
+        
+        const updatedContact = {
+          ...existing,
+          meno: data.meno || data.name || existing.meno,
+          kat: data.kat || data.category || existing.kat,
+          lok: data.lok || data.location || existing.lok,
+          popis: data.popis || data.bio || data.handshakeNote || existing.popis,
+          tel: data.tel || existing.tel,
+          email: data.email || existing.email,
+          fb: data.fb || existing.fb,
+          tg: data.tg || existing.tg,
+          gal: data.gal || existing.gal,
+          krypt: data.krypt || existing.krypt,
+          temporary: false // Ak bol predtým iba dočasný na recepcii, teraz je plnohodnotný
+        };
+
+        let updatedContactsList;
+        setContacts(prev => {
+          updatedContactsList = prev.map(c => sformatujFing(c.fing) === targetFing ? updatedContact : c);
+          AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContactsList)).catch(e => 
+            console.error("❌ VAULT_WRITE_UPDATE_ERROR:", e)
+          );
+          return updatedContactsList;
+        });
+
+        return { success: true, isDuplicate: true, error: "Túto identitu už v ateliéri máš.", contact: updatedContact };
       }
 
-      // ✨ UNIFIKOVANÝ MONOLITNÝ FORMÁT: Všetko na jednom mieste bez osekávania
+      // ✨ UNIFIKOVANÝ MONOLITNÝ FORMÁT: Vytvorenie nového kontaktu (ak vôbec neexistoval)
       const newContact = {
         fing: targetFing,
         meno: data.meno || data.name || targetFing,
@@ -320,7 +349,7 @@ export const ContactProvider = ({ children }) => {
       if (result.success) {
         alert(`✨ PEČAŤ PRIJATÁ: [ ${result.contact.meno} ] úspešne vtiahnutý do tvojho ateliéru!`);
       } else if (result.isDuplicate) {
-        alert(`🔮 ATELIÉR INFO: Tohto partnera už vo svojom trezore bezpečne držíš.`);
+        alert(`🔮 ATELIÉR INFO: Tohto partnera už vo svojom trezore bezpečne držíš. (Vizitka bola preleštená)`);
       } else {
         alert(`⚠️ CHYBA MOSTU: ${result.error}`);
       }

@@ -8,6 +8,7 @@
  *   farbami bodiek a obálkami z Radaru (radarContacts). Manfred už nemá kam ujsť, svieti hneď!
  * - 🔓 ODOMKNUTIE MODREJ ŠÍPKY: Odstránená blokáda disabled pre temporary profily. Preleštenie funguje v každom stave.
  * - 📡 INTUITÍVNA SYNCHRONIZÁCIA: handleSync inteligentne rozpozná, či leští lokálny trezor, alebo ťahá verejné dáta z Recepcie cez SignalContext.
+ * - 🔮 FAREBNÝ SEMAFOR NA ISTOTU: Zelená svieti iba vtedy, ak kontakt obsahuje aspoň jeden z komunikačných kanálov (tel, email, fb, tg), ktoré prejdú výhradne cez handshake. Inak svieti žltá.
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -81,11 +82,24 @@ const ContactsScreen = ({ navigation, route }) => {
       // Hľadáme, či Radar pre tohto partnera chytil online pulz alebo neprečítanú správu
       const radarMatch = radarContacts?.find(rc => sformatujFingUI(rc.fing) === cleanFing);
       
+      // 📡 KONTROLA PREPOJENIA KANÁLOV (Na istotu):
+      // Ak má vyplnený aspoň jeden citlivý údaj, ktorý prechádza len cez handshake -> ZELENÁ
+      const maKomunikacneKanaly = !!(
+        (vc.tel && vc.tel.trim() !== "") || 
+        (vc.email && vc.email.trim() !== "") || 
+        (vc.fb && vc.fb.trim() !== "") || 
+        (vc.tg && vc.tg.trim() !== "")
+      );
+
+      const zakladnaFarba = maKomunikacneKanaly ? '#2ECC71' : '#F1C40F'; // Zelená vs Žltá
+      const zakladnyStavText = maKomunikacneKanaly ? 'OVERENÝ' : 'ČAKÁ NA HANDSHAKE';
+      const zakladnaIkona = maKomunikacneKanaly ? '🔐' : '⏳';
+
       return {
         ...vc,
-        dotColor: radarMatch?.dotColor || '#2ECC71', // Ak radar mlčí, svieti zelená (bezpečne v trezore)
-        statusText: radarMatch?.statusText || 'V TREZORE',
-        statusIcon: radarMatch?.statusIcon || '🔐',
+        dotColor: radarMatch?.dotColor || zakladnaFarba, 
+        statusText: radarMatch?.statusText || zakladnyStavText,
+        statusIcon: radarMatch?.statusIcon || zakladnaIkona,
         hasEnvelope: radarMatch?.hasEnvelope || false,
         envelopeIcon: radarMatch?.envelopeIcon || '✉️'
       };
@@ -264,7 +278,7 @@ const ContactsScreen = ({ navigation, route }) => {
                 <View style={[G.tagBadge, item.temporary && { borderColor: '#E74C3C', backgroundColor: 'rgba(231, 76, 60, 0.1)' }]}>
                   <Text style={[G.tagBadgeText, item.temporary && { color: '#E74C3C' }]}>{displayKat.toUpperCase()}</Text>
                 </View>
-                {/* 🟢 EXPANDOVANÁ KARTA - ŽIVÁ KONTROLKA */}
+                {/* 🟢/💛 EXPANDOVANÁ KARTA - ŽIVÁ KONTROLKA PODĽA HANDSHAKE KANÁLOV */}
                 <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: farbaBodky, marginLeft: 10 }} />
               </View>
               
