@@ -145,7 +145,7 @@ const DiagnosticScreen = ({ navigation }) => {
 
             <View style={{ marginTop: 20 }}>
               <Text style={G.statusTextSmall}>{txt.gas_reserve || "GAS_RESERVE (ETH):"}</Text>
-              <Text style={G.balanceValue}>{adminEthBalance || '0.000'} ETH</Text>
+              <Text style={G.balanceValue}>{adminEthBalance || '0.0000'} ETH</Text>
             </View>
 
             <View style={G.terminalLog}>
