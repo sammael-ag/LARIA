@@ -14,7 +14,7 @@ const KRYPTO_CONFIG = {
   chainId: 8453,
   rpcUrl: "https://mainnet.base.org", 
   ownerAddress: "0x3fa2EAB0E933f36cB359F3Cc3E4456B68d2D735C", 
-  lariaContractAddress: "0xbA7C2cD68b544Cc5c6038771a58581F76Ff7700a"
+  lariaContractAddress: "0x03652A588A6c2C36f3976107B9C6B1dfE9f12dE3"
 };
 
 const KryptoContext = createContext();
