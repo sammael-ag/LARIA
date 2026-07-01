@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors'; // 👈 PRIDANÉ: Ochrana proti CORS blokácii prehliadačov
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
 
@@ -6,6 +7,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
+
+// 🔓 Povolenie CORS: Prehliadač teraz pustí odpoveď aj na tvoj lokálny frontend
+app.use(cors()); 
 app.use(express.json());
 
 // ⚙️ Konfigurácia Base Mainnetu
@@ -44,7 +48,7 @@ app.post('/api/onboard', async (req, res) => {
     }
     
     const wallet = new ethers.Wallet(privateKey, provider);
-    const gatewayContract = new ethers.Contract(GATEWAY_ADDRESS, GATEWAY_ABI, wallet);
+    const gatewayContract = new ethers.Contract(GATEWAY_ADDRESS, gatewayContractABI || GATEWAY_ABI, wallet);
 
     // Odoslanie transakcie (false = 0.001 LARIA)
     const tx = await gatewayContract.onboardUser(userAddress, false);
