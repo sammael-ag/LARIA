@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from 'cors'; // 👈 PRIDANÉ: Ochrana proti CORS blokácii prehliadačov
+import cors from 'cors';
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
 
@@ -8,17 +8,19 @@ dotenv.config();
 
 const app = express();
 
-// 🔓 Povolenie CORS: Prehliadač teraz pustí odpoveď aj na tvoj lokálny frontend
+// 🔓 Povolenie CORS pre tvoj frontend
 app.use(cors()); 
 app.use(express.json());
 
 // ⚙️ Konfigurácia Base Mainnetu
 const BASE_RPC_URL = "https://mainnet.base.org";
-const GATEWAY_ADDRESS = "0xBb9a281a3EE78629669D69771AfDA0716fFa9DEb";
 
-// Minimálne ABI pre interakciu s tvojou bránou
-const GATEWAY_ABI = [
-  "function onboardUser(address _user, bool _isFull) external"
+// 🔥 NOVÉ: Smerujeme priamo na hlavný LARIA token kontrakt
+const LARIA_TOKEN_ADDRESS = "0x03652A588A6c2C36f3976107B9C6B1dfE9f12dE3";
+
+// Štandardné ERC-20 ABI pre funkciu transfer
+const ERC20_ABI = [
+  "function transfer(address to, uint256 amount) external returns (bool)"
 ];
 
 // Ochranná membrána
@@ -33,12 +35,12 @@ app.post('/api/onboard', async (req, res) => {
       return res.status(401).json({ success: false, error: "Neautorizovaný prístup do mraveniska!" });
     }
 
-    // Overenie adresy
+    // Overenie adresy mravca
     if (!ethers.isAddress(userAddress)) {
       return res.status(400).json({ success: false, error: "Neplatná adresa mravca!" });
     }
 
-    console.log(`🚀 [RELAYER] Spúšťam automatický onboarding pre: ${userAddress}`);
+    console.log(`🚀 [RELAYER] Spúšťam priamu dotáciu tokenov pre: ${userAddress}`);
 
     const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
     const privateKey = process.env.DISTRIBUTOR_KEY;
@@ -47,19 +49,25 @@ app.post('/api/onboard', async (req, res) => {
       return res.status(500).json({ success: false, error: "Chýba DISTRIBUTOR_KEY v nastaveniach Railway!" });
     }
     
+    // Peňaženka majiteľa (owner) - posiela tokeny aj plyn na transakciu
     const wallet = new ethers.Wallet(privateKey, provider);
-    const gatewayContract = new ethers.Contract(GATEWAY_ADDRESS, GATEWAY_ABI, wallet);
+    const tokenContract = new ethers.Contract(LARIA_TOKEN_ADDRESS, ERC20_ABI, wallet);
 
-    // Odoslanie transakcie (false = 0.001 LARIA)
-    const tx = await gatewayContract.onboardUser(userAddress, false);
-    console.log(`⛓️ [RELAYER] Transakcia úspešne odoslaná! Hash: ${tx.hash}`);
+    // Definujeme sumu: 0.001 LARIA (18 desatinných miest)
+    const amountToSend = ethers.parseUnits("0.001", 18);
+
+    console.log(`📡 Posielam 0.001 LARIA z peňaženky majiteľa...`);
+    
+    // 🔥 Priamy transfer z owner peňaženky (obchádza zámok obchodovania!)
+    const tx = await tokenContract.transfer(userAddress, amountToSend);
+    console.log(`⛓️ [RELAYER] Transakcia odoslaná! Hash: ${tx.hash}`);
     
     // Čakáme na zapísanie do bloku
     await tx.wait();
 
     return res.json({
       success: true,
-      message: "Mravec úspešne onboardovaný, palivo je na peňaženke!",
+      message: "Mravec úspešne dotovaný priamo z hlavnej sýpky, palivo je doma!",
       txHash: tx.hash
     });
 
@@ -71,5 +79,5 @@ app.post('/api/onboard', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🧱 Laria ESM Relayer úspešne naštartovaný na porte ${PORT}`);
+  console.log(`🧱 Laria ESM Relayer (Priama Linka) úspešne naštartovaný na porte ${PORT}`);
 });
