@@ -48,7 +48,7 @@ app.post('/api/onboard', async (req, res) => {
     }
     
     const wallet = new ethers.Wallet(privateKey, provider);
-    const gatewayContract = new ethers.Contract(GATEWAY_ADDRESS, gatewayContractABI || GATEWAY_ABI, wallet);
+    const gatewayContract = new ethers.Contract(GATEWAY_ADDRESS, GATEWAY_ABI, wallet);
 
     // Odoslanie transakcie (false = 0.001 LARIA)
     const tx = await gatewayContract.onboardUser(userAddress, false);
