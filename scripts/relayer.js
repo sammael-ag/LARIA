@@ -15,15 +15,15 @@ app.use(express.json());
 // ⚙️ Konfigurácia Base Mainnetu
 const BASE_RPC_URL = "https://mainnet.base.org";
 
-// 🔥 NOVÉ: Smerujeme priamo na hlavný LARIA token kontrakt
-const LARIA_TOKEN_ADDRESS = "0x03652A588A6c2C36f3976107B9C6B1dfE9f12dE3";
+// 🏦 Smerujeme späť na tvoj overený Smart Contract brány
+const LARIA_GATEWAY_ADDRESS = "0xBb9a281a3EE78629669D69771AfDA0716fFa9DEb";
 
-// Štandardné ERC-20 ABI pre funkciu transfer
-const ERC20_ABI = [
-  "function transfer(address to, uint256 amount) external returns (bool)"
+// Čisté ABI pre volanie funkcie onboardUser z kontraktu LariaGateway
+const GATEWAY_ABI = [
+  "function onboardUser(address _user, bool _isFull) external"
 ];
 
-// Ochranná membrána
+// Ochranná membrána (zostáva rovnaká)
 const BACKEND_SECRET = "LARIA_RIDGE_SECRET_2026";
 
 app.post('/api/onboard', async (req, res) => {
@@ -40,7 +40,7 @@ app.post('/api/onboard', async (req, res) => {
       return res.status(400).json({ success: false, error: "Neplatná adresa mravca!" });
     }
 
-    console.log(`🚀 [RELAYER] Spúšťam priamu dotáciu tokenov pre: ${userAddress}`);
+    console.log(`🚀 [RELAYER] Spúšťam onboarding cez Smart Contract brány pre: ${userAddress}`);
 
     const provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
     const privateKey = process.env.DISTRIBUTOR_KEY;
@@ -49,25 +49,23 @@ app.post('/api/onboard', async (req, res) => {
       return res.status(500).json({ success: false, error: "Chýba DISTRIBUTOR_KEY v nastaveniach Railway!" });
     }
     
-    // Peňaženka majiteľa (owner) - posiela tokeny aj plyn na transakciu
+    // Peňaženka majiteľa (owner) - podpisuje transakciu kontraktu a platí gas
     const wallet = new ethers.Wallet(privateKey, provider);
-    const tokenContract = new ethers.Contract(LARIA_TOKEN_ADDRESS, ERC20_ABI, wallet);
+    const gatewayContract = new ethers.Contract(LARIA_GATEWAY_ADDRESS, GATEWAY_ABI, wallet);
 
-    // Definujeme sumu: 0.001 LARIA (18 desatinných miest)
-    const amountToSend = ethers.parseUnits("0.001", 18);
-
-    console.log(`📡 Posielam 0.001 LARIA z peňaženky majiteľa...`);
+    console.log(`📡 Volám onboardUser na LariaGateway (isFull = false)...`);
     
-    // 🔥 Priamy transfer z owner peňaženky (obchádza zámok obchodovania!)
-    const tx = await tokenContract.transfer(userAddress, amountToSend);
-    console.log(`⛓️ [RELAYER] Transakcia odoslaná! Hash: ${tx.hash}`);
+    // 🔥 Voláme funkciu na smart kontrakte. 
+    // Teraz už prebehne hladko, lebo hlavný token má tradingEnabled = true!
+    const tx = await gatewayContract.onboardUser(userAddress, false);
+    console.log(`⛓️ [RELAYER] Transakcia odoslaná na blockchain! Hash: ${tx.hash}`);
     
-    // Čakáme na zapísanie do bloku
+    // Čakáme na potvrdenie sietí Base
     await tx.wait();
 
     return res.json({
       success: true,
-      message: "Mravec úspešne dotovaný priamo z hlavnej sýpky, palivo je doma!",
+      message: "Mravec úspešne dotovaný cez Smart Contract brány! 100 LARIA sýpka funguje.",
       txHash: tx.hash
     });
 
@@ -79,5 +77,5 @@ app.post('/api/onboard', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🧱 Laria ESM Relayer (Priama Linka) úspešne naštartovaný na porte ${PORT}`);
+  console.log(`🧱 Laria ESM Relayer (Smart Contract Verzia) úspešne naštartovaný na porte ${PORT}`);
 });
