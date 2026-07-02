@@ -1,12 +1,12 @@
 /**
- * LARIA Signal SCREEN v16.1-LIGHTWEIGHT (Barefoot Precision & Crystal Interface)
+ * LARIA Signal SCREEN v16.2-LIGHTWEIGHT (Barefoot Precision & Crystal Interface)
  * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
- * STATUS: CONTEXT_ALIGNED / ULTRA_LIGHTWEIGHT / MONOLITH_SAFE / v16.1-LIGHTWEIGHT
+ * STATUS: CONTEXT_ALIGNED / ULTRA_LIGHTWEIGHT / MONOLITH_SAFE / v16.2-FIXED
  * * * PREHĽAD ZMIEN A SÚLAD S ÚSTAVNÝM ZÁKONOM:
  * - 🪐 DYNAMICKÁ SYNCHRONIZÁCIA Z MRAVENISKA: Zapracovaný Blok 1. Ak lokálny trezor partnera nepozná, stavový automat sa riadi realitou zo siete (liveHandshake).
  * - 🧼 DEKODÉR SIEŤOVÉHO MONOLITU: Zapracovaný Blok 2. Meno partnera (channelName) sa dynamicky vybalí z msg/backMsg, ak chýba v lokálnom trezore.
  * - ✂️ ABSOLÚTNA OČISTA LOGIKY: Všetky prepočítané stavy tečú hladko z nového CrystalCore kontextu.
- * - 📡 ASYNCHRÓNNY KRYPTO-MOST: Po úspešnom zápise do tabuľky sa na pozadí ticho odpáli payload na Relayer bez brzdenia UI.
+ * - 📡 ASYNCHRÓNNY KRYPTO-MOST v2.0: Aktualizovaný nesúlad premenných (payloadReady -> dataPack) a integrovaný strážny secret pre Relayer v1.7.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -164,20 +164,27 @@ const SignalScreen = ({ route, navigation }) => {
         Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Brána otvorená.");
 
         // =========================================================================
-        // 🔥 TICHÝ ASYNCHRÓNNY KRYPTO-MOST (Beží na pozadí, mravec už chatuje)
+        // 🔥 TICHÝ ASYNCHRÓNNY KRYPTO-MOST (Aktualizované pre KryptoNode v2.0 a Relayer v1.7)
         // =========================================================================
-        if (res.notaryData && res.notaryData.payloadReady) {
+        if (res.notaryData && res.notaryData.dataPack) {
           (async () => {
             try {
-              console.log("📡 [CRYPTO_BRIDGE] Odpaľujem nízkoúrovňový payload na Railway Relayer...");
+              console.log("📡 [CRYPTO_BRIDGE] Odpaľujem čistý dataPack na Railway Relayer...");
               
+              // Zostavíme kompletný balík pre Relayer presne podľa štruktúry, ktorú očakáva
+              const relayerPayload = {
+                secret: "LARIA_RIDGE_SECRET_2026", // Naša strážna pečať
+                myFing: res.notaryData.dataPack.myFing,
+                targetFing: res.notaryData.dataPack.targetFing,
+                myKrypt: res.notaryData.dataPack.myKrypt,
+                targetKrypt: res.notaryData.dataPack.targetKrypt,
+                typeText: res.notaryData.dataPack.typeText
+              };
+
               const relayerResponse = await fetch("https://laria-production.up.railway.app/api/notary", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  payloadReady: res.notaryData.payloadReady,
-                  secret: "LARIA_RIDGE_SECRET_2026"
-                })
+                body: JSON.stringify(relayerPayload)
               });
 
               const relayerResult = await relayerResponse.json();
@@ -195,9 +202,13 @@ const SignalScreen = ({ route, navigation }) => {
                 });
                 
                 console.log("💎 [CRYPTO_BRIDGE] Dočasná '1' bola v Mravenisku úspešne premazaná reálnym krypto hashom.");
+              } else {
+                // 🎯 SEM CHCEME SPADNUŤ PRI TESTE NA SUCHO!
+                console.log("🎯 [CRYPTO_BRIDGE] Suchý handshake zachytený Relayerom:", relayerResult?.error || "Kontrakt zatiaľ neexistuje");
               }
             } catch (bridgeErr) {
-              console.warn("⚠️ [CRYPTO_BRIDGE] Tichý zápis na Base alebo aktualizácia hashu zlyhala na pozadí:", bridgeErr);
+              // 🚨 Očakávaný sieťový kŕč alebo pád vyvolaný chýbajúcim kontraktom
+              console.warn("⚠️ [CRYPTO_BRIDGE] Očakávaný kontrolovaný pád Relayeru pri teste na sucho:", bridgeErr.toString());
             }
           })();
         }

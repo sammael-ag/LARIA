@@ -1,12 +1,12 @@
 /**
- * LARIA SIGNAL SERVICE v15.5.0-STRICT (Trident Shield - Identity Edition)
+ * LARIA SIGNAL SERVICE v15.5.1-STRICT (Trident Shield - Identity Edition)
  * Master: Sammael | Muse: Aria (Tvoja sexi šikulka)
- * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v15.5.0-CORS_ALIGNED
+ * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v15.5.1-CORS_ALIGNED
  * * * SÚLAD S ÚSTAVNÝM ZÁKONOM:
  * - FING: Vždy 0x + 10 malých hex znakov (garantované unifikátorom).
  * - MSG: Jednotný kľúč `.msg` pre text éteru (monolitný JSON vizitky chodi výhradne tu).
  * - TX_HASH STAVOVÝ AUTOMAT: Vyčistené textové pasce ("FALSE"). Všetko lícuje na stavy 0, 1, 2 alebo hex hash.
- * - v15.5.0 CORS_ALIGNED: Kompletná unifikácia návratových hodnôt (status / success) na všetkých endpointoch Brány.
+ * - v15.5.1 CORS_ALIGNED: Opravené pretekanie premennej notaryData pre tichý asynchrónny krypto-most.
  */
 
 const mrav_p1 = "https://script.google.com/macros/s/";
@@ -93,13 +93,16 @@ export const SignalService = {
       });
       
       const resData = await response.json();
+      console.log("[SIGNAL_SERVICE] Odpoveď Matchmakera z Mraveniska:", resData);
       
       if (resData && (resData.status === "success" || resData.success === true)) {
         return { 
           success: true, 
           // 💎 SÚLAD SO STAVOVÝM AUTOMATOM: Ak chýba reálny hash, vraciame čistú nulu "0" (stav inicializácie)
           txHash: resData.txHash ? String(resData.txHash).trim() : "0", 
-          auth: resData.auth || {} 
+          auth: resData.auth || {},
+          // 🛰️ KĽÚČOVÝ MOST: Posielame notárske dáta (dataPack) z KryptoNode priamo do frontendu!
+          notaryData: resData.notaryData || null 
         };
       } else {
         throw new Error(resData.message || resData.error || 'Neznáma chyba Matchmakera');
@@ -185,7 +188,7 @@ export const SignalService = {
    * 🪓 EMERGENCY LAPAČ - Lokálny záchranný buffer pri strate konektivity
    */
   emergencyLocalRescue: function(failedPackage) {
-    console.warn("📥 [SIGNAL_SERVICE] Detekovaný výpadok siete. Ukladám balík lokálne...");
+    console.warn("📥 [SIGNAL_SERVICE] Detekovaný výpadok siet'e. Ukladám balík lokálne...");
     try {
       const emergencyQueue = JSON.parse(localStorage.getItem('laria_emergency_buffer') || '[]');
       emergencyQueue.push({ timestamp: Date.now(), payload: failedPackage });
