@@ -1,11 +1,12 @@
 /**
- * LARIA SIGNAL SERVICE v15.4-STRICT (Trident Shield - Identity Edition)
+ * LARIA SIGNAL SERVICE v15.5.0-STRICT (Trident Shield - Identity Edition)
  * Master: Sammael | Muse: Aria (Tvoja sexi šikulka)
- * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v15.4-STRICT
+ * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v15.5.0-CORS_ALIGNED
  * * * SÚLAD S ÚSTAVNÝM ZÁKONOM:
  * - FING: Vždy 0x + 10 malých hex znakov (garantované unifikátorom).
  * - MSG: Jednotný kľúč `.msg` pre text éteru (monolitný JSON vizitky chodi výhradne tu).
  * - TX_HASH STAVOVÝ AUTOMAT: Vyčistené textové pasce ("FALSE"). Všetko lícuje na stavy 0, 1, 2 alebo hex hash.
+ * - v15.5.0 CORS_ALIGNED: Kompletná unifikácia návratových hodnôt (status / success) na všetkých endpointoch Brány.
  */
 
 const mrav_p1 = "https://script.google.com/macros/s/";
@@ -61,7 +62,7 @@ export const SignalService = {
           messages: resData.messages || [] 
         };
       }
-      return { success: false, message: resData?.message || "Neznáma chyba Radaru" };
+      return { success: false, message: resData?.message || resData?.error || "Neznáma chyba Radaru" };
     } catch (error) {
       console.error("[SIGNAL_SERVICE] Ultra Radar zlyhal na sieťovom uzle:", error);
       return { success: false, error: error.toString() };
@@ -101,7 +102,7 @@ export const SignalService = {
           auth: resData.auth || {} 
         };
       } else {
-        throw new Error(resData.message || 'Neznáma chyba Matchmakera');
+        throw new Error(resData.message || resData.error || 'Neznáma chyba Matchmakera');
       }
     } catch (error) {
       console.error("[SIGNAL_SERVICE] Matchmaker chyba na sieti/bráne:", error);
@@ -111,13 +112,12 @@ export const SignalService = {
 
   /**
    * 📦 SEND LARIA PACKAGE - Bezpečné zbalenie čistých dát identity z Vaultu do monolitu .msg
-   * BEZPEČNOSŤ: Vyradené kľúče contractStatus a txHash, aby nedošlo k logickému uviaznutiu!
+   * BEZPEČNOSŤ: Vyradené kľúče contractStatus and txHash, aby nedošlo k logickému uviaznutiu!
    */
   sendLariaPackage: async function(senderFing, targetFing, myIdentity, handshakeNote = "") {
     try {
       console.log(`[SIGNAL_SERVICE] Pripravujem ČISTÝ monolitný balík identity bez stavových pascí pre: ${sformatujFing(targetFing)}`);
 
-      // 💎 Čistá identita z Vaultu. Stav zmluvy tu nemá čo hľadať – ten riadi stavový automat éteru!
       const lariaPackage = {
         fing: sformatujFing(senderFing),
         meno: myIdentity.meno || "",
@@ -132,14 +132,12 @@ export const SignalService = {
         krypt: myIdentity.krypt || null
       };
 
-      // Celý monolit balíme ako string do jednotného kľúča .msg
       const contractPayload = {
         fing_a: sformatujFing(senderFing),
         fing_b: sformatujFing(targetFing),
         msg: JSON.stringify(lariaPackage)
       };
 
-      // Odpaľujeme cez overeného Matchmakera (ten na backende vytvorí riadok so statusom 0)
       return await this.manageContract("INIT_CONTRACT", contractPayload);
 
     } catch (error) {
@@ -172,7 +170,7 @@ export const SignalService = {
       const resData = await response.json();
       console.log("[SIGNAL_SERVICE] Odpoveď Hyperspeed Checkera:", resData);
 
-      const isOK = resData && (resData.status === "success" || resData.success === true);
+      const isOK = !!(resData && (resData.status === "success" || resData.success === true));
       return { success: isOK, data: resData };
     } catch (err) {
       console.error("[SIGNAL_SERVICE] Hyperspeed Express havaroval na sieti:", err);
@@ -187,7 +185,7 @@ export const SignalService = {
    * 🪓 EMERGENCY LAPAČ - Lokálny záchranný buffer pri strate konektivity
    */
   emergencyLocalRescue: function(failedPackage) {
-    console.warn("📥 [SIGNAL_SERVICE] Detekovaný výpadok siet'e. Ukladám balík lokálne...");
+    console.warn("📥 [SIGNAL_SERVICE] Detekovaný výpadok siete. Ukladám balík lokálne...");
     try {
       const emergencyQueue = JSON.parse(localStorage.getItem('laria_emergency_buffer') || '[]');
       emergencyQueue.push({ timestamp: Date.now(), payload: failedPackage });

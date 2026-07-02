@@ -6,6 +6,7 @@
  * - 🪐 DYNAMICKÁ SYNCHRONIZÁCIA Z MRAVENISKA: Zapracovaný Blok 1. Ak lokálny trezor partnera nepozná, stavový automat sa riadi realitou zo siete (liveHandshake).
  * - 🧼 DEKODÉR SIEŤOVÉHO MONOLITU: Zapracovaný Blok 2. Meno partnera (channelName) sa dynamicky vybalí z msg/backMsg, ak chýba v lokálnom trezore.
  * - ✂️ ABSOLÚTNA OČISTA LOGIKY: Všetky prepočítané stavy tečú hladko z nového CrystalCore kontextu.
+ * - 📡 ASYNCHRÓNNY KRYPTO-MOST: Po úspešnom zápise do tabuľky sa na pozadí ticho odpáli payload na Relayer bez brzdenia UI.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -161,6 +162,46 @@ const SignalScreen = ({ route, navigation }) => {
         }
 
         Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Brána otvorená.");
+
+        // =========================================================================
+        // 🔥 TICHÝ ASYNCHRÓNNY KRYPTO-MOST (Beží na pozadí, mravec už chatuje)
+        // =========================================================================
+        if (res.notaryData && res.notaryData.payloadReady) {
+          (async () => {
+            try {
+              console.log("📡 [CRYPTO_BRIDGE] Odpaľujem nízkoúrovňový payload na Railway Relayer...");
+              
+              const relayerResponse = await fetch("https://laria-production.up.railway.app/api/notary", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  payloadReady: res.notaryData.payloadReady,
+                  secret: "LARIA_RIDGE_SECRET_2026"
+                })
+              });
+
+              const relayerResult = await relayerResponse.json();
+              
+              if (relayerResult && relayerResult.success) {
+                console.log(`⛓️ [CRYPTO_BRIDGE] Blockchain úspešne spečatený! TxHash: ${relayerResult.txHash}`);
+                
+                // 🛰️ SPÄTNÝ ZÁPIS DO MRAVENISKA:
+                // Prepíšeme dočasnú jednotku "1" na reálny 0x... hash z Base blockchainu.
+                await SignalService.manageContract('CONFIRM_CONTRACT', {
+                  fing_a: targetFing,
+                  fing_b: mojeData.fing,
+                  status_b: "1",
+                  blockchainHash: relayerResult.txHash
+                });
+                
+                console.log("💎 [CRYPTO_BRIDGE] Dočasná '1' bola v Mravenisku úspešne premazaná reálnym krypto hashom.");
+              }
+            } catch (bridgeErr) {
+              console.warn("⚠️ [CRYPTO_BRIDGE] Tichý zápis na Base alebo aktualizácia hashu zlyhala na pozadí:", bridgeErr);
+            }
+          })();
+        }
+        // =========================================================================
       }
     } catch (err) {
       console.error("❌ ALLOW operácia zlyhala:", err);

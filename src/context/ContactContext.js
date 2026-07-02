@@ -1,7 +1,7 @@
 /**
- * LARIA v16.2-WIRELESS_RECEIVER: ContactContext (Kniha priateľov - Sovereign Friends Registry)
+ * LARIA v16.3.0-WIRELESS_RECEIVER: ContactContext (Kniha priateľov - Sovereign Friends Registry)
  * Master: Sammael | Muse: Aria (Tvoja bezdrôtová prijímacia šikulka)
- * Status: PURE_CORE_ALIGNED | UNIFIED_JSON_FORMAT | v16.2-WIRELESS_RECEIVER
+ * Status: PURE_CORE_ALIGNED | UNIFIED_JSON_FORMAT | v16.3.0-CORS_ALIGNED
  * * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
  * - 🛰️ ÉTEROVÝ PRIJÍMAČ (WIRELESS MODE): Pridaná anténa počúvajúca globálne signály z éteru. Prijíma importy z Radaru bez kruhových závislostí!
  * - UNIFIED MONOLITH FORMAT: Na základe rozhodnutia Majstra ukladáme kompletný formát vizitky
@@ -10,6 +10,7 @@
  * guličiek sa stará výhradne Radar v SignalContext.
  * - MODRÁ ŠÍPEČKA LIVE-PERSISTENCE: Re-sync s Mraveniskom stiahne kompletné dáta a okamžite
  * ich zapíše do lokálneho trezoru, čím okamžite preleští vizitku na obrazovke.
+ * - v16.3.0 CORS_ALIGNED: Unifikovaná kontrola stavov 'success' a 'success === true' pre hladký prechod cez Mravenisko.
  */
 
 import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
@@ -83,7 +84,6 @@ export const ContactProvider = ({ children }) => {
           const exists = prev.some(c => sformatujFing(c.fing) === prichadzajuciFing);
           if (exists) {
             console.log(`✨ [TREZOR ANTÉNA] Partner ${cielovyPartner.meno} už v lokálnom živom zozname svieti.`);
-            // VRACIAME PRELEŠTENÝ STAV: Ak dbResult priniesol zaktualizovaný kontakt, musíme ho v stave vymeniť!
             return prev.map(c => sformatujFing(c.fing) === prichadzajuciFing ? { ...c, ...cielovyPartner } : c);
           }
           console.log(`🔥 [TREZOR ANTÉNA] Prebúdzam partnera ${cielovyPartner.meno} v Trezore!`);
@@ -95,7 +95,7 @@ export const ContactProvider = ({ children }) => {
           console.log(`📡 [TREZOR -> RADAR] Prebúdzam identitu ${partner.meno} na frekvencii Radaru...`);
           await signalCtx.syncPublicProfile(prichadzajuciFing);
         } else {
-          console.log("🔮 [TREZOR ANTÉNA] Radar nemá priamu synchrónnu linku, pálom globálny refresh éteru.");
+          console.log("🔮 [TREZOR ANTÉNA] Radar nemá priamu syschrónnu linku, pálom globálny refresh éteru.");
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('LARIA_RADAR_REFRESH'));
           }
@@ -103,12 +103,9 @@ export const ContactProvider = ({ children }) => {
       }
     };
 
-    // Naladenie prijímača na frekvenciu Radaru
     window.addEventListener('LARIA_IMPORT_CONTACT', spracujBezdrotovyImport);
-    
-    // Upratovanie frekvencie pri demontáži
     return () => window.removeEventListener('LARIA_IMPORT_CONTACT', spracujBezdrotovyImport);
-  }, [contacts, signalCtx]); // Sledujeme contacts aj signalCtx pre bezchybnú synergiu
+  }, [contacts, signalCtx]);
 
   // --- 📡 DYNAMICKÝ DETEKTOR NEZNÁMYCH PEČATÍ (Recepcia na základe Radaru) ---
   const unknownContacts = useMemo(() => {
@@ -194,7 +191,6 @@ export const ContactProvider = ({ children }) => {
 
       const existing = contacts.find(c => sformatujFing(c.fing) === targetFing);
       
-      // 🔄 INTELIGENTNÉ PRELEŠTENIE PRI DUPLICITE (Zahojenie handshake zádrhelu)
       if (existing) {
         console.log(`🔄 [TREZOR] Identita ${targetFing} už existuje. Spúšťam inteligentné preleštenie čerstvými dátami z éteru...`);
         
@@ -210,7 +206,7 @@ export const ContactProvider = ({ children }) => {
           tg: data.tg || existing.tg,
           gal: data.gal || existing.gal,
           krypt: data.krypt || existing.krypt,
-          temporary: false // Ak bol predtým iba dočasný na recepcii, teraz je plnohodnotný
+          temporary: false 
         };
 
         let updatedContactsList;
@@ -225,7 +221,6 @@ export const ContactProvider = ({ children }) => {
         return { success: true, isDuplicate: true, error: "Túto identitu už v ateliéri máš.", contact: updatedContact };
       }
 
-      // ✨ UNIFIKOVANÝ MONOLITNÝ FORMÁT: Vytvorenie nového kontaktu (ak vôbec neexistoval)
       const newContact = {
         fing: targetFing,
         meno: data.meno || data.name || targetFing,
@@ -278,18 +273,17 @@ export const ContactProvider = ({ children }) => {
 
       const result = await response.json();
 
-      if (result && result.status === "success" && result.data) {
+      // 🌪️ CORS ALIGNMENT: Unifikované overenie úspešnosti z Mraveniska
+      if (result && (result.status === "success" || result.success === true) && result.data) {
         console.log(`✅ Detaily pre ${targetFing} úspešne stiahnuté pre potreby zobrazenia.`);
         
         const partnerData = result.data;
 
-        // 💎 PRELEŠTENIE A ZÁPIS DO DATABÁZY: Dáta už neostanú visieť v ľufte!
         let updatedContacts;
         setContacts(prev => {
           const exists = prev.some(c => sformatujFing(c.fing) === targetFing);
           
           if (exists) {
-            // Ak už kontakt máme, aktualizujeme mu stiahnuté premenné
             updatedContacts = prev.map(c => sformatujFing(c.fing) === targetFing ? {
               ...c,
               meno: partnerData.meno || c.meno,
@@ -304,7 +298,6 @@ export const ContactProvider = ({ children }) => {
               krypt: partnerData.krypt || c.krypt
             } : c);
           } else {
-            // Ak prišiel z webu/recepcie a leštíme ho, rovno ho vytvoríme ako plný kontakt
             updatedContacts = [...prev, {
               fing: targetFing,
               meno: partnerData.meno || targetFing,
@@ -331,7 +324,7 @@ export const ContactProvider = ({ children }) => {
 
         return { success: true, liveData: partnerData };
       }
-      return { success: false, error: "Identita v Matrixe nenájdená." };
+      return { success: false, error: result.message || result.error || "Identita v Matrixe nenájdená." };
     } catch (e) {
       console.error("❌ SYNC_ERROR:", e);
       return { success: false, error: "Matrix neodpovedá." };

@@ -1,10 +1,11 @@
 /**
- * LARIA QUANTUM ARCHITECTURE v8.2 (Gateway & Clean Vault Edition)
+ * LARIA QUANTUM ARCHITECTURE v8.3.0 (Gateway & Clean Vault Edition)
  * Context: LariaContext (THE 5D VAULT & CONFIG)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: REFORGED_SECURITY | ARCHITECT_KEY_SAFE_IN_UNDERWORLD | v8.2-CLEAN
+ * STATUS: REFORGED_SECURITY | ARCHITECT_KEY_SAFE_IN_UNDERWORLD | v8.3.0-CORS_ALIGNED
  * Description: Vyčistený front-end poklad. Distribúcia a kľúč architekta bezpečne odsunuté na Bránu.
  *              Splatený technologický dlh č.1 (striktný 0x kľúč) a vymazané staré IRC premenné.
+ * v8.3.0 CORS_ALIGNED: Unifikovaná kontrola úspešnosti v onboardingu pre hladký prechod cez Mravenisko.
  */
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
@@ -71,11 +72,11 @@ export const LariaProvider = ({ children }) => {
       });
 
       const result = await response.json();
-      if (result && result.status === "success") {
+      if (result && (result.status === "success" || result.success === true)) {
         console.log("✅ VRATNÍK: Mavenisko potvrdilo úspešnú distribúciu 0.001 LARIA!");
         await syncWalletData(newUserAddress);
       } else {
-        console.error("⚠️ VRATNÍK_ERROR: Brána odmietla distribúciu:", result.message);
+        console.warn("⚠️ VRATNÍK_ERROR: Brána odmietla distribúciu:", result.message || result.error);
       }
     } catch (error) {
       console.error("❌ VRATNÍK_ERROR pri komunikácii s Bránou:", error.message);
@@ -123,8 +124,6 @@ export const LariaProvider = ({ children }) => {
           currentSha = savedIdentity.sha;
           
           // 🛡️ Splácame technologický dlh č.1: Žiadne riskantné orezávanie bez prefixu!
-          // Ak už máme uložený fing v poznamke a začína s 0x, len ho preleštíme do lowerCase.
-          // Ak nie, bezpečne vyrobíme správny formát 0x + 10 znakov z čistého SHA kľúča.
           if (savedIdentity.poznamka && savedIdentity.poznamka.trim().toLowerCase().startsWith('0x')) {
             currentFing = savedIdentity.poznamka.trim().toLowerCase();
           } else {

@@ -1,10 +1,10 @@
 /**
- * LARIA G-MATRIX SERVICE v9.5 (Identity Recovery & Proof of Human Action Edition)
+ * LARIA G-MATRIX SERVICE v9.6 (Identity Recovery & Proof of Human Action Edition)
  * Status: SYNCED / THE LAW / MONOLITH COMPATIBLE
  * Master: Sammael | Muse: Aria
  * Popis: Centralizovaný prístup k jedinej bráne mraveniska (Brana.gs). 
  * URL je rozbitá na 3 časti, aby statické roboty videli iba tmu.
- * v9.5 SYNC: Dokonalá fúzia s odľahčenou Bránou v1.9.8 a 5D overovaním LariaCore.
+ * v9.6 CORS_ALIGNED: Plná synchronizácia s ochrannou CORS membránou Brány v2.1.1.
  */
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
@@ -21,7 +21,7 @@ const ziskajBranaUrl = () => {
 
 /**
  * 1. ČÍTANIE Z MATRIXU (Verejný kanál - doGet)
- * Lícuje priamo s doGet(e) v Brana.gs and vyťahuje verejné vizitky ako čistý JSON.
+ * Lícuje priamo s doGet(e) v Brana.gs a vyťahuje verejné vizitky ako čistý JSON.
  */
 export const fetchGMatrix = async () => {
     try {
@@ -86,16 +86,16 @@ export const saveToGMatrix = async (identityData) => {
 
         const result = await response.json();
         
-        if (result && result.status === "success") {
+        if (result && (result.status === "success" || result.success === true)) {
             console.log("✅ Matrix úspešne prijal tvoju energiu cez Writer.");
             return { success: true, message: result.message };
         } else {
-            console.warn("⚠️ Vrátnik v Bráne má námietky:", result.message);
-            return { success: false, error: result.message };
+            console.warn("⚠️ Vrátnik v Bráne má námietky:", result.message || result.error);
+            return { success: false, error: result.message || result.error };
         }
 
     } catch (error) {
-        console.error("❌ Kritická chyba komunikácie pri zápise do Brány:", error);
+        console.error("❌ Kritická chyby komunikácie pri zápise do Brány:", error);
         return { success: false, error: error.message };
     }
 };
@@ -125,12 +125,12 @@ export const recoverFromGMatrix = async (shaKey) => {
 
         const result = await response.json();
 
-        if (result && result.status === "success") {
+        if (result && (result.status === "success" || result.success === true)) {
             console.log("✅ Brána našla tvoju starú identitu v trezore.");
             return { success: true, data: result.data };
         } else {
-            console.warn("⚠️ Brána odpovedala, ale pečať nenašla:", result.message);
-            return { success: false, error: result.message };
+            console.warn("⚠️ Brána odpovedala, ale pečať nenašla:", result.message || result.error);
+            return { success: false, error: result.message || result.error };
         }
     } catch (error) {
         console.error("❌ Kritická chyba pri obnove cez Bránu:", error);
@@ -165,7 +165,7 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync", r
         const result = await response.json();
         
         // Stav A: Preklad úspešne stiahnutý z cache alebo bleskovo dodaný
-        if (result && result.status === "success") {
+        if (result && (result.status === "success" || result.success === true)) {
             console.log(`✅ Preklad pre [${targetLang}] úspešne stiahnutý z mravca Translatora.`);
             return typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
         }
@@ -219,12 +219,12 @@ export const verifyMasterAccess = async (masterSHA, secretWord) => {
 
         const result = await response.json();
         
-        if (result && result.status === "success" && result.verified === true) {
+        if (result && (result.status === "success" || result.success === true) && result.verified === true) {
             console.log("✅ Brána potvrdila identitu Majstra. Prístup povolený.");
             return { success: true };
         } else {
-            console.warn("⚠️ Brána zamietla prístup do velína:", result.message);
-            return { success: false, error: result.message };
+            console.warn("⚠️ Brána zamietla prístup do velína:", result.message || result.error);
+            return { success: false, error: result.message || result.error };
         }
     } catch (error) {
         console.error("❌ Kritická chyba pri sieťovom overovaní Master prístupu:", error);
@@ -262,12 +262,12 @@ export const sendEmailViaGMatrix = async (email, templateName, subject, template
 
         const result = await response.json();
         
-        if (result && result.status === "success") {
+        if (result && (result.status === "success" || result.success === true)) {
             console.log(`✅ Mailer úspešne doručil správu na uzol ${email}.`);
             return { success: true, message: result.message };
         } else {
-            console.warn("⚠️ Mailer v Bráne hlási chybu spracovania:", result.message);
-            return { success: false, error: result.message };
+            console.warn("⚠️ Mailer v Bráne hlási chybu spracovania:", result.message || result.error);
+            return { success: false, error: result.message || result.error };
         }
     } catch (error) {
         console.error("❌ Kritická chyba komunikácie s Mailerom v Bráne:", error);

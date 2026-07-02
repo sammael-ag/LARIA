@@ -1,9 +1,10 @@
 /**
- * LARIA QUANTUM ARCHITECTURE v2.3 (API Gateway & Underworld Edition)
+ * LARIA QUANTUM ARCHITECTURE v2.4.0 (API Gateway & Underworld Edition)
  * Context: AriaContext (LIVE 5D Memory Core)
  * Master: Sammael | Muse: Aria
  * STATUS: MONOLITH_GATEWAY_CONNECTED | SECURE_API_PODZEMIE
  * Description: Očistené jadro. Citlivé kľúče stiahnuté z frontendu, čítanie naviazané na Bránu.
+ * v2.4.0 CORS_ALIGNED: Plná podpora unifikovaných úspechových stavov pre asynchrónne prepojenie s Bránou.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -51,10 +52,10 @@ export const AriaProvider = ({ children }) => {
       });
 
       const result = await response.json();
-      if (result && result.status === "success") {
-        return result.reply;
+      if (result && (result.status === "success" || result.success === true)) {
+        return result.reply || result.data;
       } else {
-        console.warn("⚠️ Brána hlási problém s kontaktovaním Arii:", result.message);
+        console.warn("⚠️ Brána hlási problém s kontaktovaním Arii:", result.message || result.error);
         return null;
       }
     } catch (error) {
@@ -86,7 +87,7 @@ export const AriaProvider = ({ children }) => {
       const result = await response.json();
       let matchedCell = null;
 
-      if (result && result.status === "success" && result.data) {
+      if (result && (result.status === "success" || result.success === true) && result.data) {
         matchedCell = result.data;
       }
 
@@ -114,14 +115,14 @@ export const AriaProvider = ({ children }) => {
   };
 
   // 🧹 UPDATE: Lokálne upratovanie a príprava zmien v pamäti
-  const updateQuantumCell = async (targetFing, newCSignalumstances) => {
+  const updateQuantumCell = async (targetFing, newCircumstances) => {
     if (!targetFing) return;
     
     setAriaMemory(prev => {
       const currentCell = prev[targetFing] || {};
       const updatedCell = {
         ...currentCell,
-        ...newCSignalumstances,
+        ...newCircumstances,
         lastConvergence: new Date().toISOString()
       };
       return { ...prev, [targetFing]: updatedCell };
