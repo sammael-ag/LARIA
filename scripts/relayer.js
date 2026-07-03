@@ -1,3 +1,10 @@
+/**
+ * LARIA ESM RELAYER v1.7.1 (Trident Security & ABI Fix)
+ * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
+ * Status: FIXED_500_ERROR | RELAYER_SHIELD_ACTIVE
+ * Description: Opravená typografická nezhoda v názve GATEWAY_ABI, ktorá spôsobovala pád servera.
+ */
+
 import express from 'express';
 import cors from 'cors';
 import { ethers } from 'ethers';
@@ -15,7 +22,7 @@ app.use(express.json());
 // ⚙️ Konfigurácia Base Mainnetu a Mraveniska
 const BASE_RPC_URL = "https://mainnet.base.org";
 const LARIA_GATEWAY_ADDRESS = "0xBb9a281a3EE78629669D69771AfDA0716fFa9DEb";
-const LARIA_NOTARY_ADDRESS = "0xf849a4___TU PRÍDE NOVÁ ADRESA _____a4f0B2";
+const LARIA_NOTARY_ADDRESS = "0xf849a4e046fC6D8adFef9c4594ae417306a4f0B2";
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
 const brana_p1 = "https://script.google.com/macros/s/";
@@ -29,12 +36,11 @@ const ziskajBranaUrl = () => {
     return `${brana_p1}${brana_p2}${brana_p3}`;
 };
 
-// ABI pre obidva kontrakty
+// 💎 Unifikované ABI pre obidva kontrakty (zarovnané veľké písma)
 const GATEWAY_ABI = [
   "function onboardUser(address _user, bool _isFull) external"
 ];
 
-// ABI pre našu novú duálnu tokenovú pečať v13.0
 const NOTARY_ABI = [
   "function sealDualRelationshipWithToken(address _walletA, address _walletB, string memory _fingA, string memory _fingB, string memory _metadata) external"
 ];
@@ -67,7 +73,9 @@ app.post('/api/onboard', async (req, res) => {
     }
     
     const wallet = new ethers.Wallet(privateKey, provider);
-    const gatewayContract = new ethers.Contract(LARIA_GATEWAY_ADDRESS, gatewayABI, wallet);
+    
+    // 🔮 FIX: Premenovaná z 'gatewayABI' na 'GATEWAY_ABI', aby sedela s deklaráciou hore
+    const gatewayContract = new ethers.Contract(LARIA_GATEWAY_ADDRESS, GATEWAY_ABI, wallet);
 
     console.log(`📡 Volám onboardUser na LariaGateway...`);
     const tx = await gatewayContract.onboardUser(userAddress, false);
@@ -162,7 +170,7 @@ app.post('/api/notary', async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Duálny vzťah úspešne pretečený na blockchaine pod jedným hashom a nahlásený Matchmakerovi.",
+      message: "Duálny vzťah úspešne pretečený na blockchaine pod jedným hashom and nahlásený Matchmakerovi.",
       txHash: tx.hash
     });
 
@@ -174,5 +182,5 @@ app.post('/api/notary', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🧱 Laria ESM Relayer (v1.7 - Trident Security) úspešne spustený na porte ${PORT}`);
+  console.log(`🧱 Laria ESM Relayer (v1.7.1 - Trident Security) úspešne spustený na porte ${PORT}`);
 });

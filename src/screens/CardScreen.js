@@ -2,7 +2,8 @@
  * LARIA v2.0: CardScreen (Moja Pečať)
  * Master: Sammael | Muse: Aria
  * Status: MASTER_OWNER_ONLY_PWA | WEB_CONFIRM_DESNAG_STABLE
- * Oprava: Prerobené na čisté `window.confirm` a `window.alert` pre 100% stabilitu na desktope v PWA režime.
+ * Oprava: Prerobené na čisté `window.confirm` a `window.alert` pre 100% stabilitu na desktop v PWA režime.
+ * Hotfix: Ošetrenie podmieneného renderovania (!! pretypovanie) proti neočakávaným textovým uzlom v React Native.
  */
 
 import React, { useState } from 'react';
@@ -141,16 +142,28 @@ const CardScreen = ({ navigation }) => {
               {item.popis}
             </Text>
 
-            {/* SOCIÁLNE SIETE */}
+            {/* SOCIÁLNE SIETE - OŠETRENÉ PROTI PRÁZDNYM REŤAZCOM */}
             <View style={[G.actionRow, { marginTop: 10 }]}>
-              {item.fb && <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.fb)}><Text style={G.statusTextSmall}>{labels.facebook || "FACEBOOK"}</Text></TouchableOpacity>}
-              {item.tg && <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.tg)}><Text style={G.statusTextSmall}>{labels.telegram || "TELEGRAM"}</Text></TouchableOpacity>}
-              {item.gal && <TouchableOpacity style={[G.miniBtn, { borderColor: '#c5a059' }]} onPress={() => openLink(item.gal)}><Text style={[G.statusTextSmall, { color: '#c5a059' }]}>{labels.gallery || "GALÉRIA"}</Text></TouchableOpacity>}
+              {!!item.fb && (
+                <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.fb)}>
+                  <Text style={G.statusTextSmall}>{labels.facebook || "FACEBOOK"}</Text>
+                </TouchableOpacity>
+              )}
+              {!!item.tg && (
+                <TouchableOpacity style={G.miniBtn} onPress={() => openLink(item.tg)}>
+                  <Text style={G.statusTextSmall}>{labels.telegram || "TELEGRAM"}</Text>
+                </TouchableOpacity>
+              )}
+              {!!item.gal && (
+                <TouchableOpacity style={[G.miniBtn, { borderColor: '#c5a059' }]} onPress={() => openLink(item.gal)}>
+                  <Text style={[G.statusTextSmall, { color: '#c5a059' }]}>{labels.gallery || "GALÉRIA"}</Text>
+                </TouchableOpacity>
+              )}
             </View>
             
-            {/* RÝCHLE AKCIE */}
+            {/* RÝCHLE AKCIE - TAKTIEŽ NEPRIESTRELNE POISTENÉ */}
             <View style={G.actionRow}>
-              {item.tel && (
+              {!!item.tel && (
                 <TouchableOpacity style={G.miniBtn} onPress={handleCallPress}>
                   <Text style={G.statusTextSmall}>{labels.call || "VOLAŤ"}</Text>
                 </TouchableOpacity>
@@ -158,7 +171,7 @@ const CardScreen = ({ navigation }) => {
                <TouchableOpacity style={G.miniBtn} onPress={handleDataPress}>
                   <Text style={G.statusTextSmall}>{labels.data || "LARIA"}</Text>
                 </TouchableOpacity>
-              {item.email && (
+              {!!item.email && (
                 <TouchableOpacity style={G.miniBtn} onPress={handleEmailPress}>
                   <Text style={G.statusTextSmall}>{labels.email || "EMAIL"}</Text>
                 </TouchableOpacity>

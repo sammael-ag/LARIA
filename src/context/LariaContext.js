@@ -1,11 +1,9 @@
 /**
- * LARIA QUANTUM ARCHITECTURE v8.3.0 (Gateway & Clean Vault Edition)
+ * LARIA QUANTUM ARCHITECTURE v8.3.2 (Gateway & Clean Vault Edition)
  * Context: LariaContext (THE 5D VAULT & CONFIG)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: REFORGED_SECURITY | ARCHITECT_KEY_SAFE_IN_UNDERWORLD | v8.3.0-CORS_ALIGNED
- * Description: Vyčistený front-end poklad. Distribúcia a kľúč architekta bezpečne odsunuté na Bránu.
- *              Splatený technologický dlh č.1 (striktný 0x kľúč) a vymazané staré IRC premenné.
- * v8.3.0 CORS_ALIGNED: Unifikovaná kontrola úspešnosti v onboardingu pre hladký prechod cez Mravenisko.
+ * STATUS: REFORGED_SECURITY | RECONNECTED_PIPELINES | v8.3.2-CLEAN
+ * Description: Zachovaná kompletná autentifikácia cez Apps Script, vyčistené duplicitné blockchain dopyty.
  */
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
@@ -18,7 +16,7 @@ import { fetchLariaTranslations } from '../services/GMatrixService.js';
 
 const LariaContext = createContext();
 
-// 🔐 TROJZUBEC: Prístup k našej unifikovanej bráne maveniska
+// 🔐 TROJZUBEC: Prístup k našej unifikovanej bráne maveniska (Apps Script ponechaný!)
 const brana_p1 = "https://script.google.com/macros/s/";
 const brana_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ";
 const brana_p3 = "/exec";
@@ -30,6 +28,8 @@ export const LariaProvider = ({ children }) => {
     generateAutoWallet, 
     recoverWalletFromKey, 
     syncWalletData, 
+    requestLariaOnboarding, // 🚀 Vytiahnuté bezpečné Railway onboardovanie
+    lariaBalance,           // 📡 Sledujeme už očistený stav priamo z KryptoContextu
     ownerAddress, 
     rpcUrl, 
     lariaContractAddress 
@@ -48,17 +48,16 @@ export const LariaProvider = ({ children }) => {
     identity: { 
       SECURE_ID: null, sha: null, meno: "Sammael", kat: "Majster", lok: "Rákoš",    
       popis: "", tel: "", email: "", fb: "", tg: "", gal: "", isPublic: false, 
-      poznamka: "", krypt: null, privateKey: null, jazyk: "sk" // 🪓 IRC premenná Signal úspešne odstránená
+      poznamka: "", krypt: null, privateKey: null, jazyk: "sk"
     }
   });
 
   /**
-   * 🔥 BEZPEČNÝ VRATNÍK: Distribúcia LARIA tokenov presunutá do podzemia
-   * Žiadny process.env.PRIVATE_KEY na frontende! Všetko rieši backend Brány.
+   * 🔥 BEZPEČNÝ VRATNÍK: Apps Script register ponechaný pre kontrolu a zápis účtov.
    */
   const onboardNewUser = async (newUserAddress) => {
     try {
-      console.log("🛠️ VRATNÍK: Posielam požiadavku na distribúciu pre:", newUserAddress);
+      console.log("🛠️ VRATNÍK: Posielam požiadavku na distribúciu/registráciu pre:", newUserAddress);
       
       const response = await fetch(ziskajBranaUrl(), {
         method: 'POST',
@@ -73,28 +72,29 @@ export const LariaProvider = ({ children }) => {
 
       const result = await response.json();
       if (result && (result.status === "success" || result.success === true)) {
-        console.log("✅ VRATNÍK: Mavenisko potvrdilo úspešnú distribúciu 0.001 LARIA!");
+        console.log("✅ VRATNÍK: Mavenisko overilo/zapísalo účet úspešne!");
+        
+        // 🛡️ Namiesto duplicitného čítania siete rovno pošleme požiadavku do nášho Krypto štítu, nech preklepne zostatky
         await syncWalletData(newUserAddress);
       } else {
-        console.warn("⚠️ VRATNÍK_ERROR: Brána odmietla distribúciu:", result.message || result.error);
+        console.warn("⚠️ VRATNÍK_ERROR: Brána odmietla operáciu:", result.message || result.error);
       }
     } catch (error) {
       console.error("❌ VRATNÍK_ERROR pri komunikácii s Bránou:", error.message);
     }
   };
 
+  /**
+   * 🛡️ KRYPTO_REPAIR: Odľahčená verzia bez duplicitného bombardovania blockchainu.
+   * Kontrolu nuly zverujeme stavu z KryptoContextu a v prípade potreby aktivujeme čistú dotáciu.
+   */
   const checkAndRepairLariaAssets = async (address) => {
     if (!address) return;
     try {
-      const provider = new ethers.JsonRpcProvider(rpcUrl);
-      const minABI = ["function balanceOf(address) view returns (uint256)"];
-      const contract = new ethers.Contract(lariaContractAddress, minABI, provider);
-      const balanceRaw = await contract.balanceOf(address);
-      const balance = parseFloat(ethers.formatUnits(balanceRaw, 18));
-      const nonce = await provider.getTransactionCount(address);
-
-      if (balance < 0.001 && nonce === 0) {
-        await onboardNewUser(address);
+      // Ak už z KryptoContextu vieme, že používateľ má 0.0000 LARIA, spúšťame bezpečný onboarding
+      if (parseFloat(lariaBalance) === 0) {
+        console.log("📡 [LariaContext] Detekovaný nulový stav cez KryptoContext. Spúšťam dotáciu.");
+        await requestLariaOnboarding(address);
       }
     } catch (e) {
       console.log("❌ AUTO-REPAIR_FAIL:", e.message);
@@ -123,7 +123,6 @@ export const LariaProvider = ({ children }) => {
         if (savedIdentity && savedIdentity.sha) {
           currentSha = savedIdentity.sha;
           
-          // 🛡️ Splácame technologický dlh č.1: Žiadne riskantné orezávanie bez prefixu!
           if (savedIdentity.poznamka && savedIdentity.poznamka.trim().toLowerCase().startsWith('0x')) {
             currentFing = savedIdentity.poznamka.trim().toLowerCase();
           } else {
@@ -136,7 +135,6 @@ export const LariaProvider = ({ children }) => {
           const defaultMeno = savedIdentity?.meno || "Sammael";
           currentSha = generatePureSHA(randomSalt, defaultMeno);
           
-          // ✨ Zrod nového fingu v striktnom zákone: 0x + 10 lowerCase znakov z čistého SHA
           const cistySha = currentSha.replace('0x', '').toLowerCase();
           currentFing = '0x' + cistySha.substring(0, 10);
           console.log(`✨ KRYPTOGRAFICKÝ KOKON: Zrod novej identity. FING: [${currentFing}]`);
@@ -154,16 +152,28 @@ export const LariaProvider = ({ children }) => {
           savedIdentity = { ...vault.identity, sha: currentSha, poznamka: currentFing, jazyk: aktivnyJazyk, SECURE_ID: null };
         } else {
           if (!savedIdentity.sha) savedIdentity.sha = currentSha;
-          savedIdentity.poznamka = currentFing; // Bezpečné priradenie unifikovaného fingu
+          savedIdentity.poznamka = currentFing; 
           savedIdentity.jazyk = aktivnyJazyk;
           savedIdentity.SECURE_ID = null;
         }
 
+        // 🧹 OŠETRENIE FALLBACKOV
+        savedIdentity.meno = savedIdentity.meno || "Sammael";
+        savedIdentity.kat = savedIdentity.kat || "Majster";
+        savedIdentity.lok = savedIdentity.lok || "Rákoš";
+        savedIdentity.popis = savedIdentity.popis || "";
+        savedIdentity.tel = savedIdentity.tel || "";
+        savedIdentity.email = savedIdentity.email || "";
+        savedIdentity.fb = savedIdentity.fb || "";
+        savedIdentity.tg = savedIdentity.tg || "";
+
         const updatedStatus = runLariaProtocol(savedIdentity, false);
         setVault({ status: updatedStatus, identity: savedIdentity });
 
+        // 🛡️ KRITICKÉ MIESTO STACK TRACE: Spúšťame len jeden čistý sync. Duplicitné čítanie siete zmazané.
         if (savedIdentity.krypt) {
           syncWalletData(savedIdentity.krypt);
+          // O štyri sekundy neskôr len skontrolujeme, či netreba zavolať relayer, žiadny raw RPC call navyše.
           setTimeout(() => checkAndRepairLariaAssets(savedIdentity.krypt), 4000);
         }
 
@@ -209,6 +219,8 @@ export const LariaProvider = ({ children }) => {
       const currentFing = cistySha ? '0x' + cistySha.substring(0, 10) : "";
       const updatedIdentity = { ...vault.identity, krypt: newWallet.address, privateKey: newWallet.privateKey, poznamka: currentFing, SECURE_ID: null };
       await syncIdentity(updatedIdentity);
+      
+      // 🚀 Zápis pošleme do starého Vratníka (Apps Script), ale onboarding tokenov zastreší Railway cez KryptoContext automatiku.
       setTimeout(() => onboardNewUser(newWallet.address), 2000);
       return newWallet.address;
     }

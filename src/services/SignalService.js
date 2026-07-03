@@ -102,7 +102,9 @@ export const SignalService = {
           txHash: resData.txHash ? String(resData.txHash).trim() : "0", 
           auth: resData.auth || {},
           // 🛰️ KĽÚČOVÝ MOST: Posielame notárske dáta (dataPack) z KryptoNode priamo do frontendu!
-          notaryData: resData.notaryData || null 
+          notaryData: resData.notaryData || null,
+          // 🔥 FIX: Prepúšťame čerstvý radar z mraveniska priamo do Contextu!
+          radar: resData.radar || resData.Radar || null 
         };
       } else {
         throw new Error(resData.message || resData.error || 'Neznáma chyba Matchmakera');

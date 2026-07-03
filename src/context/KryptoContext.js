@@ -1,11 +1,11 @@
 /**
- * LARIA v2.4.0: KryptoContext (Blockchain Core + Railway Relayer Integration)
+ * LARIA v2.4.2: KryptoContext (Blockchain Core + Railway Relayer Integration)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
- * Status: RAILWAY_RELAYER_INTEGRATED | PRODUCTION_READY
- * OPTIMALIZÁCIA: Automatický onboarding spustený pri detekcii 0.0000 LARIA s ochranou proti cykleniu.
+ * Status: RAILWAY_RELAYER_INTEGRATED | STRICT_MODE_SHIELD_ACTIVE
+ * OPTIMALIZÁCIA: Pridaný synchrónny useRef Set-filter proti double-triggeru v React Strict Mode.
  */
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useRef } from 'react';
 import { ethers } from 'ethers';
 
 // TIETO KONFIGURÁCIE SÚ PEVNÉ - BLOCKCHAIN NEPUSTÍ
@@ -14,7 +14,6 @@ const KRYPTO_CONFIG = {
   rpcUrl: "https://mainnet.base.org", 
   ownerAddress: "0x3fa2EAB0E933f36cB359F3Cc3E4456B68d2D735C", 
   lariaContractAddress: "0x03652A588A6c2C36f3976107B9C6B1dfE9f12dE3",
-  // 🛰️ SEM DAJ SVOJU ADRESU Z RAILWAY (Settings -> Networking/Domains)
   railwayUrl: "https://laria-production.up.railway.app/api/onboard",
   backendSecret: "LARIA_RIDGE_SECRET_2026"
 };
@@ -33,8 +32,8 @@ export const KryptoProvider = ({ children }) => {
 
   const [isLoading, setIsLoading] = useState(false);
   
-  // 🛡️ Bezpečnostný filter, aby sme nespamovali Railway, kým sa transakcia minuje
-  const [attemptedOnboardings, setAttemptedOnboardings] = useState([]);
+  // 🛡️ Synchrónny pamäťový filter, ktorý nečaká na asynchrónny re-render a okamžite seká Strict Mode duplikáty
+  const attemptedOnboardingsRef = useRef(new Set());
 
   // --- 🍫 ZROD IDENTITY (Generovanie peňaženky) ---
   const generateAutoWallet = async () => {
@@ -55,11 +54,14 @@ export const KryptoProvider = ({ children }) => {
   const requestLariaOnboarding = async (userAddress) => {
     const addrLower = userAddress.toLowerCase();
     
-    // Ak už na tomto mravcovi pracujeme, nepustíme duplicitnú požiadavku
-    if (attemptedOnboardings.includes(addrLower)) return;
+    // 🛡️ Synchrónna kontrola v referenčnom Set-e – ak už prebieha, okamžitá stopka
+    if (attemptedOnboardingsRef.current.has(addrLower)) {
+      console.log(`⏳ [KryptoContext] Onboarding pre ${addrLower} už v tejto sekunde prebieha. Blokujem Strict Mode duplikát.`);
+      return;
+    }
 
-    // Pridáme adresu do zoznamu spracovávaných
-    setAttemptedOnboardings(prev => [...prev, addrLower]);
+    // Okamžitý synchrónny zápis, kým sa stihne spustiť akákoľvek iná paralelná operácia
+    attemptedOnboardingsRef.current.add(addrLower);
     console.log(`📡 [KryptoContext] Štartujem automatický onboarding na Railway pre: ${userAddress}`);
 
     try {
@@ -80,17 +82,24 @@ export const KryptoProvider = ({ children }) => {
         setTimeout(() => syncWalletData(userAddress), 4000);
       } else {
         console.error(`❌ [KryptoContext] Relayer odmietol dotáciu: ${data.error}`);
-        // V prípade chyby uvoľníme adresu na nový pokus neskôr
-        setAttemptedOnboardings(prev => prev.filter(a => a !== addrLower));
+        // V prípade jednoznačného odmietnutia adresu uvoľníme pre budúce pokusy
+        attemptedOnboardingsRef.current.delete(addrLower);
       }
     } catch (error) {
       console.error("❌ [KryptoContext] Zlyhalo spojenie s Railway relayerom:", error);
-      setAttemptedOnboardings(prev => prev.filter(a => a !== addrLower));
+      // Pri sieťovom zlyhaní uvoľníme filter
+      attemptedOnboardingsRef.current.delete(addrLower);
     }
   };
 
   // --- 🔄 SYNCHRONIZÁCIA MATRIXU ---
   const syncWalletData = async (targetAddress) => {
+    // 🛡️ 1. CONCURRENCY GUARD: Ak už jedna synchronizácia beží, okamžite zahodíme súbežný dopyt
+    if (isLoading) {
+      console.log("⏳ [KryptoContext] Načítavanie už aktívne prebieha. Ignorujem duplicitný dopyt.");
+      return;
+    }
+
     const addressToQuery = targetAddress || krypt || KRYPTO_CONFIG.ownerAddress;
     
     if (!addressToQuery || !ethers.isAddress(addressToQuery)) {
@@ -102,16 +111,31 @@ export const KryptoProvider = ({ children }) => {
     try {
       const provider = new ethers.JsonRpcProvider(KRYPTO_CONFIG.rpcUrl);
 
-      // 1. ETH Balance
-      const rawEth = await provider.getBalance(addressToQuery);
-      const formattedEth = ethers.formatEther(rawEth); 
+      // 🛡️ 2. IZOLOVANÝ ETH BLOCK (Zlyhanie verejného RPC nezhodí aplikáciu)
+      let formattedEth = "0.000000";
+      try {
+        const rawEth = await provider.getBalance(addressToQuery);
+        formattedEth = ethers.formatEther(rawEth);
+      } catch (ethError) {
+        console.warn("⚠️ [KryptoContext] RPC uzol neodpovedal na dopyt ETH:", ethError.message);
+        formattedEth = ethBalance; 
+      }
 
-      // 2. LARIA Balance
-      const minABI = ["function balanceOf(address) view returns (uint256)"];
-      const contract = new ethers.Contract(KRYPTO_CONFIG.lariaContractAddress, minABI, provider);
-      
-      const rawLaria = await contract.balanceOf(addressToQuery);
-      const formattedLaria = ethers.formatUnits(rawLaria, 18);
+      // 🛡️ 3. IZOLOVANÝ LARIA ERC-20 BLOCK (Štít proti "missing revert data")
+      let formattedLaria = "0.0000";
+      try {
+        const minABI = ["function balanceOf(address) view returns (uint256)"];
+        const contract = new ethers.Contract(KRYPTO_CONFIG.lariaContractAddress, minABI, provider);
+        
+        const rawLaria = await contract.balanceOf(addressToQuery);
+        formattedLaria = ethers.formatUnits(rawLaria, 18);
+      } catch (lariaError) {
+        console.warn(
+          "⚠️ [KryptoContext] Stíšená chyba kontraktu (missing revert data / rate-limit). Fallback na bezpečný režim. Detail:",
+          lariaError.message
+        );
+        formattedLaria = lariaBalance; 
+      }
       
       // --- ROZDVOJOVAČ LOGIKY ---
       if (addressToQuery.toLowerCase() === KRYPTO_CONFIG.ownerAddress.toLowerCase()) {
@@ -132,7 +156,7 @@ export const KryptoProvider = ({ children }) => {
       }
 
     } catch (error) {
-      console.error("❌ Matrix Sync Error:", error.message);
+      console.error("❌ Neočakávaná kritická havária v hlavnom Matrix Sync:", error.message);
     } finally {
       setIsLoading(false);
     }
@@ -151,7 +175,7 @@ export const KryptoProvider = ({ children }) => {
     isLoading,
     generateAutoWallet,
     syncWalletData,
-    requestLariaOnboarding // Exponujeme von, ak by sme chceli niekde tlačiť manuálne gombíkom
+    requestLariaOnboarding 
   };
 
   return <KryptoContext.Provider value={kryptoVibe}>{children}</KryptoContext.Provider>;

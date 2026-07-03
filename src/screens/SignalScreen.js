@@ -1,12 +1,13 @@
 /**
- * LARIA Signal SCREEN v16.2-LIGHTWEIGHT (Barefoot Precision & Crystal Interface)
+ * LARIA Signal SCREEN v16.5-CRYSTAL-WIRELESS (Barefoot Precision & Integrated Interface)
  * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
- * STATUS: CONTEXT_ALIGNED / ULTRA_LIGHTWEIGHT / MONOLITH_SAFE / v16.2-FIXED
- * * * PREHĽAD ZMIEN A SÚLAD S ÚSTAVNÝM ZÁKONOM:
- * - 🪐 DYNAMICKÁ SYNCHRONIZÁCIA Z MRAVENISKA: Zapracovaný Blok 1. Ak lokálny trezor partnera nepozná, stavový automat sa riadi realitou zo siete (liveHandshake).
- * - 🧼 DEKODÉR SIEŤOVÉHO MONOLITU: Zapracovaný Blok 2. Meno partnera (channelName) sa dynamicky vybalí z msg/backMsg, ak chýba v lokálnom trezore.
- * - ✂️ ABSOLÚTNA OČISTA LOGIKY: Všetky prepočítané stavy tečú hladko z nového CrystalCore kontextu.
- * - 📡 ASYNCHRÓNNY KRYPTO-MOST v2.0: Aktualizovaný nesúlad premenných (payloadReady -> dataPack) a integrovaný strážny secret pre Relayer v1.7.
+ * STATUS: FULLY_ALIGNED / CONTEXT_MATING_OK / ULTRA_LIGHTWEIGHT / v16.5-FIXED
+ * * * PREHĽAD ZMIEN A ZLÍCOVANIE:
+ * - 📡 MATING S V17 CONTEXTOM: Odstránené neexistujúce premenné (currentContractStatus, liveHandshakeMessage).
+ * - ⚡ PURE CONTEXT ACTIONS: Funkcie handleAcceptHandshake a handleRejectHandshake kompletne delegované 
+ *   na kontextové confirmLariaContract, čím sa eliminuje manuálny zápis a duplicita kódu.
+ * - 🛡️ CRYPTO FINGER UNIFIER: Pridaná lokálna poistka overAUnifikujFing pre stopercentnú zhodu ID pri filtrovaní chatu.
+ * - 🧼 KRYŠTÁLOVÉ ZOBRAZENIE: Zachovaný kompletný reaktívny stavový automat a čistá typografia.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -25,71 +26,66 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { G, ACCENT, Signal_BOTTOM, Signal_CHAT, HANDSHAKE_PANEL } from '../styles/styles.js';
 import { useSignal } from '../context/SignalContext.js';
 import { useLaria } from '../context/LariaContext.js'; 
-import { useContacts } from '../context/ContactContext.js'; 
-import { SignalService } from '../services/SignalService.js';
+
+/**
+ * 🛡️ STRIKTNÝ UNIFIKÁTOR ID: Pretransformuje akýkoľvek vstup na 0x + 10 lowerCase znakov.
+ */
+const overAUnifikujFing = (rawFing) => {
+  if (!rawFing) return null;
+  let clean = rawFing.toString().trim().toLowerCase();
+  if (clean.startsWith('l_')) clean = clean.substring(2);
+  const cistySha = clean.startsWith('0x') ? clean.replace('0x', '') : clean;
+  return `0x${cistySha.substring(0, 10)}`;
+};
 
 const SignalScreen = ({ route, navigation }) => {
   const laria = useLaria(); 
   const { vault } = laria;
-  const { addContact, updateContractStatus } = useContacts(); 
   
   const [note, setNote] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [isNetOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const flatListRef = useRef();
 
-  // Vytiahneme prepočítané klubové kontakty, recepciu a prúdy z globálneho mozgu
-  const { contacts, unknownContacts, incomingRequests, sendLariaPackage, sendChatMessage, resolveHandshakeStatus, markAsRead } = useSignal();
-
-  // --- 🛰️ EXTRAKCIA A SYNCHRONIZÁCIA CIEĽA ---
+  // --- 🛰️ EXTRAKCIA CIEĽA ---
   const { target, fallbackFing } = route.params || {};
   const targetFing = (target?.fing || fallbackFing || '').trim().toLowerCase();
   const masterName = vault?.identity?.meno || 'Sammael';
 
-  // Dynamické hľadanie partnera buď v klube, alebo na live recepcii
-  const prislusnyKontakt = contacts?.find(c => c.fing === targetFing) || 
-                            unknownContacts?.find(c => c.fing === targetFing);
+  // --- 🧠 DELEGÁCIA LOGIKY GLOBÁLNEMU MOZGU (CONTEXTU) ---
+  const { 
+    contacts, 
+    unknownContacts, 
+    incomingRequests, 
+    sendLariaPackage, 
+    confirmLariaContract, // 🔥 Nové priame žhavenie Matchmakeru cez kontext
+    sendChatMessage, 
+    markAsRead
+  } = useSignal();
 
-  // =========================================================================
-  // 🪐 BLOK 1 & BLOK 2: DYNAMICKÁ SYNCHRONIZÁCIA A DEKÓDOVANIE Z MRAVENISKA
-  // =========================================================================
+  // 🛰️ KRYŠTÁLOVÉ PREPOJENIE IDENTÍT CEZ UNIFIKOVANÝ FINGERPRINT
+  const cleanTargetFing = overAUnifikujFing(targetFing);
   
-  // 1. Nájdeme akýkoľvek živý handshake v histórii prúdov
-  const liveHandshake = incomingRequests?.find(req => req.fing === targetFing && req.isHandshake);
+  const aktivnyHandshakeLog = incomingRequests?.find(req => 
+    req.isHandshake && overAUnifikujFing(req.fing) === cleanTargetFing
+  );
 
-  // 2. Vytiahneme surový stav z lokálneho klubu/recepcie
-  let contractStatus = prislusnyKontakt?.contractStatus !== undefined ? Number(prislusnyKontakt.contractStatus) : -1;
+  const prislusnyKontakt = contacts?.find(c => overAUnifikujFing(c.fing) === cleanTargetFing) || 
+                           unknownContacts?.find(c => overAUnifikujFing(c.fing) === cleanTargetFing);
 
-  // Ak lokálny trezor partnera nepozná (-1) alebo tvrdí, že sa stále čaká (0), ale sieť už vie viac:
-  if ((contractStatus === -1 || contractStatus === 0) && liveHandshake) {
-    // Prísne preberáme reálny stav, ktorý je zapísaný priamo v sieti
-    const networkStatus = liveHandshake.contractStatus !== undefined ? Number(liveHandshake.contractStatus) : 0;
-    contractStatus = networkStatus;
-  }
+  // Surová pravda z live handshake logu má absolútnu prednosť pred asynchrónnou databázou:
+  const finalStatus = aktivnyHandshakeLog !== undefined 
+    ? Number(aktivnyHandshakeLog.contractStatus) 
+    : (prislusnyKontakt?.contractStatus !== undefined ? Number(prislusnyKontakt.contractStatus) : -1);
 
-  // 3. Dynamický dekodér identity priamo z pretekajúceho sieťového balíka (Blok 2)
-  let sietovaIdentita = null;
-  if (liveHandshake && contractStatus === 1) {
-    try {
-      // Ak sme boli iniciátor (isIncoming === false), partner odpovedal v backMsg
-      // Ak sme boli prijímateľ (isIncoming === true), profil partnera je v msg
-      const rawJson = liveHandshake.isIncoming === false ? liveHandshake.backMsg : liveHandshake.msg;
-      
-      if (rawJson && rawJson.startsWith('{')) {
-        sietovaIdentita = JSON.parse(rawJson);
-      }
-    } catch (e) {
-      console.warn("⚠️ Nepodarilo sa za behu rozbaliť sieťový monolit:", e);
-    }
-  }
+  const finalIsIncoming = aktivnyHandshakeLog !== undefined 
+    ? aktivnyHandshakeLog.isIncoming === true 
+    : !prislusnyKontakt?.temporary;
 
-  // Opravíme channelName, aby okamžite ukázal meno zo siete, ak nemáme kontakt v trezore
-  const channelName = prislusnyKontakt?.meno || sietovaIdentita?.meno || target?.meno || targetFing || "Laria Handshake";
-
-  // --- 🧭 SMEROVÁ INTUÍCIA STAVOVÉHO AUTOMATU ---
-  const isContractApproved = contractStatus === 1;
-  const isTemporaryOnReception = !!prislusnyKontakt?.temporary;
-  const isIncomingHandshake = liveHandshake ? liveHandshake.isIncoming === true : isTemporaryOnReception;
+  // 🔄 FIX RECEPCIE (Otočenie zrkadla pre odchádzajúce žiadosti):
+  const channelName = (finalStatus === 0 && !finalIsIncoming)
+    ? (target?.meno || targetFing || "Laria Handshake")
+    : (prislusnyKontakt?.meno || target?.meno || targetFing || "Laria Handshake");
 
   // --- 🛡️ BEZPEČNÝ BLESKOVÝ MARK AS READ ---
   useEffect(() => {
@@ -118,101 +114,18 @@ const SignalScreen = ({ route, navigation }) => {
     };
   };
 
-  // --- 🟢 AKCIA: ALLOW (POTVRDENIE ZMLUVY & ZÁPIS DO TREZORU) ---
-  const handleAcceptHandshake = async (handshakeMsg) => {
+  // --- 🟢 AKCIA: ALLOW (POTVRDENIE ZMLUVY CEZ KONTEXT) ---
+  const handleAcceptHandshake = async () => {
     try {
       const mojeData = zostavMojeMonolitneData();
       
-      const res = await SignalService.manageContract('CONFIRM_CONTRACT', {
-        fing_a: targetFing,
-        fing_b: mojeData.fing,
-        status_b: "1",
-        txHash: "1",
-        payload: JSON.stringify(mojeData)
-      });
+      // Všetka ťažká logika, zápis do trezoru a import boli prenechané kontextu
+      const res = await confirmLariaContract(targetFing, true, mojeData);
 
       if (res && res.success) {
-        let partnerData = {};
-        try {
-          const rawMsg = handshakeMsg?.msg || '';
-          if (rawMsg.startsWith('{')) partnerData = JSON.parse(rawMsg);
-        } catch(e) {
-          console.warn("Nepodarilo sa rozparsovať payload partnera, prepínam na fallback.");
-        }
-
-        await addContact({
-          fing: targetFing,
-          meno: partnerData.meno || target?.meno || handshakeMsg?.senderMeno || targetFing,
-          kat: partnerData.kat || target?.kat || 'Overený partner',
-          lok: partnerData.lok || target?.lok || 'V sieti',
-          popis: partnerData.popis || target?.popis || partnerData.handshakeNote || handshakeMsg?.msg || 'Spojenie nadviazané cez handshake.',
-          tel: partnerData.tel || '',
-          email: partnerData.email || '',
-          fb: partnerData.fb || '',
-          tg: partnerData.tg || '',
-          gal: partnerData.gal || target?.gal || '',
-          krypt: partnerData.krypt || null,
-          contractStatus: 1, 
-          txHash: "1"        
-        });
-
-        if (handshakeMsg?.id) resolveHandshakeStatus(handshakeMsg.id, 1);
-        if (typeof updateContractStatus === 'function') {
-          await updateContractStatus(targetFing, 1, "1");
-        }
-
-        Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Brána otvorená.");
-
-        // =========================================================================
-        // 🔥 TICHÝ ASYNCHRÓNNY KRYPTO-MOST (Aktualizované pre KryptoNode v2.0 a Relayer v1.7)
-        // =========================================================================
-        if (res.notaryData && res.notaryData.dataPack) {
-          (async () => {
-            try {
-              console.log("📡 [CRYPTO_BRIDGE] Odpaľujem čistý dataPack na Railway Relayer...");
-              
-              // Zostavíme kompletný balík pre Relayer presne podľa štruktúry, ktorú očakáva
-              const relayerPayload = {
-                secret: "LARIA_RIDGE_SECRET_2026", // Naša strážna pečať
-                myFing: res.notaryData.dataPack.myFing,
-                targetFing: res.notaryData.dataPack.targetFing,
-                myKrypt: res.notaryData.dataPack.myKrypt,
-                targetKrypt: res.notaryData.dataPack.targetKrypt,
-                typeText: res.notaryData.dataPack.typeText
-              };
-
-              const relayerResponse = await fetch("https://laria-production.up.railway.app/api/notary", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(relayerPayload)
-              });
-
-              const relayerResult = await relayerResponse.json();
-              
-              if (relayerResult && relayerResult.success) {
-                console.log(`⛓️ [CRYPTO_BRIDGE] Blockchain úspešne spečatený! TxHash: ${relayerResult.txHash}`);
-                
-                // 🛰️ SPÄTNÝ ZÁPIS DO MRAVENISKA:
-                // Prepíšeme dočasnú jednotku "1" na reálny 0x... hash z Base blockchainu.
-                await SignalService.manageContract('CONFIRM_CONTRACT', {
-                  fing_a: targetFing,
-                  fing_b: mojeData.fing,
-                  status_b: "1",
-                  blockchainHash: relayerResult.txHash
-                });
-                
-                console.log("💎 [CRYPTO_BRIDGE] Dočasná '1' bola v Mravenisku úspešne premazaná reálnym krypto hashom.");
-              } else {
-                // 🎯 SEM CHCEME SPADNUŤ PRI TESTE NA SUCHO!
-                console.log("🎯 [CRYPTO_BRIDGE] Suchý handshake zachytený Relayerom:", relayerResult?.error || "Kontrakt zatiaľ neexistuje");
-              }
-            } catch (bridgeErr) {
-              // 🚨 Očakávaný sieťový kŕč alebo pád vyvolaný chýbajúcim kontraktom
-              console.warn("⚠️ [CRYPTO_BRIDGE] Očakávaný kontrolovaný pád Relayeru pri teste na sucho:", bridgeErr.toString());
-            }
-          })();
-        }
-        // =========================================================================
+        Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Rádiové frekvencie zladené.");
+      } else {
+        Alert.alert("CHYBA", res.error || "Nepodarilo sa overiť kontrakt.");
       }
     } catch (err) {
       console.error("❌ ALLOW operácia zlyhala:", err);
@@ -220,22 +133,14 @@ const SignalScreen = ({ route, navigation }) => {
   };
 
   // --- 🔴 AKCIA: ABORT (ODMIETNUTIE ZMLUVY) ---
-  const handleRejectHandshake = async (handshakeMsg) => {
+  const handleRejectHandshake = async () => {
     try {
-      const mojeData = zostavMojeMonolitneData();
-      const res = await SignalService.manageContract('CONFIRM_CONTRACT', {
-        fing_a: targetFing,
-        fing_b: mojeData.fing,
-        status_b: "2",
-        txHash: "2" 
-      });
+      const res = await confirmLariaContract(targetFing, false);
       
       if (res && res.success) {
-        if (handshakeMsg?.id) resolveHandshakeStatus(handshakeMsg.id, 2);
-        if (typeof updateContractStatus === 'function') {
-          await updateContractStatus(targetFing, 2, "2");
-        }
         navigation.goBack();
+      } else {
+        Alert.alert("CHYBA", res.error || "Nepodarilo sa odmietnuť kontrakt.");
       }
     } catch (err) {
       console.error("❌ ABORT operácia zlyhala:", err);
@@ -270,19 +175,19 @@ const SignalScreen = ({ route, navigation }) => {
     }
   };
 
-  // --- 🧼 DEKODÉR PRICHÁDZAJÚCEHO MONOLITU PRE ZOBRAZENIE ŽIADOSTI ---
+  // Vytiahnutie textu správy pre zobrazenie požiadavky
   let zobrazenaSpravaHandshake = prislusnyKontakt?.popis || "Žiadosť o bezpečné prepojenie.";
-  if (liveHandshake?.msg && liveHandshake.msg.startsWith('{')) {
+  if (aktivnyHandshakeLog?.msg && aktivnyHandshakeLog.msg.startsWith('{')) {
     try {
-      const parsnutyMonolit = JSON.parse(liveHandshake.msg);
+      const parsnutyMonolit = JSON.parse(aktivnyHandshakeLog.msg);
       zobrazenaSpravaHandshake = parsnutyMonolit.popis || parsnutyMonolit.handshakeNote || zobrazenaSpravaHandshake;
     } catch(e) {}
   }
 
-  // Extrakcia čistého chatu pre FlatList
+  // Extrakcia čistého chatu pre FlatList s presným unifikovaným porovnaním
   const chatMessagesOnly = incomingRequests
     ? incomingRequests
-        .filter(msg => msg.fing === targetFing && !msg.isHandshake)
+        .filter(msg => overAUnifikujFing(msg.fing) === cleanTargetFing && !msg.isHandshake)
         .map(msg => ({
           id: msg.id || 'MSG_' + Date.now() + Math.random(),
           user: msg.isMe ? masterName : channelName,
@@ -313,8 +218,8 @@ const SignalScreen = ({ route, navigation }) => {
         </View>
 
         {/* 🛠️ ULTRA-LIGHTWEIGHT STAVOVÝ AUTOMAT SCREENU */}
-        {contractStatus === 0 && isIncomingHandshake ? (
-          /* REŽIM 1: PRICHÁDZAJÚCI HANDSHAKE (ALLOW / ABORT) */
+        {finalStatus === 0 && finalIsIncoming ? (
+          /* REŽIM 1: PRICHÁDZAJÚCI HANDSHAKE */
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
             <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', padding: 20, borderRadius: 6, width: '100%' }}>
               <Text style={[G.statusTextSmall, { color: '#E74C3C', marginBottom: 10, textTransform: 'uppercase', fontWeight: 'bold' }]}>⚠️ Prichádzajúca Pečať (Bunka H):</Text>
@@ -323,30 +228,24 @@ const SignalScreen = ({ route, navigation }) => {
               </Text>
               
               <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
-                <TouchableOpacity 
-                  style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnReject, { flex: 1, paddingVertical: 14 }]} 
-                  onPress={() => handleRejectHandshake(liveHandshake)}
-                >
+                <TouchableOpacity style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnReject, { flex: 1, paddingVertical: 14 }]} onPress={handleRejectHandshake}>
                   <Text style={[HANDSHAKE_PANEL.buttonText, { color: '#E74C3C' }]}>[ ABORT ]</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity 
-                  style={[HANDSHAKE_PANEL.button, { flex: 1, paddingVertical: 14, backgroundColor: 'rgba(197, 160, 89, 0.15)', borderColor: ACCENT || '#c5a059', borderWidth: 1, alignItems: 'center', borderRadius: 4 }]} 
-                  onPress={() => handleAcceptHandshake(liveHandshake)}
-                >
+                <TouchableOpacity style={[HANDSHAKE_PANEL.button, { flex: 1, paddingVertical: 14, backgroundColor: 'rgba(197, 160, 89, 0.15)', borderColor: ACCENT || '#c5a059', borderWidth: 1, alignItems: 'center', borderRadius: 4 }]} onPress={handleAcceptHandshake}>
                   <Text style={[HANDSHAKE_PANEL.buttonText, { color: ACCENT || '#c5a059', fontWeight: 'bold' }]}>[ ALLOW ]</Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
-        ) : contractStatus === 0 && !isIncomingHandshake ? (
-          /* REŽIM 2: ODOSLANÝ HANDSHAKE (ČAKÁ SA) */
+        ) : finalStatus === 0 && !finalIsIncoming ? (
+          /* REŽIM 2: ODOSLANÝ HANDSHAKE */
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
             <Text style={[G.cardDescriptionText, { color: '#888', textAlign: 'center', fontSize: 16, lineHeight: 24 }]}>
               ⏳ Kontrakt bol bezpečne vyslaný do Matrixu.{"\n"}Čaká sa na akceptáciu (ALLOW) zo strany partnera...
             </Text>
           </View>
-        ) : isContractApproved ? (
+        ) : finalStatus === 1 ? (
           /* REŽIM 3: AKTÍVNE CHAT ROZHRANIE */
           <FlatList
             ref={flatListRef}
@@ -369,18 +268,11 @@ const SignalScreen = ({ route, navigation }) => {
                   { marginTop: isSameUserAsPrevious ? 1 : 10 }
                 ]}>
                   {!isSameUserAsPrevious && (
-                    <Text style={[
-                      G.cardDescriptionText, 
-                      Signal_CHAT.authorName,
-                      { color: isMyMessage ? (ACCENT || '#c5a059') : '#FF77FF' }
-                    ]}>
+                    <Text style={[G.cardDescriptionText, Signal_CHAT.authorName, { color: isMyMessage ? (ACCENT || '#c5a059') : '#FF77FF' }]}>
                       {item.user}
                     </Text>
                   )}
-                  <View style={[
-                    Signal_CHAT.bubbleContainer,
-                    isMyMessage ? Signal_CHAT.bubbleRight : Signal_CHAT.bubbleLeft
-                  ]}>
+                  <View style={[Signal_CHAT.bubbleContainer, isMyMessage ? Signal_CHAT.bubbleRight : Signal_CHAT.bubbleLeft]}>
                     <Text style={[G.cardDescriptionText, Signal_CHAT.messageText]}>
                       {item.msg} 
                     </Text>
@@ -433,7 +325,7 @@ const SignalScreen = ({ route, navigation }) => {
       </View>
 
       {/* CHAT INPUT PRE AKTÍVNY REŽIM 3 */}
-      {isContractApproved && (
+      {finalStatus === 1 && (
         <View style={[Signal_BOTTOM.container, { paddingBottom: 20, backgroundColor: '#000000' }]}>
           <View style={Signal_BOTTOM.innerWrapper}>
             <TextInput
