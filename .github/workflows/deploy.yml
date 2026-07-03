@@ -6,9 +6,9 @@ on:
       - main
 
 permissions:
-  contents: write
-  pages: write      # 🔥 PRIDANÉ: Nové prísne pravidlá GitHubu vyžadujú povolenie na zápis stránok
-  id-token: write   # 🔥 PRIDANÉ: Potrebné pre bezpečné overenie OIDC tokenu v novom Node prostredí
+  contents: read     # Stačí nám čítať kód
+  pages: write       # Zápis priamo na GitHub Pages server
+  id-token: write    # Overenie identity pre laria.space
 
 jobs:
   deploy:
@@ -16,12 +16,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 # 🚀 MODERNIZÁCIA: Prechod na v4, ktorá natívne miluje nové Node prostredie
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4 # 🚀 MODERNIZÁCIA: Prechod na v4 pre stabilné cachovanie
+        uses: actions/setup-node@v4
         with:
-          node-version: '20' # 📈 UPGRADE: Zdvihla som to na stabilnú '20' (Expo 51 aj krypto knižnice na nej idú ako hodinky a GitHub ju nešikanuje)
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -31,9 +31,10 @@ jobs:
       - name: Build Web App (Expo + Metro Export)
         run: npm run build:web
 
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4.7.2 # 🚀 FIX: Vytiahla som verziu na najnovšiu desatinnú čiarku (v4.7.2 plne rieši zamŕzanie zápisu CNAME pod Node 24)
+      - name: Upload Artifact to Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          folder: ./dist
-          branch: gh-pages
-          clean: true
+          path: ./dist # Sem smerujeme vygenerovaný web, ktorý sa bezpečne zabalí
+
+      - name: Deploy to GitHub Pages Natívne
+        uses: actions/deploy-pages@v4 # Oficiálna akcia od GitHubu, žiadna tretia strana
