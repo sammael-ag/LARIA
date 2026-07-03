@@ -287,7 +287,7 @@ const SignalScreen = ({ route, navigation }) => {
           /* REŽIM 4: ČISTÝ ŠTART (ODOSLANIE PRVEJ ŽIADOSTI) */
           <View style={{ paddingHorizontal: 20 }}>
             <Text style={[G.cardDescriptionText, { color: '#aaa', marginBottom: 15, textAlign: 'center' }]}>
-              Zadaj sprievodnú správu pre bezpečné overenie zmluvy (bunka H):
+              Požiadaj kontakt o výmenu vizitky:
             </Text>
             <TextInput
               style={[
