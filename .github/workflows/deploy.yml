@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write      # 🔥 PRIDANÉ: Nové prísne pravidlá GitHubu vyžadujú povolenie na zápis stránok
+  id-token: write   # 🔥 PRIDANÉ: Potrebné pre bezpečné overenie OIDC tokenu v novom Node prostredí
 
 jobs:
   deploy:
@@ -14,24 +16,23 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # 🚀 MODERNIZÁCIA: Prechod na v4, ktorá natívne miluje nové Node prostredie
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4 # 🚀 MODERNIZÁCIA: Prechod na v4 pre stabilné cachovanie
         with:
-          node-version: '18' # Expo 51 a React 18 milujú Node v18/v20
-          cache: 'npm'       # Automaticky cachuje node_modules, aby build trval pár sekúnd
+          node-version: '20' # 📈 UPGRADE: Zdvihla som to na stabilnú '20' (Expo 51 aj krypto knižnice na nej idú ako hodinky a GitHub ju nešikanuje)
+          cache: 'npm'
 
       - name: Install dependencies
         run: |
           npm install --legacy-peer-deps
-          # --legacy-peer-deps používame kvôli rôznym verziám krypto knižníc a expro balíkov, nech to prejde ako nôž maslom
 
       - name: Build Web App (Expo + Metro Export)
         run: npm run build:web
 
       - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: JamesIves/github-pages-deploy-action@v4.7.2 # 🚀 FIX: Vytiahla som verziu na najnovšiu desatinnú čiarku (v4.7.2 plne rieši zamŕzanie zápisu CNAME pod Node 24)
         with:
           folder: ./dist
           branch: gh-pages
