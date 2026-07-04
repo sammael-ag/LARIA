@@ -1,8 +1,8 @@
 /**
- * LARIA v2.4.2: KryptoContext (Blockchain Core + Railway Relayer Integration)
+ * LARIA v2.4.4: KryptoContext (Blockchain Core + Railway Relayer Integration)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
- * Status: RAILWAY_RELAYER_INTEGRATED | STRICT_MODE_SHIELD_ACTIVE
- * OPTIMALIZÁCIA: Pridaný synchrónny useRef Set-filter proti double-triggeru v React Strict Mode.
+ * Status: RAILWAY_RELAYER_INTEGRATED | STRICT_MODE_SHIELD_ACTIVE | INITIAL_NULL_SHIELD
+ * OPTIMALIZÁCIA: Zavedený počiatočný stav null pre lariaBalance proti falošným dotáciám pri remounte.
  */
 
 import React, { createContext, useContext, useState, useRef } from 'react';
@@ -23,14 +23,16 @@ const KryptoContext = createContext();
 export const KryptoProvider = ({ children }) => {
   // --- KANÁL A: USER (Identity) ---
   const [krypt, setKrypt] = useState(null); 
-  const [lariaBalance, setLariaBalance] = useState("0.0000");
+  // 🛡️ HLAVNÝ ZÁSAH: Inicializujeme na null namiesto "0.0000". Kým sieť neodpovie, stav je neznámy.
+  const [lariaBalance, setLariaBalance] = useState(null); 
   const [ethBalance, setEthBalance] = useState("0.000000");
 
   // --- KANÁL B: SYSTEM DISPATCHER (Vrátnik/Majiteľ) ---
   const [systemLariaBalance, setSystemLariaBalance] = useState("0.0000");
   const [systemEthBalance, setSystemEthBalance] = useState("0.000000");
 
-  const [isLoading, setIsLoading] = useState(false);
+  // 🛡️ Sledovanie stavu načítavania RPC dát unifikované pre LariaContext
+  const [isLoadingKrypto, setIsLoadingKrypto] = useState(false);
   
   // 🛡️ Synchrónny pamäťový filter, ktorý nečaká na asynchrónny re-render a okamžite seká Strict Mode duplikáty
   const attemptedOnboardingsRef = useRef(new Set());
@@ -95,7 +97,7 @@ export const KryptoProvider = ({ children }) => {
   // --- 🔄 SYNCHRONIZÁCIA MATRIXU ---
   const syncWalletData = async (targetAddress) => {
     // 🛡️ 1. CONCURRENCY GUARD: Ak už jedna synchronizácia beží, okamžite zahodíme súbežný dopyt
-    if (isLoading) {
+    if (isLoadingKrypto) {
       console.log("⏳ [KryptoContext] Načítavanie už aktívne prebieha. Ignorujem duplicitný dopyt.");
       return;
     }
@@ -107,7 +109,7 @@ export const KryptoProvider = ({ children }) => {
       return;
     }
 
-    setIsLoading(true);
+    setIsLoadingKrypto(true);
     try {
       const provider = new ethers.JsonRpcProvider(KRYPTO_CONFIG.rpcUrl);
 
@@ -149,16 +151,14 @@ export const KryptoProvider = ({ children }) => {
           setKrypt(addressToQuery);
         }
 
-        // 🎯 AUTOMATICKÁ AKTIVÁCIA: Ak má nový registrovaný mravec na konte nulu, rovno voláme relayer
-        if (parseFloat(formattedLaria) === 0 && addressToQuery.toLowerCase() !== KRYPTO_CONFIG.ownerAddress.toLowerCase()) {
-          requestLariaOnboarding(addressToQuery);
-        }
+        // 🛡️ KOREKCIA: Žiadne automatické spúšťanie onboarding relayera odtiaľto.
+        // Riadenie a načasovanie dotácií bolo plne zverené externému LariaContextu.
       }
 
     } catch (error) {
       console.error("❌ Neočakávaná kritická havária v hlavnom Matrix Sync:", error.message);
     } finally {
-      setIsLoading(false);
+      setIsLoadingKrypto(false);
     }
   };
 
@@ -172,7 +172,7 @@ export const KryptoProvider = ({ children }) => {
     adminLariaBalance: systemLariaBalance, 
     systemEthBalance,
     systemLariaBalance,
-    isLoading,
+    isLoadingKrypto, 
     generateAutoWallet,
     syncWalletData,
     requestLariaOnboarding 
