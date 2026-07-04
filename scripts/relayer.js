@@ -22,7 +22,7 @@ app.use(express.json());
 // ⚙️ Konfigurácia Base Mainnetu a Mraveniska
 const BASE_RPC_URL = "https://mainnet.base.org";
 const LARIA_GATEWAY_ADDRESS = "0xBb9a281a3EE78629669D69771AfDA0716fFa9DEb";
-const LARIA_NOTARY_ADDRESS = "0xf849a4e046fC6D8adFef9c4594ae417306a4f0B2";
+const LARIA_NOTARY_ADDRESS = "0x27305270861fD39aCb88F55Feea1b27c47A5EE8E";
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
 const brana_p1 = "https://script.google.com/macros/s/";
