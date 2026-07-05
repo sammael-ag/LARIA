@@ -1,12 +1,11 @@
 /**
- * LARIA Signal SCREEN v16.5-CRYSTAL-WIRELESS (Barefoot Precision & Integrated Interface)
+ * LARIA Signal SCREEN v17.4.0-CRYSTAL-PURGE (Barefoot Precision & Integrated Interface)
  * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
- * STATUS: FULLY_ALIGNED / CONTEXT_MATING_OK / ULTRA_LIGHTWEIGHT / v16.5-FIXED
+ * STATUS: FULLY_ALIGNED / CONTEXT_MATING_OK / ULTRA_LIGHTWEIGHT / v17.4.0-CRYSTAL-PURGE
  * * * PREHĽAD ZMIEN A ZLÍCOVANIE:
- * - 📡 MATING S V17 CONTEXTOM: Odstránené neexistujúce premenné (currentContractStatus, liveHandshakeMessage).
- * - ⚡ PURE CONTEXT ACTIONS: Funkcie handleAcceptHandshake a handleRejectHandshake kompletne delegované 
- *   na kontextové confirmLariaContract, čím sa eliminuje manuálny zápis a duplicita kódu.
- * - 🛡️ CRYPTO FINGER UNIFIER: Pridaná lokálna poistka overAUnifikujFing pre stopercentnú zhodu ID pri filtrovaní chatu.
+ * - 🪓 AUTOMATED PULL-PURGE: Integrované podmienené čistenie buniek F a H. Pri akceptácii (ALLOW) čistí H, pri aktívnom chate čistí F.
+ * - 📡 MATING S V17 CONTEXTOM: Plne zladené s novou metódou `purgeMatrixCell` z globálneho provideru.
+ * - 🛡️ CRYPTO FINGER UNIFIER: Lokálna poistka overAUnifikujFing pre stopercentnú zhodu ID pri filtrovaní chatu.
  * - 🧼 KRYŠTÁLOVÉ ZOBRAZENIE: Zachovaný kompletný reaktívny stavový automat a čistá typografia.
  */
 
@@ -58,9 +57,10 @@ const SignalScreen = ({ route, navigation }) => {
     unknownContacts, 
     incomingRequests, 
     sendLariaPackage, 
-    confirmLariaContract, // 🔥 Nové priame žhavenie Matchmakeru cez kontext
+    confirmLariaContract, 
     sendChatMessage, 
-    markAsRead
+    markAsRead,
+    purgeMatrixCell // 🔥 Nová zbraň pre selektívnu deštrukciu stôp
   } = useSignal();
 
   // 🛰️ KRYŠTÁLOVÉ PREPOJENIE IDENTÍT CEZ UNIFIKOVANÝ FINGERPRINT
@@ -94,6 +94,20 @@ const SignalScreen = ({ route, navigation }) => {
     }
   }, [targetFing, incomingRequests?.length]); 
 
+  // --- 🪓 AUTOMATICKÝ PULL-PURGE PRE ODCHÁDZAJÚCU BUNKU F ---
+  useEffect(() => {
+    // Ak sme v režime aktívneho chatu a v surovom logu kontraktu ešte strašia prebytočné dáta
+    if (finalStatus === 1 && targetFing && typeof purgeMatrixCell === 'function') {
+      const maSurovyPayload = aktivnyHandshakeLog?.msg?.trim().startsWith('{') || 
+                              aktivnyHandshakeLog?.backMsg?.trim().startsWith('{');
+      
+      if (maSurovyPayload) {
+        console.log(`🪓 [SCREEN AUTO-PURGE] Kanál schválený. Čistím stopu v bunke F pre: ${targetFing}`);
+        purgeMatrixCell(targetFing, 'F');
+      }
+    }
+  }, [finalStatus, targetFing, aktivnyHandshakeLog]);
+
   /**
    * 📦 POMOCNÝ MONOLITNÝ STAVITEL: Zbalí kompletné vnútro identity pre Matrix
    */
@@ -114,7 +128,7 @@ const SignalScreen = ({ route, navigation }) => {
     };
   };
 
-  // --- 🟢 AKCIA: ALLOW (POTVRDENIE ZMLUVY CEZ KONTEXT) ---
+  // --- 🟢 AKCIA: ALLOW (POTVRDENIE ZMLUVY CEZ KONTEXT + PURGE BUNKY H) ---
   const handleAcceptHandshake = async () => {
     try {
       const mojeData = zostavMojeMonolitneData();
@@ -124,6 +138,12 @@ const SignalScreen = ({ route, navigation }) => {
 
       if (res && res.success) {
         Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW). Rádiové frekvencie zladené.");
+        
+        // 🔥 OKAMŽITÁ DEŠTRUKCIA: Vyčistíme prichádzajúcu bunku H, stopy zahladené
+        if (typeof purgeMatrixCell === 'function') {
+          console.log(`🪓 [SCREEN ALLOW-PURGE] Odpaľujem čistenie bunky H pre partnera: ${targetFing}`);
+          await purgeMatrixCell(targetFing, 'H');
+        }
       } else {
         Alert.alert("CHYBA", res.error || "Nepodarilo sa overiť kontrakt.");
       }
