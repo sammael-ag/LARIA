@@ -1,8 +1,9 @@
 /**
- * LARIA ESM RELAYER v1.7.1 (Trident Security & ABI Fix)
+ * LARIA ESM RELAYER v1.7.3 (Trident Security & Blockchain Deep Radar)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
- * Status: FIXED_500_ERROR | RELAYER_SHIELD_ACTIVE
- * Description: Opravená typografická nezhoda v názve GATEWAY_ABI, ktorá spôsobovala pád servera.
+ * Status: ACTIVE | DEEP_BLOCKCHAIN_LOGGING | BIGINT_SAFE
+ * Description: Pridané hlboké logovanie odpovedí z blockchainu (Tx Response a Tx Receipt) 
+ *              s ochranou proti BigInt pádu aplikácie.
  */
 
 import express from 'express';
@@ -36,7 +37,17 @@ const ziskajBranaUrl = () => {
     return `${brana_p1}${brana_p2}${brana_p3}`;
 };
 
-// 💎 Unifikované ABI pre obidva kontrakty (zarovnané veľké písma)
+/**
+ * 🛡️ BEZPEČNÝ KRYPTO-FILTER: Zabraňuje pádu Node.js na "TypeError: Do not know how to serialize a BigInt"
+ * pri logovaní surových objektov z ethers.js.
+ */
+const safeJsonStringify = (obj) => {
+  return JSON.stringify(obj, (key, value) =>
+    typeof value === 'bigint' ? value.toString() : value, 2
+  );
+};
+
+// 💎 Unifikované ABI pre obidva kontrakty
 const GATEWAY_ABI = [
   "function onboardUser(address _user, bool _isFull) external"
 ];
@@ -73,8 +84,6 @@ app.post('/api/onboard', async (req, res) => {
     }
     
     const wallet = new ethers.Wallet(privateKey, provider);
-    
-    // 🔮 FIX: Premenovaná z 'gatewayABI' na 'GATEWAY_ABI', aby sedela s deklaráciou hore
     const gatewayContract = new ethers.Contract(LARIA_GATEWAY_ADDRESS, GATEWAY_ABI, wallet);
 
     console.log(`📡 Volám onboardUser na LariaGateway...`);
@@ -100,15 +109,22 @@ app.post('/api/onboard', async (req, res) => {
 // =========================================================================
 app.post('/api/notary', async (req, res) => {
   try {
+    console.log("=========================================================================");
+    console.log("📡 [RELAYER_DIAGNOSTIKA] Prichádzajúci payload na /api/notary:");
+    console.log("Surové req.body:", JSON.stringify(req.body, null, 2));
+    
     const { secret, targetFing, myFing, targetKrypt, myKrypt, typeText } = req.body;
 
-    // 🛡️ Kontrola ochranného štítu
+    // Ochranný štít
     if (secret !== BACKEND_SECRET) {
       return res.status(401).json({ success: false, error: "Neautorizovaný prístup k Notárovi!" });
     }
 
     if (!ethers.isAddress(targetKrypt) || !ethers.isAddress(myKrypt)) {
-      return res.status(400).json({ success: false, error: "Blockchain adresy mravcov (krypt) chýbajú alebo sú neplatné!" });
+      return res.status(400).json({ 
+        success: false, 
+        error: "Blockchain adresy mravcov (krypt) chýbajú alebo sú neplatné!" 
+      });
     }
 
     console.log(`🚀 [RELAYER] Štartujem duálne spečatenie: ${myKrypt} <-> ${targetKrypt}`);
@@ -124,35 +140,60 @@ app.post('/api/notary', async (req, res) => {
     const notaryContract = new ethers.Contract(LARIA_NOTARY_ADDRESS, NOTARY_ABI, wallet);
 
     const metadataType = typeText || "HANDSHAKE_COVENANT";
+    const safeMyFing = myFing ? String(myFing) : "";
+    const safeTargetFing = targetFing ? String(targetFing) : "";
 
-    console.log(`📡 Volám sealDualRelationshipWithToken na LariaNotary...`);
+    console.log(`📡 [BLOCKCHAIN_CALL] Volám sealDualRelationshipWithToken na LariaNotary...`);
     
-    // 🔥 Jeden spoločný výstrel na Base blockchain
+    // 🔥 1. FÁZA: Odpal na Base blockchain (Čakáme na odpoveď uzla o prijatí)
     const tx = await notaryContract.sealDualRelationshipWithToken(
       myKrypt,       
       targetKrypt,   
-      myFing,        
-      targetFing,    
+      safeMyFing,        
+      safeTargetFing,    
       metadataType   
     );
 
-    console.log(`⛓️ [RELAYER] Transakcia úspešne odoslaná! JEDEN spoločný Hash: ${tx.hash}. Čakám na blok...`);
-    
-    await tx.wait();
-    console.log(`💎 [RELAYER] Zápis úspešne vytesaný do blockchainu.`);
+    // 🔍 KRYPTO-RADAR 1: Pozrieme sa na surovú odpoveď uzla (Tx Response) hneď po akceptovaní v mempoole
+    console.log("=========================================================================");
+    console.log(`⛓️ [RELAYER_BLOCKCHAIN] Transakcia akceptovaná sietí! Pridelený Hash: ${tx.hash}`);
+    console.log("📦 [RELAYER_BLOCKCHAIN_ODPOVEĎ] Surový objekt Tx Response:");
+    console.log(safeJsonStringify(tx));
+    console.log("=========================================================================");
 
-    // 🛰️ CESTA SPÄŤ: Relayer cez Privátny lúč zostaví URL a nahlási výsledok Matchmakerovi
-    if (targetFing && myFing) {
+    console.log(`⏳ [RELAYER_BLOCKCHAIN] Čakám na vyťaženie bloku (tx.wait)...`);
+    
+    // 🔥 2. FÁZA: Čakáme na potvrdenie z bloku (Tažař dokončil prácu)
+    const receipt = await tx.wait();
+
+    // 🔍 KRYPTO-RADAR 2: Kompletná pitva potvrdenky o zápise (Tx Receipt)
+    console.log("=========================================================================");
+    console.log(`💎 [RELAYER_BLOCKCHAIN] Transakcia úspešne zapísaná do bloku č.: ${receipt.blockNumber}`);
+    console.log(`⛽ Spotrebovaný Gas: ${receipt.gasUsed ? receipt.gasUsed.toString() : "N/A"}`);
+    console.log(`📊 Status (1 = OK, 0 = REVERT): ${receipt.status}`);
+    console.log("🧾 [RELAYER_BLOCKCHAIN_POTVRDENKA] Surový objekt Tx Receipt:");
+    console.log(safeJsonStringify(receipt));
+    console.log("=========================================================================");
+
+    // Kontrola, či transakcia neprebehla s chybou (Revert)
+    if (receipt.status === 0) {
+      console.error("🚨 [RELAYER_CRITICAL] Blockchain vrátil STATUS 0 (Transakcia zlyhala/Reverted)!");
+      throw new Error("Transakcia bola na blockchaine zamietnutá (Reverted).");
+    }
+
+    // 🛰️ CESTA SPÄŤ: Relayer cez Privátny lúč nahlási výsledok Matchmakerovi
+    if (safeMyFing && safeTargetFing) {
       const ostraMraveniskoUrl = ziskajBranaUrl();
-      console.log(`📡 [RELAYER] Posielam txHash do Mraveniska cez bezpečný lúč...`);
       
       const gasPayload = {
         action: "CONFIRM_CONTRACT",
-        fing_a: targetFing,
-        fing_b: myFing,
+        fing_a: safeTargetFing,
+        fing_b: safeMyFing,
         status_b: "1",
         txHash: tx.hash.toLowerCase()
       };
+
+      console.log("🔍 [RELAYER_PÁTRANIE] Odosielam spätný payload do Matchmakeru:", JSON.stringify(gasPayload));
 
       try {
         const gasResponse = await fetch(ostraMraveniskoUrl, {
@@ -161,26 +202,38 @@ app.post('/api/notary', async (req, res) => {
           body: JSON.stringify(gasPayload)
         });
         
-        const gasResult = await gasResponse.json();
-        console.log("🧼 [RELAYER] Výsledok zápisu v Matchmakeri:", gasResult);
+        console.log(`📡 [RELAYER_PÁTRANIE] Google Apps Script odpovedal statusom: ${gasResponse.status}`);
+        const responseText = await gasResponse.text();
+        console.log("🧼 [RELAYER_PÁTRANIE] Surová textová odpoveď z Google tabuľky:", responseText);
+
+        try {
+          const gasResult = JSON.parse(responseText);
+          console.log("🧼 [RELAYER] Výsledok úspešného spracovania v Matchmakeri:", gasResult);
+        } catch (jsonErr) {
+          console.warn("⚠️ [RELAYER_PÁTRANIE] Odpoveď z Google nie je čistý JSON, ale textový prenos prebehol.");
+        }
       } catch (gasErr) {
-        console.error("⚠️ [RELAYER] Spätný zápis do Google tabuľky zlyhal, ale krypto je spečatené:", gasErr);
+        console.error("❌ [RELAYER_PÁTRANIE] Spätný zápis do Google tabuľky totálne vyhorel:", gasErr.message || gasErr);
       }
+    } else {
+      console.warn("⚠️ [RELAYER_PÁTRANIE] Vynechávam spätné volanie, nakoľko fingerprinty sú prázdne.");
     }
 
     return res.json({
       success: true,
-      message: "Duálny vzťah úspešne pretečený na blockchaine pod jedným hashom and nahlásený Matchmakerovi.",
+      message: "Duálny vzťah úspešne pretečený na blockchaine pod jedným hashom a nahlásený Matchmakerovi.",
       txHash: tx.hash
     });
 
   } catch (error) {
-    console.error("❌ [RELAYER_NOTARY_ERROR]:", error);
+    console.error("❌ [RELAYER_NOTARY_ERROR] Transakcia alebo komunikácia skolabovala! Podrobný výpis chyby:");
+    console.error("- Message:", error.message);
+    console.error("- Stack trace:", error.stack);
     return res.status(500).json({ success: false, error: error.message || error.toString() });
   }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🧱 Laria ESM Relayer (v1.7.1 - Trident Security) úspešne spustený na porte ${PORT}`);
+  console.log(`🧱 Laria ESM Relayer (v1.7.3 - Deep Blockchain Radar) úspešne spustený na porte ${PORT}`);
 });
