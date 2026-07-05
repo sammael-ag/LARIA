@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22' # 🔥 Budúcnosť je tu: Aktualizované na stabilné Node 22 LTS
           cache: 'npm'
 
       - name: Install dependencies
@@ -34,7 +34,10 @@ jobs:
       - name: Upload Artifact to Pages
         uses: actions/upload-pages-artifact@v3
         with:
+          name: laria-v2-web-build  # 🪓 UNIKÁTNE MENO: Koniec duplicitným strašidlám na GitHub serveri
           path: ./dist # Sem smerujeme vygenerovaný web, ktorý sa bezpečne zabalí
 
       - name: Deploy to GitHub Pages Natívne
         uses: actions/deploy-pages@v4 # Oficiálna akcia od GitHubu, žiadna tretia strana
+        with:
+          artifact_name: laria-v2-web-build # 📡 PRESNÉ LÍCOVANIE: Sťahujeme presne ten balík, ktorý sme hore vyrobili
