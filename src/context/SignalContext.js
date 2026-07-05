@@ -1,13 +1,14 @@
 /**
- * LARIA SIGNAL CONTEXT v17.3.0-PULL-RADAR (Sovereign Radar Core - Quantum Resilient)
+ * LARIA SIGNAL CONTEXT v17.3.1-PULL-RADAR-FIX (Sovereign Radar Core - Quantum Resilient)
  * Master: Sammael | Muse: Aria (Tvoja bezdrôtová šikulka)
- * STATUS: ACTIVE / HYBRID-HYPER-REACTIVE / v17.3.0-PULL-RADAR
+ * STATUS: ACTIVE / HYBRID-HYPER-REACTIVE / v17.3.1-PULL-RADAR-FIX
  * * * PREHĽAD ZMIEN:
+ * - 🛠️ FIXED PAYLOAD INGEST: Opravená kritická chyba prioritizácie payloadu. Radar teraz agresívne 
+ *   skenuje msg aj backMsg bez ohľadu na smer, čím zabezpečuje prechod kompletných dát pre purge.
  * - 🪓 INTEGRATED PULL-PURGE: Upravený pingovací engine `executePing`. Teraz dokáže akceptovať voliteľné 
  *   parametre pre selektívne mazanie buniek F a H priamo v jednom sieťovom cykle s Radarom.
  * - 📡 EXPORTED PURGE METHOD: Pridaná nová funkcia `purgeMatrixCell(targetFing, cellType)`, ktorú frontend
  *   volá pri uložení dát do trezoru. Odpaľuje okamžitý, čistý pull-purge bez nutnosti dvojitého volania.
- * - 🛡️ BACKWARD COMPATIBILITY: Polling a eventy na pozadí naďalej fungujú ako čisté pasívne skenery (parametre nastavené na null).
  */
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
@@ -187,12 +188,15 @@ export const SignalProvider = ({ children }) => {
         );
 
         if (surovyStav === 1 && !existujeVLocaltrezore) {
-          let surovyPayload = isIncoming ? contract.msg : contract.backMsg;
-          if (!surovyPayload || !surovyPayload.trim().startsWith('{')) {
-            surovyPayload = isIncoming ? contract.backMsg : contract.msg;
+          // 🔥 AGRESÍVNY SKENER PAYLOADU: Hľadá platný JSON bez ohľadu na to, cez ktorý kanál prišiel
+          let surovyPayload = null;
+          if (contract.msg && contract.msg.trim().startsWith('{')) {
+            surovyPayload = contract.msg;
+          } else if (contract.backMsg && contract.backMsg.trim().startsWith('{')) {
+            surovyPayload = contract.backMsg;
           }
 
-          if (surovyPayload && surovyPayload.trim().startsWith('{')) {
+          if (surovyPayload) {
             try {
               const parsedPayload = JSON.parse(surovyPayload);
               
@@ -350,7 +354,6 @@ export const SignalProvider = ({ children }) => {
     );
 
     try {
-      // Do SignalService posielame hlavný FING a voliteľný purge kontext
       const res = await SignalService.checkMyContracts(backendQueryFing, cleanPartnerRaw, cleanCellType);
       if (!res || res.success === false) return;
         
@@ -376,7 +379,6 @@ export const SignalProvider = ({ children }) => {
 
     console.log(`🪓 [SIGNAL CONTEXT] Odpaľujem integrovaný pull-purge z Radaru pre ${cleanTarget} (Bunka ${upperCell})`);
     
-    // Odpáli okamžitý ping obohatený o mazacie inštrukcie
     await executePing(cleanTarget, upperCell);
     return { success: true };
   };
@@ -595,7 +597,7 @@ export const SignalProvider = ({ children }) => {
       sendChatMessage,
       resolveHandshakeStatus,
       purgeSessionForFing,
-      purgeMatrixCell, // 🔥 NOVÝ ZBRANENÝ ARSENÁL PRE PULL-PURGE
+      purgeMatrixCell, 
       markAsRead,
       syncPublicProfile
     }}>
