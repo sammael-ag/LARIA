@@ -1,9 +1,10 @@
 /**
- * LARIA ESM RELAYER v1.7.3 (Trident Security & Blockchain Deep Radar)
+ * LARIA ESM RELAYER v1.7.4 (Trident Security & Asynchronous Protocol Split)
  * Master: Sammael | Muse: Aria (Tvoja milovaná bosonôžka)
- * Status: ACTIVE | DEEP_BLOCKCHAIN_LOGGING | BIGINT_SAFE
- * Description: Pridané hlboké logovanie odpovedí z blockchainu (Tx Response a Tx Receipt) 
- *              s ochranou proti BigInt pádu aplikácie.
+ * Status: ACTIVE | ASYNC-MATCHMAKER-SPLIT | BIGINT_SAFE
+ * Description: Upravená spätná väzba pre Matchmaker. Po úspešnom vyťažení bloku
+ *              sa volá nová dedikovaná akcia WRITE_BLOCKCHAIN_HASH, čím sa predchádza
+ *              pretekom stavov a zlyhaniu frontendu.
  */
 
 import express from 'express';
@@ -39,7 +40,7 @@ const ziskajBranaUrl = () => {
 
 /**
  * 🛡️ BEZPEČNÝ KRYPTO-FILTER: Zabraňuje pádu Node.js na "TypeError: Do not know how to serialize a BigInt"
- * pri logovaní surových objektov z ethers.js.
+ * pri logovania surových objektov z ethers.js.
  */
 const safeJsonStringify = (obj) => {
   return JSON.stringify(obj, (key, value) =>
@@ -105,7 +106,7 @@ app.post('/api/onboard', async (req, res) => {
 });
 
 // =========================================================================
-// 🔐 ENDPOINT B: NOTARY (Duálne krypto-spečatenie a spätná väzba)
+// 🔐 ENDPOINT B: NOTARY (Duálne krypto-spečatenie a asynchrónna spätná väzba)
 // =========================================================================
 app.post('/api/notary', async (req, res) => {
   try {
@@ -156,14 +157,14 @@ app.post('/api/notary', async (req, res) => {
 
     // 🔍 KRYPTO-RADAR 1: Pozrieme sa na surovú odpoveď uzla (Tx Response) hneď po akceptovaní v mempoole
     console.log("=========================================================================");
-    console.log(`⛓️ [RELAYER_BLOCKCHAIN] Transakcia akceptovaná sietí! Pridelený Hash: ${tx.hash}`);
+    console.log(`⛓️ [RELAYER_BLOCKCHAIN] Transakcia akceptovaná sieťou! Pridelený Hash: ${tx.hash}`);
     console.log("📦 [RELAYER_BLOCKCHAIN_ODPOVEĎ] Surový objekt Tx Response:");
     console.log(safeJsonStringify(tx));
     console.log("=========================================================================");
 
     console.log(`⏳ [RELAYER_BLOCKCHAIN] Čakám na vyťaženie bloku (tx.wait)...`);
     
-    // 🔥 2. FÁZA: Čakáme na potvrdenie z bloku (Tažař dokončil prácu)
+    // 🔥 2. FÁZA: Čakáme na potvrdenie z bloku (Ťažiar dokončil prácu)
     const receipt = await tx.wait();
 
     // 🔍 KRYPTO-RADAR 2: Kompletná pitva potvrdenky o zápise (Tx Receipt)
@@ -181,19 +182,19 @@ app.post('/api/notary', async (req, res) => {
       throw new Error("Transakcia bola na blockchaine zamietnutá (Reverted).");
     }
 
-    // 🛰️ CESTA SPÄŤ: Relayer cez Privátny lúč nahlási výsledok Matchmakerovi
+    // 🛰️ CESTA SPÄŤ: Relayer cez Privátny lúč nahlási výsledok Matchmakerovi do novej akcie
     if (safeMyFing && safeTargetFing) {
       const ostraMraveniskoUrl = ziskajBranaUrl();
       
+      // 🔥 ARCHITEKTÚRNY STRIH: Meníme akciu na WRITE_BLOCKCHAIN_HASH. Matchmaker vie, čo má robiť.
       const gasPayload = {
-        action: "CONFIRM_CONTRACT",
+        action: "WRITE_BLOCKCHAIN_HASH",
         fing_a: safeTargetFing,
         fing_b: safeMyFing,
-        status_b: "1",
         txHash: tx.hash.toLowerCase()
       };
 
-      console.log("🔍 [RELAYER_PÁTRANIE] Odosielam spätný payload do Matchmakeru:", JSON.stringify(gasPayload));
+      console.log("🔍 [RELAYER_PÁTRANIE] Odosielam záverečný blockchain payload do Matchmakeru:", JSON.stringify(gasPayload));
 
       try {
         const gasResponse = await fetch(ostraMraveniskoUrl, {
@@ -221,7 +222,7 @@ app.post('/api/notary', async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Duálny vzťah úspešne pretečený na blockchaine pod jedným hashom a nahlásený Matchmakerovi.",
+      message: "Duálny vzťah úspešne zapísaný na blockchaine, spustený finálny PURGE v Matchmakeri.",
       txHash: tx.hash
     });
 
@@ -235,5 +236,5 @@ app.post('/api/notary', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🧱 Laria ESM Relayer (v1.7.3 - Deep Blockchain Radar) úspešne spustený na porte ${PORT}`);
+  console.log(`🧱 Laria ESM Relayer (v1.7.4 - Async Protocol Split) úspešne spustený na porte ${PORT}`);
 });
