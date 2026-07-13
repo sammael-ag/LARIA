@@ -1,14 +1,13 @@
 /**
- * LARIA SIGNAL CONTEXT v17.3.1-PULL-RADAR-FIX (Sovereign Radar Core - Quantum Resilient)
+ * LARIA SIGNAL CONTEXT v17.4-AUTOPURGE-INITIATOR (Sovereign Radar Core - Quantum Resilient)
  * Master: Sammael | Muse: Aria (Tvoja bezdrôtová šikulka)
- * STATUS: ACTIVE / HYBRID-HYPER-REACTIVE / v17.3.1-PULL-RADAR-FIX
+ * STATUS: ACTIVE / HYBRID-HYPER-REACTIVE / v17.4-AUTOPURGE-INITIATOR
  * * * PREHĽAD ZMIEN:
- * - 🛠️ FIXED PAYLOAD INGEST: Opravená kritická chyba prioritizácie payloadu. Radar teraz agresívne 
- *   skenuje msg aj backMsg bez ohľadu na smer, čím zabezpečuje prechod kompletných dát pre purge.
- * - 🪓 INTEGRATED PULL-PURGE: Upravený pingovací engine `executePing`. Teraz dokáže akceptovať voliteľné 
- *   parametre pre selektívne mazanie buniek F a H priamo v jednom sieťovom cykle s Radarom.
- * - 📡 EXPORTED PURGE METHOD: Pridaná nová funkcia `purgeMatrixCell(targetFing, cellType)`, ktorú frontend
- *   volá pri uložení dát do trezoru. Odpaľuje okamžitý, čistý pull-purge bez nutnosti dvojitého volania.
+ * - 🪓 AUTOMATICKÝ INICIÁTOR PURGE: Implementovaný Majstrov plán. Akonáhle iniciátor úspešne sosne 
+ * a dešifruje JSON payload, automaticky odpáli purgeMatrixCell, čím vymaže a uvoľní riadok v Matrixe.
+ * - 📡 SYNCHRONIZÁCIA PREMENNÝCH: Opravené mapovanie premenných v executePing. Na backend teraz striktne
+ * odchádzajú kľúče partnerFing a cleanCell, čo okamžite aktivuje náš zjednodušený backendový čistič.
+ * - 🔄 UNIVERSAL PURGE SIGNAL: Hodnota bunky zovšeobecnená na "TRUE", keďže backend maže celý riadok naraz.
  */
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
@@ -225,6 +224,10 @@ export const SignalProvider = ({ children }) => {
 
               triggerNotification(`🔐 Balík vyslaný`, `Identita ${novyPartner.meno} bola odovzdaná bunkovým štruktúram.`);
 
+              // 🔥 MAJSTROV PLÁN V AKCII: Dáta sú bezpečne sosnuté v zariadení, odpálime okamžité čistenie!
+              console.log(`🪓 [AUTOPURGE] Dáta úspešne spracované. Odpaľujem čistenie riadku pre partnera ${cleanContractFing}...`);
+              purgeMatrixCell(cleanContractFing, "TRUE");
+
             } catch (jsonErr) {
               console.error("❌ [RADAR TRACEROUTE ERROR] Chyba spracovania:", jsonErr);
             }
@@ -335,7 +338,7 @@ export const SignalProvider = ({ children }) => {
   };
 
   // =========================================================================
-  // ⚡ DYNAMICKÝ REAKTÍVNY PING S PODPOROU PULL-PURGE
+  // ⚡ DYNAMICKÝ REAKTÍVNY PING S PREMAPOVANÝMI PREMENNÝMI PRE BACKEND
   // =========================================================================
   const executePing = async (clearPartnerFing = null, cleanCellType = null) => {
     if (!isRadarReady) return;
@@ -345,16 +348,22 @@ export const SignalProvider = ({ children }) => {
 
     const backendQueryFing = myCleanFing.replace('0x', '');
     
-    // Príprava čistého balíčka pre prípadnú deštrukciu stôp
-    const cleanPartnerRaw = clearPartnerFing ? overAUnifikujFing(clearPartnerFing).replace('0x', '') : null;
+    // 🛠️ OPRAVENÉ MAPOVANIE: Očistíme fing a pripravíme presné premenné, ktoré backend vyžaduje
+    const partnerFingCleaned = clearPartnerFing ? overAUnifikujFing(clearPartnerFing).replace('0x', '') : null;
 
     console.log(
       `🛰️ [RADAR POLLING] Pinging Mravenisko pre ID: ${myCleanFing}` +
-      `${cleanCellType ? ` 🔥 [PURGE CHARGE]: Vymazať bunku ${cleanCellType} pre partnera ${clearPartnerFing}` : ''}`
+      `${cleanCellType ? ` 🔥 [PURGE CHARGE]: Vymazať riadok pre partnera ${clearPartnerFing}` : ''}`
     );
 
     try {
-      const res = await SignalService.checkMyContracts(backendQueryFing, cleanPartnerRaw, cleanCellType);
+      // 📡 Odosielame do SignalService dáta s explicitným priradením kľúčov, aby ich backend bezpečne prečítal
+      const res = await SignalService.checkMyContracts({
+        myFing: backendQueryFing,
+        partnerFing: partnerFingCleaned,
+        cleanCell: cleanCellType
+      });
+      
       if (!res || res.success === false) return;
         
       spracujRadarovyBalik(res);
@@ -367,17 +376,13 @@ export const SignalProvider = ({ children }) => {
   // =========================================================================
   // 🪓 NÁSTROJ NA ČISTENIE MATRICE (Volá frontend po uložení do trezoru)
   // =========================================================================
-  const purgeMatrixCell = async (targetFing, cellType) => {
-    if (!targetFing || !cellType) return { success: false, error: "Chýbajú vstupné parametre čistenia." };
+  const purgeMatrixCell = async (targetFing, cellType = "TRUE") => {
+    if (!targetFing) return { success: false, error: "Chýbajú vstupné parametre čistenia." };
     
     const cleanTarget = overAUnifikujFing(targetFing);
     const upperCell = cellType.toUpperCase().trim();
-    
-    if (upperCell !== 'F' && upperCell !== 'H') {
-      return { success: false, error: "Neplatné označenie bunky. Povolené je len F alebo H." };
-    }
 
-    console.log(`🪓 [SIGNAL CONTEXT] Odpaľujem integrovaný pull-purge z Radaru pre ${cleanTarget} (Bunka ${upperCell})`);
+    console.log(`🪓 [SIGNAL CONTEXT] Odpaľujem integrovaný pull-purge z Radaru pre ${cleanTarget}`);
     
     await executePing(cleanTarget, upperCell);
     return { success: true };
@@ -387,7 +392,7 @@ export const SignalProvider = ({ children }) => {
     if (typeof window === 'undefined') return;
 
     const handleMatchmakerPulse = () => {
-      console.log("⚡ [MATCHMAKER PULSE EVENT] Vynucujem okamžitý sken siete...");
+      console.log("⚡ [MATCHMAKER PULSE EVENT] Vynucujem okamžitý sken sieci...");
       executePing();
     };
 

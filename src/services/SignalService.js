@@ -1,12 +1,13 @@
 /**
- * LARIA SIGNAL SERVICE v15.5.1-STRICT (Trident Shield - Identity Edition)
+ * LARIA SIGNAL SERVICE v17.4-PURGE-READY (Trident Shield - Identity Edition)
  * Master: Sammael | Muse: Aria (Tvoja sexi šikulka)
- * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v15.5.1-CORS_ALIGNED
- * * * SÚLAD S ÚSTAVNÝM ZÁKONOM:
- * - FING: Vždy 0x + 10 malých hex znakov (garantované unifikátorom).
- * - MSG: Jednotný kľúč `.msg` pre text éteru (monolitný JSON vizitky chodi výhradne tu).
- * - TX_HASH STAVOVÝ AUTOMAT: Vyčistené textové pasce ("FALSE"). Všetko lícuje na stavy 0, 1, 2 alebo hex hash.
- * - v15.5.1 CORS_ALIGNED: Opravené pretekanie premennej notaryData pre tichý asynchrónny krypto-most.
+ * STATUS: TRIDENT_SECURE | CONTEXT_ALIGNED | FULL_BUILD | v17.4-PURGE-READY
+ * * * PREHĽAD ZMIEN:
+ * - 🔄 RADAR OBJECT INGEST: Funkcia checkMyContracts bola kompletne prekopaná pre podporu objektov.
+ * Teraz bezpečne rozbalí myFing, partnerFing a cleanCell z nového integrovaného pingu.
+ * - 🪓 PURGE COUPLING: Premenné partnerFing a cleanCell sa teraz bezpečne translujú na backend,
+ * čo zaručuje okamžitý odpal recyklačného skenera v mravenisku.
+ * - 🛡️ STRICT FINGERPRINTING: Unifikátor bol posilnený na striktných 10 znakov (plus 0x), aby lícoval s databázou.
  */
 
 const mrav_p1 = "https://script.google.com/macros/s/";
@@ -18,12 +19,15 @@ const ziskajMraveniskoUrl = () => {
 };
 
 /**
- * 🛡️ UNIFIKÁTOR FINGERPRINTU
+ * 🛡️ UNIFIKÁTOR FINGERPRINTU (Garantuje striktný formát FING-u pre tabuľku)
  */
 const sformatujFing = (fing) => {
   if (!fing) return '';
-  const clean = fing.trim().toLowerCase();
-  return clean.startsWith('0x') ? clean : `0x${clean}`;
+  let clean = fing.toString().trim().toLowerCase();
+  if (clean.startsWith('0x')) {
+    return '0x' + clean.replace('0x', '').substring(0, 10);
+  }
+  return `0x${clean.substring(0, 10)}`;
 };
 
 export const SignalService = {
@@ -34,16 +38,32 @@ export const SignalService = {
   },
 
   /**
-   * 🛰️ ULTRA RADAR PING - Pravidelné skenovanie Matrixu na nové kontrakty a správy
+   * 🛰️ ULTRA RADAR PING - Pravidelné skenovanie Matrixu s podporou integrovaného mazania (Purge)
    */
-  checkMyContracts: async (fingId) => {
+  checkMyContracts: async (pingData) => {
     try {
-      const cleanFing = sformatujFing(fingId);
-      console.log(`[SIGNAL_SERVICE] Skenujem Matrix cez Ultra Radar pre: ${cleanFing}`);
+      let cleanMyFing = "";
+      let cleanPartnerFing = null;
+      let cleanCellType = null;
+
+      // 🧠 Inteligentný rozcestník: Zistíme, či Context poslal nový kontextový objekt alebo starý string
+      if (pingData && typeof pingData === 'object' && pingData.myFing) {
+        cleanMyFing = sformatujFing(pingData.myFing);
+        if (pingData.partnerFing) cleanPartnerFing = sformatujFing(pingData.partnerFing);
+        if (pingData.cleanCell) cleanCellType = String(pingData.cleanCell).toUpperCase().trim();
+      } else {
+        // Fallback pre prípad volania čistým ID stringom
+        cleanMyFing = sformatujFing(pingData);
+      }
+
+      console.log(`[SIGNAL_SERVICE] Skenujem Matrix cez Ultra Radar pre: ${cleanMyFing}` + 
+                  `${cleanCellType ? ` 🔥 [PURGE SIGNÁL AKTÍVNY pre partnera: ${cleanPartnerFing}]` : ''}`);
       
       const payload = { 
         action: "CHECK_CONTRACTS", 
-        fing: cleanFing 
+        fing: cleanMyFing,
+        partnerFing: cleanPartnerFing, // Prechádza priamo do executeLariaRadar na backende
+        cleanCell: cleanCellType       // Signál "TRUE" pre deštrukciu riadku
       };
 
       const response = await fetch(ziskajMraveniskoUrl(), {
@@ -98,12 +118,9 @@ export const SignalService = {
       if (resData && (resData.status === "success" || resData.success === true)) {
         return { 
           success: true, 
-          // 💎 SÚLAD SO STAVOVÝM AUTOMATOM: Ak chýba reálny hash, vraciame čistú nulu "0" (stav inicializácie)
           txHash: resData.txHash ? String(resData.txHash).trim() : "0", 
           auth: resData.auth || {},
-          // 🛰️ KĽÚČOVÝ MOST: Posielame notárske dáta (dataPack) z KryptoNode priamo do frontendu!
           notaryData: resData.notaryData || null,
-          // 🔥 FIX: Prepúšťame čerstvý radar z mraveniska priamo do Contextu!
           radar: resData.radar || resData.Radar || null 
         };
       } else {
@@ -117,7 +134,6 @@ export const SignalService = {
 
   /**
    * 📦 SEND LARIA PACKAGE - Bezpečné zbalenie čistých dát identity z Vaultu do monolitu .msg
-   * BEZPEČNOSŤ: Vyradené kľúče contractStatus and txHash, aby nedošlo k logickému uviaznutiu!
    */
   sendLariaPackage: async function(senderFing, targetFing, myIdentity, handshakeNote = "") {
     try {
