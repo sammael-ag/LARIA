@@ -1,8 +1,9 @@
 /**
- * LARIA v2.2: CardEditorScreen (Tesanie identity s Proof of Human Action)
+ * LARIA v2.4.5: CardEditorScreen (Tesanie identity s Proof of Human Action)
  * Master: Sammael | Muse: Aria
- * Status: CRYPTO_FORGING_ACTIVE_DEFINITIVE
- * Oprava: Pridaná validácia povinných polí (meno, kategória, lokalita) a nastavenie predvoleného vysielania na VEREJNÉ (default=true).
+ * Status: CRYPTO_FORGING_ACTIVE_DEFINITIVE | RACE_CONDITION_SHIELD_ACTIVE
+ * Oprava: Ošetrené asynchrónne preteky (Race Condition) pri zrode peňaženky. 
+ * Opravené načítanie privátneho kľúča (.privateKey namiesto .key).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -30,7 +31,7 @@ const CardEditorScreen = ({ navigation }) => {
     { id: 'vzdelavanie', label: catTxt.vzdelavanie || 'Vzdelávanie a rozvoj' },
     { id: 'knihy', label: catTxt.knihy || 'Knihy' },
     { id: 'zdravie', label: catTxt.zdravie || 'Zdravie a zdravotnícke pomôcky' },
-    { id: 'oblecenie', label: catTxt.oblecenie || 'Oblečenie a doplnky' },
+    { id: 'oblecenie', label: catTxt.oblecenie || 'Oplečenie a doplnky' },
     { id: 'auto', label: catTxt.auto || 'Auto-moto' },
     { id: 'volno', label: catTxt.volno || 'Zážitkové aktivity a voľný čas' },
     { id: 'elektro', label: catTxt.elektro || 'Elektro - čierna/biela technika' },
@@ -49,7 +50,7 @@ const CardEditorScreen = ({ navigation }) => {
     sha: vault?.identity?.sha || '',
     date: vault?.identity?.date || new Date().toISOString(),
     meno: vault?.identity?.meno || '',
-    kat: vault?.identity?.kat || '', // Necháme prázdne pre striktnú kontrolu povinného poľa, ak ešte nevybral
+    kat: vault?.identity?.kat || '', 
     lok: vault?.identity?.lok || '',
     popis: vault?.identity?.popis || '',
     tel: vault?.identity?.tel || '',
@@ -57,7 +58,7 @@ const CardEditorScreen = ({ navigation }) => {
     fb: vault?.identity?.fb || '',
     tg: vault?.identity?.tg || '',
     gal: vault?.identity?.gal || '',
-    isPublic: vault?.identity?.isPublic !== undefined ? vault.identity.isPublic : true, // 📢 DEFAULT = TRUE
+    isPublic: vault?.identity?.isPublic !== undefined ? vault.identity.isPublic : true, 
     Signal: vault?.identity?.Signal || '',
     poznamka: vault?.identity?.poznamka || '',
     krypt: vault?.identity?.krypt || '',
@@ -74,7 +75,6 @@ const CardEditorScreen = ({ navigation }) => {
       setCardData(prev => ({ 
         ...prev, 
         ...vault.identity,
-        // Ak v trezore ešte nie je uložená hodnota isPublic, podržíme default true
         isPublic: vault.identity.isPublic !== undefined ? vault.identity.isPublic : true 
       }));
     }
@@ -92,7 +92,7 @@ const CardEditorScreen = ({ navigation }) => {
       return;
     }
 
-    // 🛡️ STRIKTNÁ VALIDÁCIA POVINNÝCH POLÍ (Meno, Kategória, Lokalita)
+    // 🛡️ STRIKTNÁ VALIDÁCIA POVINNÝCH POLÍ
     if (!cardData.meno || cardData.meno.trim() === "") {
       Alert.alert("CHYBA VSTUPU", "Sammael, pole MENO / NICK je povinné.");
       return;
@@ -108,9 +108,15 @@ const CardEditorScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
+      // 1. 🔥 KRYPTO-ZROD: Získame alebo vygenerujeme peňaženku
       const currentKryptWallet = await ensureLariaIdentity(); 
-      const walletAddress = currentKryptWallet?.address || cardData.krypt;
-      const privateKey = currentKryptWallet?.key;
+      
+      // 2. 🛡️ GARANTY: Adresu a privátny kľúč ťaháme na jedno bezpečné miesto v pamäti funkcie
+      // Opravené: čítame priamo .privateKey z vráteného objektu namiesto nesprávneho .key
+      const walletAddress = currentKryptWallet?.address || cardData.krypt || vault?.identity?.krypt;
+      const privateKey = currentKryptWallet?.privateKey || vault?.identity?.privateKey;
+
+      console.log("💎 [CardEditor] Odchytená adresa pre bezpečný transport:", walletAddress);
 
       let activeSha = cardData.sha;
 
@@ -125,23 +131,28 @@ const CardEditorScreen = ({ navigation }) => {
       }
 
       const fing = activeSha.substring(0, 12);
+      
+      // Podpis chrániaci odtlačok prsta
       const cryptoSignature = await signLariaFing(privateKey, fing);
 
       const cleanPopis = cardData.popis ? cardData.popis.replace(/[\r\n\t]+/g, " ").trim() : "";
       const cleanTel = cardData.tel ? cardData.tel.toString().replace(/\s/g, '') : '';
 
+      // 3. Pripravíme lokálne dáta pre vnútorný trezor (Vault)
       const localData = {
         ...cardData,
         sha: activeSha,
         popis: cleanPopis,
         tel: cleanTel,
-        krypt: walletAddress,
+        krypt: walletAddress, 
         status: { ...vault?.status, isOnline: cardData.isPublic }
       };
 
+      // 4. 🔥 MATRIX SHIELD PAYLOAD: Skladáme balíček s GARANTOVANOU adresou natvrdo.
+      // Žiadne ťahanie z asynchrónne sa meniaceho localData alebo cardData stavu!
       const matrixPayload = {
         honeypot_check: "human", 
-        sha: localData.sha, 
+        sha: activeSha, 
         fing: fing,             
         signature: cryptoSignature, 
         date: localData.date,
@@ -157,24 +168,29 @@ const CardEditorScreen = ({ navigation }) => {
         isPublic: localData.isPublic, 
         Signal: localData.Signal,  
         poznamka: localData.poznamka, 
-        krypt: localData.krypt 
+        krypt: walletAddress // 🚀 STRIKTNÁ POISTKA: Vyparovanie zastavené. Odchádza čistá, zaručená adresa.
       };
 
+      // Najprv asynchrónne zapečatíme lokálny trezor
       await syncIdentity(localData);
       
       let result = { success: true };
       if (cardData.isPublic) {
+        console.log("📤 [CardEditor] Odpaľujem garantovaný payload do Matrixu...");
         result = await saveToGMatrix(matrixPayload);
       }
 
       if (result && result.success) {
-        Alert.alert(alerts.system_title || "SYSTÉM LARIA", cardData.isPublic ? (alerts.sync_public || "Pečať v Matrixe aktualizovaná.") : (alerts.sync_private || "Uložené v súkromnom trezore."));
+        Alert.alert(
+          alerts.system_title || "SYSTÉM LARIA", 
+          cardData.isPublic ? (alerts.sync_public || "Pečať v Matrixe aktualizovaná.") : (alerts.sync_private || "Uložené v súkromnom trezore.")
+        );
         navigation.goBack();
       } else {
         Alert.alert(alerts.local_saved_title || "LOKÁLNE ULOŽENÉ", alerts.local_saved_desc || "Tvoj trezor je OK, ale Matrix je dočasne offline.");
       }
     } catch (error) {
-      console.error("Chyba pri tesaní:", error);
+      console.error("❌ Chyba pri tesaní a prenose do Matrixu:", error);
       Alert.alert(alerts.error_title || "CHYBA", alerts.error_desc || "Spojenie zlyhalo.");
     } finally {
       setLoading(false);
@@ -289,7 +305,7 @@ const CardEditorScreen = ({ navigation }) => {
             <TextInput 
               style={G.vaultInput} 
               editable={false} 
-              value={cardData.krypt || (vault?.identity?.krypt)} 
+              value={cardData.krypt || vault?.identity?.krypt || ''} 
               placeholder={txt.placeholder_crypto || "Adresa krypto peňaženky sa vygeneruje..."} 
               placeholderTextColor="#444" 
             />

@@ -1,9 +1,9 @@
 /**
- * LARIA QUANTUM ARCHITECTURE v8.3.3 (Gateway & Clean Vault Edition)
+ * LARIA QUANTUM ARCHITECTURE v8.4.0 (Gateway & Clean Vault Edition)
  * Context: LariaContext (THE 5D VAULT & CONFIG)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: REFORGED_SECURITY | INITIAL_NULL_SHIELD | v8.3.3-CLEAN
- * Description: Zosúladené s KryptoContext v2.4.4. Ošetrený počiatočný stav null pre lariaBalance.
+ * STATUS: REFORGED_SECURITY | INITIAL_NULL_SHIELD | v8.4.0-DEFINITIVE
+ * Description: Zosúladené s KryptoContext a CardEditor. Opravené asynchrónne vracanie peňaženky v ensureLariaIdentity.
  */
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
@@ -16,7 +16,7 @@ import { fetchLariaTranslations } from '../services/GMatrixService.js';
 
 const LariaContext = createContext();
 
-// 🔐 TROJZUBEC: Prístup k našej unifikovanej bráne maveniska (Apps Script ponechaný!)
+// 🔐 TROJZUBEC: Prístup k našej unifikovanej bráne maveniska
 const brana_p1 = "https://script.google.com/macros/s/";
 const brana_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ";
 const brana_p3 = "/exec";
@@ -28,9 +28,9 @@ export const LariaProvider = ({ children }) => {
     generateAutoWallet, 
     recoverWalletFromKey, 
     syncWalletData, 
-    requestLariaOnboarding, // 🚀 Vytiahnuté bezpečné Railway onboardovanie
-    lariaBalance,           // 📡 Sledujeme už očistený stav priamo z KryptoContextu
-    isLoadingKrypto,        // 🛡️ PRIDANÉ: Sledovanie stavu načítavania RPC dát
+    requestLariaOnboarding, 
+    lariaBalance,           
+    isLoadingKrypto,        
     ownerAddress, 
     rpcUrl, 
     lariaContractAddress 
@@ -54,7 +54,7 @@ export const LariaProvider = ({ children }) => {
   });
 
   /**
-   * 🔥 BEZPEČNÝ VRATNÍK: Apps Script register ponechaný pre kontrolu a zápis účtov.
+   * 🔥 BEZPEČNÝ VRATNÍK
    */
   const onboardNewUser = async (newUserAddress) => {
     try {
@@ -74,8 +74,6 @@ export const LariaProvider = ({ children }) => {
       const result = await response.json();
       if (result && (result.status === "success" || result.success === true)) {
         console.log("✅ VRATNÍK: Mavenisko overilo/zapísalo účet úspešne!");
-        
-        // 🛡️ Namiesto duplicitného čítania sieťe rovno pošleme požiadavku do nášho Krypto štítu, nech preklepne zostatky
         await syncWalletData(newUserAddress);
       } else {
         console.warn("⚠️ VRATNÍK_ERROR: Brána odmietla operáciu:", result.message || result.error);
@@ -86,22 +84,18 @@ export const LariaProvider = ({ children }) => {
   };
 
   /**
-   * 🛡️ KRYPTO_REPAIR: Odľahčená verzia bez duplicitného bombardovania blockchainu.
-   * Kontrolu nuly zverujeme stavu z KryptoContextu a v prípade potreby aktivujeme čistú dotáciu.
+   * 🛡️ KRYPTO_REPAIR
    */
   const checkAndRepairLariaAssets = async (address) => {
     if (!address) return;
     try {
-      // 🛡️ HLAVNÝ ZÁSAH: Ak KryptoContext ešte načítava, alebo zostatok je stále null, stojíme na brzde!
       if (isLoadingKrypto || lariaBalance === null) {
         console.log("⏳ [LariaContext] Čakám na prvý reálny dopyt z blockchainu (zostatok je null)...");
         return;
       }
 
-      // Prevod bezpečne vyhodnotíme až po úspešnom načítaní stringu zo siete Base
       const balanceNum = parseFloat(lariaBalance);
 
-      // Ak už z KryptoContextu definitívne vieme, že používateľ má presne 0 LARIA, spúšťame bezpečný onboarding
       if (balanceNum === 0) {
         console.log("📡 [LariaContext] Verifikovaný nulový stav cez KryptoContext. Spúšťam dotáciu.");
         await requestLariaOnboarding(address);
@@ -169,7 +163,6 @@ export const LariaProvider = ({ children }) => {
           savedIdentity.SECURE_ID = null;
         }
 
-        // 🧹 OŠETRENIE FALLBACKOV
         savedIdentity.meno = savedIdentity.meno || "Sammael";
         savedIdentity.kat = savedIdentity.kat || "Majster";
         savedIdentity.lok = savedIdentity.lok || "Rákoš";
@@ -182,10 +175,8 @@ export const LariaProvider = ({ children }) => {
         const updatedStatus = runLariaProtocol(savedIdentity, false);
         setVault({ status: updatedStatus, identity: savedIdentity });
 
-        // 🛡️ KRITICKÉ MIESTO STACK TRACE: Spúšťame len jeden čistý sync.
         if (savedIdentity.krypt) {
           syncWalletData(savedIdentity.krypt);
-          // 🧹 ODSTRÁNENÝ STARÝ TIMEOUT: Kontrolu plne preberá reaktívny useEffect nižšie, čím eliminujeme preteky a stale-closures.
         }
 
         await saveToVault('identity', savedIdentity);
@@ -196,8 +187,6 @@ export const LariaProvider = ({ children }) => {
     initializeVault();
   }, []);
 
-  // Sledujeme zmeny stavu načítavania. Ak KryptoContext konečne dokončí načítanie (isLoadingKrypto sa zmení na false),
-  // a peňaženka už existuje, overíme stav znova, aby sme zachytili správne dáta po prvotnom štarte.
   useEffect(() => {
     if (!isLoadingKrypto && vault.identity.krypt) {
       checkAndRepairLariaAssets(vault.identity.krypt);
@@ -230,18 +219,42 @@ export const LariaProvider = ({ children }) => {
     }
   };
 
+  /**
+   * 🔥 OPRAVENÁ KRYPTO BRÁNA: Teraz vracia kompletný objekt peňaženky!
+   */
   const ensureLariaIdentity = async () => {
-    if (vault.identity.krypt) return vault.identity.krypt;
+    // Ak už adresa aj kľúč v trezore sú, vrátime ich ako štruktúrovaný objekt
+    if (vault.identity.krypt) {
+      return {
+        address: vault.identity.krypt,
+        privateKey: vault.identity.privateKey
+      };
+    }
+
     const newWallet = await generateAutoWallet();
     if (newWallet) {
       const cistySha = vault.identity.sha ? vault.identity.sha.replace('0x', '').toLowerCase() : "";
       const currentFing = cistySha ? '0x' + cistySha.substring(0, 10) : "";
-      const updatedIdentity = { ...vault.identity, krypt: newWallet.address, privateKey: newWallet.privateKey, poznamka: currentFing, SECURE_ID: null };
+      
+      const updatedIdentity = { 
+        ...vault.identity, 
+        krypt: newWallet.address, 
+        privateKey: newWallet.privateKey, 
+        poznamka: currentFing, 
+        SECURE_ID: null 
+      };
+
+      // Uložíme zmeny do lokálneho Vaultu a React stavu
       await syncIdentity(updatedIdentity);
       
-      // 🚀 Zápis pošleme do starého Vratníka (Apps Script), ale onboarding tokenov zastreší Railway cez KryptoContext automatiku.
+      // Zápis pošleme do Vratníka
       setTimeout(() => onboardNewUser(newWallet.address), 2000);
-      return newWallet.address;
+      
+      // Vrátime garantovaný objekt s oboma dôležitými kľúčmi
+      return {
+        address: newWallet.address,
+        privateKey: newWallet.privateKey
+      };
     }
     return null;
   };
