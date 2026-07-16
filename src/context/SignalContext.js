@@ -9,6 +9,7 @@
  * - 📡 SYNCHRONIZÁCIA PREMENNÝCH: Opravené mapovanie premenných v executePing. Na backend teraz striktne
  * odchádzajú kľúče partnerFing a cleanCell, čo okamžite aktivuje náš zjednodušený backendový čistič.
  * - 🔄 UNIVERSAL PURGE SIGNAL: Hodnota bunky zovšeobecnená na "TRUE", keďže backend maže celý riadok naraz.
+ * - 🛡️ ANTI-HYPERPING LOCK: Pridaná klientska poistka spracovanePurgeFingyRef pre zamedzenie zacyklenia pingu.
  */
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
@@ -60,6 +61,9 @@ export const SignalProvider = ({ children }) => {
   const [isSignalConnected, setIsSignalConnected] = useState(true); 
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [isRadarReady, setIsRadarReady] = useState(false);
+
+  // 🛡️ PAMÄŤOVÝ ZÁMOK PRE AUTOPURGE (Zabráni hyperpingu na jedno a to isté ID):
+  const spracovanePurgeFingyRef = useRef(new Set());
 
   const contactCtx = typeof useContacts === 'function' ? useContacts() : null;
   const contacts = contactCtx?.contacts || [];
@@ -226,9 +230,22 @@ export const SignalProvider = ({ children }) => {
 
               triggerNotification(`🔐 Balík vyslaný`, `Identita ${novyPartner.meno} bola odovzdaná bunkovým štruktúram.`);
 
-              // 🔥 MAJSTROV PLÁN V AKCII: Dáta sú bezpečne sosnuté v zariadení, odpálime okamžité čistenie!
-              console.log(`🪓 [AUTOPURGE] Dáta úspešne spracované. Odpaľujem čistenie riadku pre partnera ${cleanContractFing}...`);
-              purgeMatrixCell(cleanContractFing, "TRUE");
+              // 🔥 MAJSTROVA POISTKA V AKCII: Zamedzuje hyperpingu zacyklením.
+              if (!spracovanePurgeFingyRef.current.has(cleanContractFing)) {
+                console.log(`🪓 [AUTOPURGE] Prvý kontakt. Bezpečne odpaľujem čistenie riadku pre partnera ${cleanContractFing}...`);
+                
+                // Uzamkneme tento fingerprint, aby sme neposielali ďalšie duplicitné purge requesty
+                spracovanePurgeFingyRef.current.add(cleanContractFing);
+                
+                purgeMatrixCell(cleanContractFing, "TRUE");
+
+                // Po 10 sekundách zámok uvoľníme pre prípadné ďalšie handshaky v budúcnosti
+                setTimeout(() => {
+                  spracovanePurgeFingyRef.current.delete(cleanContractFing);
+                }, 10000);
+              } else {
+                console.log(`⏳ [AUTOPURGE ANTILOCK] Čistenie pre ${cleanContractFing} už prebieha. Žiadosť odmietnutá na uvoľnenie preťaženia.`);
+              }
 
             } catch (jsonErr) {
               console.error("❌ [RADAR TRACEROUTE ERROR] Chyba spracovania:", jsonErr);

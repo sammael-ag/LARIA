@@ -5,8 +5,8 @@
  * * * PREHĽAD ZMIEN:
  * - 🔄 RADAR OBJECT INGEST: Funkcia checkMyContracts bola kompletne prekopaná pre podporu objektov.
  * Teraz bezpečne rozbalí myFing, partnerFing a cleanCell z nového integrovaného pingu.
- * - 🪓 PURGE COUPLING: Premenné partnerFing a cleanCell sa teraz bezpečne translujú na backend,
- * čo zaručuje okamžitý odpal recyklačného skenera v mravenisku.
+ * - 🪓 PURGE COUPLING: Premenné partner_fing a cleanCell sa teraz bezpečne translujú na backend,
+ * čo zaručuje okamžitý odpal recyklačného skenera v mravenisku. (Opravené na partner_fing!).
  * - 🛡️ STRICT FINGERPRINTING: Unifikátor bol posilnený na striktných 10 znakov (plus 0x), aby lícoval s databázou.
  */
 
@@ -62,7 +62,7 @@ export const SignalService = {
       const payload = { 
         action: "CHECK_CONTRACTS", 
         fing: cleanMyFing,
-        partnerFing: cleanPartnerFing, // Prechádza priamo do executeLariaRadar na backende
+        partner_fing: cleanPartnerFing, // 🔥 TU TO JE: Prepojené priamo na backend premennú z Bodu 3
         cleanCell: cleanCellType       // Signál "TRUE" pre deštrukciu riadku
       };
 
