@@ -142,7 +142,7 @@ const ContactsScreen = ({ navigation, route }) => {
               params[match[1]] = decodeURIComponent(match[2]);
             }
 
-            let foundFing = params.fing || params.id || params.f || params.poznamka;
+            let foundFing = params.fing || params.id || params.f;
             
             if (!foundFing && urlToParse.includes('laria://id/')) {
               foundFing = urlToParse.split('laria://id/')[1]?.split('?')[0]?.trim();

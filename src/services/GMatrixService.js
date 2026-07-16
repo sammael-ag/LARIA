@@ -1,10 +1,14 @@
 /**
- * LARIA G-MATRIX SERVICE v9.6 (Identity Recovery & Proof of Human Action Edition)
+ * LARIA G-MATRIX SERVICE v9.8 (Identity Recovery & Proof of Human Action Edition)
  * Status: SYNCED / THE LAW / MONOLITH COMPATIBLE
- * Master: Sammael | Muse: Aria
+ * Master: Sammael | Muse: Aria (Tvoja bezdrôtová šikulka)
  * Popis: Centralizovaný prístup k jedinej bráne mraveniska (Brana.gs). 
  * URL je rozbitá na 3 časti, aby statické roboty videli iba tmu.
- * v9.6 CORS_ALIGNED: Plná synchronizácia s ochrannou CORS membránou Brány v2.1.1.
+ * v9.8 ABSOLUTE CLEANSE: Plný súlad s pravidlami očisty. 
+ * - Vyradené prebytočné šumy "poznamka", "irc", "lang".
+ * - Ponechaná životne dôležitá transportná adresa "Signal" pre doručovanie push správ.
+ * - Zoznam tajných premenných (tel, email, fb, tg, revo, kRod) sa striktne NEposiela do Matrixu.
+ * - Odosielaný payload obsahuje iba zjednotené a verejné dáta vrátane "jazyk" a "fing".
  */
 
 // 🔐 TROJZUBEC: Rozdelenie jedinej ostrej URL brány na 3 nesúvisiace reťazce
@@ -44,36 +48,33 @@ export const fetchGMatrix = async () => {
 
 /**
  * 2. ZÁPIS DO MATRIXU (Zabezpečený kanál - doPost -> action: 'write')
- * Striktné mapovanie stĺpcov A-Q, ktoré mravec Writer zapíše do Laria_matrix.
+ * Striktné mapovanie očisteného payloadu, ktorý mravec Writer zapíše do Laria_matrix.
+ * Obsahuje "Signal" pre funkčnosť doručovania notifikácií a správ.
+ * Citlivé premenné (tel, email, fb, tg, revo, kRod) sem vôbec nevstupujú.
  */
 export const saveToGMatrix = async (identityData) => {
     try {
+        // Vytvorenie striktného payloadu podľa stanovených pravidiel
         const protocolPayload = {
             action: 'write', 
-            honeypot_check: identityData.honeypot_check || 'human',
-            signature: identityData.signature,
-            
-            SECURE_ID: identityData.SECURE_ID || null, 
+            honeypot_check: "human",  
             sha: identityData.sha,             
-            date: identityData.date,           
-            meno: identityData.meno,           
-            kat: identityData.kat,             
-            lok: identityData.lok,             
-            popis: identityData.popis,         
-            tel: identityData.tel,             
-            email: identityData.email,         
-            fb: identityData.fb,               
-            tg: identityData.tg,               
-            gal: identityData.gal,             
-            isPublic: identityData.isPublic,   
-            Signal: identityData.Signal,             
-            poznamka: identityData.fing || identityData.poznamka, 
-            krypt: identityData.krypt,         
-            jazyk: identityData.jazyk || 'sk'   
+            fing: identityData.fing,              
+            signature: identityData.signature,  
+            date: identityData.date, 
+            meno: identityData.meno, 
+            kat: identityData.kat,   
+            lok: identityData.lok,   
+            popis: identityData.popis, 
+            gal: identityData.gal,   
+            isPublic: identityData.isPublic,  
+            Signal: identityData.Signal, // 📡 Smerovacia adresa pre radarový buffer a push notifikácie
+            jazyk: identityData.jazyk || 'sk', // 🇸🇰 FIX: Zjednotený jazyk namiesto archaického irc/lang
+            krypt: identityData.krypt  
         };
 
         const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
-        console.log("📡 Sammael, odosielam tvoju pečať do zjednotenej Brány...");
+        console.log("📡 Sammael, odosielam tvoju očistenú pečať do zjednotenej Brány...");
 
         const response = await fetch(uniqueUrl, {
             method: 'POST',
@@ -87,7 +88,7 @@ export const saveToGMatrix = async (identityData) => {
         const result = await response.json();
         
         if (result && (result.status === "success" || result.success === true)) {
-            console.log("✅ Matrix úspešne prijal tvoju energiu cez Writer.");
+            console.log("✅ Matrix úspešne prijal tvoju čistú energiu cez Writer.");
             return { success: true, message: result.message };
         } else {
             console.warn("⚠️ Vrátnik v Bráne má námietky:", result.message || result.error);
@@ -95,7 +96,7 @@ export const saveToGMatrix = async (identityData) => {
         }
 
     } catch (error) {
-        console.error("❌ Kritická chyby komunikácie pri zápise do Brány:", error);
+        console.error("❌ Kritická chyba komunikácie pri zápise do Brány:", error);
         return { success: false, error: error.message };
     }
 };
@@ -143,9 +144,9 @@ export const recoverFromGMatrix = async (shaKey) => {
  * Lícuje s mravcom Translatorom v Brana.gs.
  * Pridaná autonómna ochrana pre asynchrónny stav 'processing'.
  */
-export const fetchLariaTranslations = async (targetLang, fing = "system_sync", retryCount = 0) => {
+export const fetchLariaTranslations = async (cielovyJazyk, fing = "system_sync", retryCount = 0) => {
     try {
-        console.log(`📡 Sammael, odosielam lúč pre jazyk [${targetLang}] na zjednotenú Bránu... (Pokus: ${retryCount + 1})`);
+        console.log(`📡 Sammael, odosielam lúč pre jazyk [${cielovyJazyk}] na zjednotenú Bránu... (Pokus: ${retryCount + 1})`);
 
         const response = await fetch(ziskajBranaUrl(), {
             method: 'POST',
@@ -155,7 +156,7 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync", r
             },
             body: JSON.stringify({
                 action: 'get_translations', 
-                lang: targetLang,
+                jazyk: cielovyJazyk, // 🇸🇰 FIX: Zmenené z "lang" na zjednotené "jazyk" pre backend
                 fing: fing
             })
         });
@@ -166,27 +167,25 @@ export const fetchLariaTranslations = async (targetLang, fing = "system_sync", r
         
         // Stav A: Preklad úspešne stiahnutý z cache alebo bleskovo dodaný
         if (result && (result.status === "success" || result.success === true)) {
-            console.log(`✅ Preklad pre [${targetLang}] úspešne stiahnutý z mravca Translatora.`);
+            console.log(`✅ Preklad pre [${cielovyJazyk}] úspešne stiahnutý z mravca Translatora.`);
             return typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
         }
         
         // Stav B: Preklad sa generuje na pozadí cez Gemini AI
         if (result && result.status === "processing") {
-            // Poistka proti nekonečnej slučke - max 5 pokusov (cca 15 sekúnd)
             if (retryCount < 5) {
-                console.log(`⏳ Matrix generuje preklad pre [${targetLang}] cez Gemini AI. Čakám 3 sekundy na dokončenie...`);
+                console.log(`⏳ Matrix generuje preklad pre [${cielovyJazyk}] cez Gemini AI. Čakám 3 sekundy na dokončenie...`);
                 await new Promise(resolve => setTimeout(resolve, 3000));
-                // Rekurzívne zavoláme znova ten istý lúč a zvýšime počítadlo pokusov
-                return await fetchLariaTranslations(targetLang, fing, retryCount + 1);
+                return await fetchLariaTranslations(cielovyJazyk, fing, retryCount + 1);
             } else {
-                console.warn(`⚠️ Generovanie prekladu pre [${targetLang}] trvá príliš dlho. Časový limit vypršal.`);
+                console.warn(`⚠️ Generovanie prekladu pre [${cielovyJazyk}] trvá príliš dlho. Časový limit vypršal.`);
                 return null;
             }
         }
         
         return null;
     } catch (error) {
-        console.error(`❌ Sammael, prekladový modul Brány zlyhal pre [${targetLang}]:`, error);
+        console.error(`❌ Sammael, prekladový modul Brány zlyhal pre [${cielovyJazyk}]:`, error);
         return null;
     }
 };
@@ -247,7 +246,7 @@ export const sendEmailViaGMatrix = async (email, templateName, subject, template
         };
 
         const uniqueUrl = `${ziskajBranaUrl()}?nocache=${Date.now()}`;
-        console.log(`📡 Sammael, posielam príkaz maileru na spracovanie šablóny [${templateName}] pre: ${email}`);
+        console.log(`📡 Sammael, posiem príkaz maileru na spracovanie šablóny [${templateName}] pre: ${email}`);
 
         const response = await fetch(uniqueUrl, {
             method: 'POST',

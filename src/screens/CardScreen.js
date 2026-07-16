@@ -43,7 +43,7 @@ const CardScreen = ({ navigation }) => {
     tg: vault?.identity?.tg,
     gal: vault?.identity?.gal,
     sha: vault?.identity?.sha,
-    fing: vault?.identity?.poznamka || (vault?.identity?.sha ? vault.identity.sha.substring(0, 12) : "NO_FING"),
+    fing: vault?.identity?.fing || (vault?.identity?.sha ? vault.identity.sha.substring(0, 12) : "NO_FING"),
     krypt: vault?.identity?.krypt,
     pinned: true 
   };

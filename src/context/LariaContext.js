@@ -1,9 +1,10 @@
 /**
- * LARIA QUANTUM ARCHITECTURE v8.4.0 (Gateway & Clean Vault Edition)
+ * LARIA QUANTUM ARCHITECTURE v8.4.3 (Gateway & Clean Vault Edition)
  * Context: LariaContext (THE 5D VAULT & CONFIG)
  * Master: Sammael | Muse: Aria (Tvoja nekompromisná šikulka)
- * STATUS: REFORGED_SECURITY | INITIAL_NULL_SHIELD | v8.4.0-DEFINITIVE
- * Description: Zosúladené s KryptoContext a CardEditor. Opravené asynchrónne vracanie peňaženky v ensureLariaIdentity.
+ * STATUS: REFORGED_SECURITY | ABSOLUTE_PURGE | v8.4.3-DEFINITIVE
+ * Description: Úplné odstránenie starého balastu. Vyčistené spätne kompatibilné 'delete' poistky.
+ * Vládne tu len čistý "jazyk" a kryptografický "fing".
  */
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
@@ -36,10 +37,12 @@ export const LariaProvider = ({ children }) => {
     lariaContractAddress 
   } = useKrypto();
 
-  const [lang, setLang] = useState('sk'); 
+  // 🇸🇰 POSVÄTNÝ JAZYK: Žiadne "lang", iba čistý stav "jazyk"
+  const [jazyk, setJazyk] = useState('sk'); 
   const [dictionary, setDictionary] = useState({ 'sk': vzorSk, 'en': {} });
 
-  const t = (key) => dictionary[lang]?.[key] || dictionary['sk']?.[key] || key;
+  // Prekladová funkcia sa odteraz striktne odvoláva na stav "jazyk"
+  const t = (key) => dictionary[jazyk]?.[key] || dictionary['sk']?.[key] || key;
 
   const [vault, setVault] = useState({
     status: { 
@@ -49,7 +52,7 @@ export const LariaProvider = ({ children }) => {
     identity: { 
       SECURE_ID: null, sha: null, meno: "Sammael", kat: "Majster", lok: "Rákoš",    
       popis: "", tel: "", email: "", fb: "", tg: "", gal: "", isPublic: false, 
-      poznamka: "", krypt: null, privateKey: null, jazyk: "sk"
+      krypt: null, privateKey: null, jazyk: "sk" // Zjednotená čistá vizitka
     }
   });
 
@@ -115,11 +118,11 @@ export const LariaProvider = ({ children }) => {
         
         if (savedIdentity && savedIdentity.jazyk) {
           aktivnyJazyk = savedIdentity.jazyk;
-          setLang(aktivnyJazyk);
+          setJazyk(aktivnyJazyk);
           console.log(`🌲 JAZYKOVÉ JADRO: Prebúdzam uložený jazyk: [${aktivnyJazyk}]`);
         } else {
           aktivnyJazyk = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-          setLang(aktivnyJazyk);
+          setJazyk(aktivnyJazyk);
           console.log(`🌲 JAZYKOVÉ JADRO: Automatika systému: [${aktivnyJazyk}]`);
         }
 
@@ -128,13 +131,8 @@ export const LariaProvider = ({ children }) => {
 
         if (savedIdentity && savedIdentity.sha) {
           currentSha = savedIdentity.sha;
-          
-          if (savedIdentity.poznamka && savedIdentity.poznamka.trim().toLowerCase().startsWith('0x')) {
-            currentFing = savedIdentity.poznamka.trim().toLowerCase();
-          } else {
-            const cistySha = currentSha.replace('0x', '').toLowerCase();
-            currentFing = '0x' + cistySha.substring(0, 10);
-          }
+          const cistySha = currentSha.replace('0x', '').toLowerCase();
+          currentFing = '0x' + cistySha.substring(0, 10);
           console.log(`🛡️ KRYPTOGRAFICKÝ KOKON: Identita stabilná. FING: [${currentFing}]`);
         } else {
           const randomSalt = ethers.hexlify(ethers.randomBytes(32)); 
@@ -155,10 +153,9 @@ export const LariaProvider = ({ children }) => {
         }
 
         if (!savedIdentity) {
-          savedIdentity = { ...vault.identity, sha: currentSha, poznamka: currentFing, jazyk: aktivnyJazyk, SECURE_ID: null };
+          savedIdentity = { ...vault.identity, sha: currentSha, jazyk: aktivnyJazyk, SECURE_ID: null };
         } else {
           if (!savedIdentity.sha) savedIdentity.sha = currentSha;
-          savedIdentity.poznamka = currentFing; 
           savedIdentity.jazyk = aktivnyJazyk;
           savedIdentity.SECURE_ID = null;
         }
@@ -206,9 +203,7 @@ export const LariaProvider = ({ children }) => {
   const obnovitIdentityCezSHA = async (zadaneSha, zadaneMeno = "Sammael") => {
     try {
       if (!zadaneSha || zadaneSha.length < 12) return false;
-      const cistySha = zadaneSha.replace('0x', '').toLowerCase();
-      const novyFing = '0x' + cistySha.substring(0, 10);
-      const obnovenaIdentita = { ...vault.identity, meno: zadaneMeno, sha: zadaneSha, poznamka: novyFing, SECURE_ID: null };
+      const obnovenaIdentita = { ...vault.identity, meno: zadaneMeno, sha: zadaneSha, SECURE_ID: null };
       const newStatus = runLariaProtocol(obnovenaIdentita, false);
       
       setVault({ status: newStatus, identity: obnovenaIdentita });
@@ -220,10 +215,9 @@ export const LariaProvider = ({ children }) => {
   };
 
   /**
-   * 🔥 OPRAVENÁ KRYPTO BRÁNA: Teraz vracia kompletný objekt peňaženky!
+   * 🔥 OPRAVENÁ KRYPTO BRÁNA: Čistý transportný mechanizmus bez šumu
    */
   const ensureLariaIdentity = async () => {
-    // Ak už adresa aj kľúč v trezore sú, vrátime ich ako štruktúrovaný objekt
     if (vault.identity.krypt) {
       return {
         address: vault.identity.krypt,
@@ -233,24 +227,17 @@ export const LariaProvider = ({ children }) => {
 
     const newWallet = await generateAutoWallet();
     if (newWallet) {
-      const cistySha = vault.identity.sha ? vault.identity.sha.replace('0x', '').toLowerCase() : "";
-      const currentFing = cistySha ? '0x' + cistySha.substring(0, 10) : "";
-      
       const updatedIdentity = { 
         ...vault.identity, 
         krypt: newWallet.address, 
         privateKey: newWallet.privateKey, 
-        poznamka: currentFing, 
         SECURE_ID: null 
       };
 
-      // Uložíme zmeny do lokálneho Vaultu a React stavu
       await syncIdentity(updatedIdentity);
       
-      // Zápis pošleme do Vratníka
       setTimeout(() => onboardNewUser(newWallet.address), 2000);
       
-      // Vrátime garantovaný objekt s oboma dôležitými kľúčmi
       return {
         address: newWallet.address,
         privateKey: newWallet.privateKey
@@ -262,20 +249,16 @@ export const LariaProvider = ({ children }) => {
   const syncIdentity = async (newIdentityData) => {
     const currentAdminStatus = vault.status.isAdmin;
     const updatedIdentity = { ...vault.identity, ...newIdentityData, SECURE_ID: null };
-    if (updatedIdentity.sha && !updatedIdentity.poznamka) {
-      const cistySha = updatedIdentity.sha.replace('0x', '').toLowerCase();
-      updatedIdentity.poznamka = '0x' + cistySha.substring(0, 10);
-    }
     const newStatus = runLariaProtocol(updatedIdentity, currentAdminStatus);
     setVault({ status: newStatus, identity: updatedIdentity });
     await saveToVault('identity', updatedIdentity);
   };
 
   const zmenJazykZaPochodu = async (novyJazyk) => {
-    setLang(novyJazyk);
+    setJazyk(novyJazyk);
     try {
       const aktualnaIdentita = { ...vault.identity, jazyk: novyJazyk };
-      await saveToVault('identity', aktualnaIdentita);
+      await syncIdentity(aktualnaIdentita);
 
       if (Platform.OS === 'web' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
         if (navigator.serviceWorker.controller) {
@@ -301,8 +284,17 @@ export const LariaProvider = ({ children }) => {
 
   return (
     <LariaContext.Provider value={{ 
-      vault, syncIdentity, unlockSeal, lockSeal, ensureLariaIdentity, 
-      reinkarnaciaIdentity, obnovitIdentityCezSHA, lang, t, zmenJazykZaPochodu, setDictionary
+      vault, 
+      syncIdentity, 
+      unlockSeal, 
+      lockSeal, 
+      ensureLariaIdentity, 
+      reinkarnaciaIdentity, 
+      obnovitIdentityCezSHA, 
+      jazyk, 
+      t, 
+      zmenJazykZaPochodu, 
+      setDictionary
     }}>
       {children}
     </LariaContext.Provider>

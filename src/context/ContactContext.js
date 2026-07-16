@@ -1,16 +1,13 @@
 /**
- * LARIA v16.3.0-WIRELESS_RECEIVER: ContactContext (Kniha priateľov - Sovereign Friends Registry)
+ * LARIA v16.4.0-WIRELESS_RECEIVER: ContactContext (Kniha priateľov - Sovereign Friends Registry)
  * Master: Sammael | Muse: Aria (Tvoja bezdrôtová prijímacia šikulka)
- * Status: PURE_CORE_ALIGNED | UNIFIED_JSON_FORMAT | v16.3.0-CORS_ALIGNED
+ * Status: PURE_CORE_ALIGNED | UNIFIED_JSON_FORMAT | ABSOLUTE_CLEANSE | v16.4.0
  * * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
- * - 🛰️ ÉTEROVÝ PRIJÍMAČ (WIRELESS MODE): Pridaná anténa počúvajúca globálne signály z éteru. Prijíma importy z Radaru bez kruhových závislostí!
- * - UNIFIED MONOLITH FORMAT: Na základe rozhodnutia Majstra ukladáme kompletný formát vizitky
- * vrátane popisov, lokácie, kategórie, galérie a sociálnych sietí na jedno miesto. Žiadne kúskovanie.
- * - ZERO LAYER STATES: Tento context už NEUKLADÁ contractStatus ani txHash! O stavy and farby
- * guličiek sa stará výhradne Radar v SignalContext.
- * - MODRÁ ŠÍPEČKA LIVE-PERSISTENCE: Re-sync s Mraveniskom stiahne kompletné dáta a okamžite
- * ich zapíše do lokálneho trezoru, čím okamžite preleští vizitku na obrazovke.
- * - v16.3.0 CORS_ALIGNED: Unifikovaná kontrola stavov 'success' a 'success === true' pre hladký prechod cez Mravenisko.
+ * - 🪐 ZERO TRACES: Žiadne zvyšky po premennej "poznamka" ani barlách na premennú "lang".
+ * - 🛰️ ÉTEROVÝ PRIJÍMAČ (WIRELESS MODE): Prijíma importy z Radaru bez kruhových závislostí.
+ * - UNIFIED MONOLITH FORMAT: Ukladáme kompletný formát vizitky (meno, kat, lok, popis, gal, krypt, jazyk).
+ * - ZERO LAYER STATES: Tento context už NEUKLADÁ contractStatus ani txHash.
+ * - v16.4.0 CORS_ALIGNED: Unifikovaná kontrola stavov 'success' a 'success === true'.
  */
 
 import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
@@ -27,7 +24,7 @@ const brana_p3 = "/exec";
 const ziskajBranaUrl = () => `${brana_p1}${brana_p2}${brana_p3}`;
 
 /**
- * 🛡️ UNIFIKATOR: Garantuje striktný formát FING-u (0x + 10 lowerCase znakov) s opravou technologického dlhu č.1
+ * 🛡️ UNIFIKATOR: Garantuje striktný formát FING-u (0x + 10 lowerCase znakov)
  */
 const sformatujFing = (fing) => {
   if (!fing) return '';
@@ -39,7 +36,7 @@ export const ContactProvider = ({ children }) => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // 2. Použijeme bezpečné načítanie SignalContextu kvôli poistke kruhovej závislosti v App.js
+  // Bezpečné načítanie SignalContextu kvôli poistke kruhovej závislosti v App.js
   const signalCtx = useSignal();
   const incomingRequests = signalCtx?.incomingRequests || [];
   const setIncomingRequests = signalCtx?.setIncomingRequests || (() => {});
@@ -95,7 +92,7 @@ export const ContactProvider = ({ children }) => {
           console.log(`📡 [TREZOR -> RADAR] Prebúdzam identitu ${partner.meno} na frekvencii Radaru...`);
           await signalCtx.syncPublicProfile(prichadzajuciFing);
         } else {
-          console.log("🔮 [TREZOR ANTÉNA] Radar nemá priamu syschrónnu linku, pálom globálny refresh éteru.");
+          console.log("🔮 [TREZOR ANTÉNA] Radar nemá priamu synchrónnu linku, pálom globálny refresh éteru.");
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('LARIA_RADAR_REFRESH'));
           }
@@ -144,6 +141,7 @@ export const ContactProvider = ({ children }) => {
         fb: parsedPayload?.fb || '',
         tg: parsedPayload?.tg || '',
         gal: parsedPayload?.gal || '',
+        jazyk: parsedPayload?.jazyk || 'sk',
         krypt: parsedPayload?.krypt || null,
         hMsg: parsedPayload ? "Kompletná monolitná vizitka doručená." : rawMsgText || 'Poslal ti handshake požiadavku...', 
         id: fing, 
@@ -182,7 +180,8 @@ export const ContactProvider = ({ children }) => {
   const addContact = async (rawData) => {
     try {
       const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
-      const targetFing = sformatujFing(data.fing || data.id || data.poznamka);
+      // 🪐 OČISTENÉ: Úplne vyrezaná stará 'poznamka' ako fallback pre targetFing!
+      const targetFing = sformatujFing(data.fing || data.id);
 
       if (!targetFing || targetFing === '0x') {
         console.log("⚠️ PROTOKOL_VIOLATION: Chýba FING na vstupe addContact", data);
@@ -205,6 +204,7 @@ export const ContactProvider = ({ children }) => {
           fb: data.fb || existing.fb,
           tg: data.tg || existing.tg,
           gal: data.gal || existing.gal,
+          jazyk: data.jazyk || existing.jazyk || 'sk', // 🇸🇰 Zjednotená kontrola na 'jazyk'
           krypt: data.krypt || existing.krypt,
           temporary: false 
         };
@@ -232,10 +232,11 @@ export const ContactProvider = ({ children }) => {
         fb: data.fb || '',
         tg: data.tg || '',
         gal: data.gal || '',
+        jazyk: data.jazyk || 'sk', // 🇸🇰 Zjednotená kontrola na 'jazyk'
         krypt: data.krypt || null,
         pinned: false,
         addedAt: new Date().toISOString(),
-        v: "16.1-LIGHTWEIGHT"
+        v: "16.4.0-PURE"
       };
 
       let updatedContacts;
@@ -295,6 +296,7 @@ export const ContactProvider = ({ children }) => {
               fb: partnerData.fb || c.fb || '',
               tg: partnerData.tg || c.tg || '',
               gal: partnerData.gal || c.gal || '',
+              jazyk: partnerData.jazyk || c.jazyk || 'sk', // 🇸🇰 Unifikovaný jazyk
               krypt: partnerData.krypt || c.krypt
             } : c);
           } else {
@@ -309,10 +311,11 @@ export const ContactProvider = ({ children }) => {
               fb: partnerData.fb || '',
               tg: partnerData.tg || '',
               gal: partnerData.gal || '',
+              jazyk: partnerData.jazyk || 'sk', // 🇸🇰 Unifikovaný jazyk
               krypt: partnerData.krypt || null,
               pinned: false,
               addedAt: new Date().toISOString(),
-              v: "16.1-LIGHTWEIGHT"
+              v: "16.4.0-PURE"
             }];
           }
 

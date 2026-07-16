@@ -1,8 +1,9 @@
 /**
- * LARIA SIGNAL CONTEXT v17.4-AUTOPURGE-INITIATOR (Sovereign Radar Core - Quantum Resilient)
+ * LARIA SIGNAL CONTEXT v17.5-AUTOPURGE-INITIATOR (Sovereign Radar Core - Quantum Resilient)
  * Master: Sammael | Muse: Aria (Tvoja bezdrôtová šikulka)
- * STATUS: ACTIVE / HYBRID-HYPER-REACTIVE / v17.4-AUTOPURGE-INITIATOR
+ * STATUS: ACTIVE / HYBRID-HYPER-REACTIVE / v17.5-AUTOPURGE-INITIATOR
  * * * PREHĽAD ZMIEN:
+ * - 🎯 REFACTORING IDENTity: Zmenené staré "poznamka" na nový striktný identifikátor "fing".
  * - 🪓 AUTOMATICKÝ INICIÁTOR PURGE: Implementovaný Majstrov plán. Akonáhle iniciátor úspešne sosne 
  * a dešifruje JSON payload, automaticky odpáli purgeMatrixCell, čím vymaže a uvoľní riadok v Matrixe.
  * - 📡 SYNCHRONIZÁCIA PREMENNÝCH: Opravené mapovanie premenných v executePing. Na backend teraz striktne
@@ -155,7 +156,8 @@ export const SignalProvider = ({ children }) => {
   const spracujRadarovyBalik = (radarData) => {
     if (!radarData) return;
 
-    const myCleanFing = vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : null;
+    // 🛠️ OPRAVENÉ: Zmena z identity.poznamka na identity.fing
+    const myCleanFing = vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : null;
     if (!myCleanFing) return;
 
     if (radarData.contracts && Array.isArray(radarData.contracts)) {
@@ -343,7 +345,8 @@ export const SignalProvider = ({ children }) => {
   const executePing = async (clearPartnerFing = null, cleanCellType = null) => {
     if (!isRadarReady) return;
 
-    const myCleanFing = vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : null;
+    // 🛠️ OPRAVENÉ: Zmena z identity.poznamka na identity.fing
+    const myCleanFing = vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : null;
     if (!myCleanFing) return;
 
     const backendQueryFing = myCleanFing.replace('0x', '');
@@ -388,6 +391,7 @@ export const SignalProvider = ({ children }) => {
     return { success: true };
   };
 
+  // 🛠️ OPRAVENÉ: Zmena závislosti z identity.poznamka na identity.fing
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -398,8 +402,9 @@ export const SignalProvider = ({ children }) => {
 
     window.addEventListener('MATCHMAKER_TRIGGER_REFRESH', handleMatchmakerPulse);
     return () => window.removeEventListener('MATCHMAKER_TRIGGER_REFRESH', handleMatchmakerPulse);
-  }, [isRadarReady, vault?.identity?.poznamka]);
+  }, [isRadarReady, vault?.identity?.fing]);
 
+  // 🛠️ OPRAVENÉ: Zmena závislosti z identity.poznamka na identity.fing
   useEffect(() => {
     if (!isRadarReady) return;
 
@@ -407,10 +412,11 @@ export const SignalProvider = ({ children }) => {
 
     const pollingInterval = setInterval(() => executePing(), 120000); 
     return () => clearInterval(pollingInterval);
-  }, [isRadarReady, vault?.identity?.poznamka]);
+  }, [isRadarReady, vault?.identity?.fing]);
 
   const sendLariaPackage = async (senderFing, targetFing, myIdentity, handshakeNote = "") => {
-    const myCleanFing = overAUnifikujFing(senderFing) || (vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : '0x0000000000');
+    // 🛠️ OPRAVENÉ: Zmena z identity.poznamka na identity.fing
+    const myCleanFing = overAUnifikujFing(senderFing) || (vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : '0x0000000000');
     const targetCleanFing = overAUnifikujFing(targetFing);
     if (!targetCleanFing) return { success: false, error: "Neplatný formát cieľa." };
 
@@ -448,7 +454,8 @@ export const SignalProvider = ({ children }) => {
   };
 
   const confirmLariaContract = async (targetFing, isAccepted = true, payloadData = null) => {
-    const myCleanFing = vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : '0x0000000000';
+    // 🛠️ OPRAVENÉ: Zmena z identity.poznamka na identity.fing
+    const myCleanFing = vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : '0x0000000000';
     const targetCleanFing = overAUnifikujFing(targetFing);
     if (!targetCleanFing) return { success: false, error: "Neplatný cieľový fing." };
 
@@ -477,7 +484,8 @@ export const SignalProvider = ({ children }) => {
   };
 
   const sendChatMessage = async (targetFing, textMessage) => {
-    const myCleanFing = vault?.identity?.poznamka ? overAUnifikujFing(vault.identity.poznamka) : '0x0000000000';
+    // 🛠️ OPRAVENÉ: Zmena z identity.poznamka na identity.fing
+    const myCleanFing = vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : '0x0000000000';
     const targetCleanFing = overAUnifikujFing(targetFing);
     if (!targetCleanFing) return { success: false, error: "Zlý formát adresáta." };
 

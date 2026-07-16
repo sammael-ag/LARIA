@@ -10,7 +10,7 @@ const ASSETS_TO_CACHE = [
   './logo512.png'
   // Sem neskôr prihodíš ďalšie súbory pre offline "telo" appky
 ];
-let currentLang = 'sk'; // Neviditeľný jazykový port pre Service Worker
+let aktualnyJazyk = 'sk'; // 🇸🇰 Zjednotený jazykový port pre Service Worker (vždy "jazyk")
 
 // Inštalácia - učňovská debna na náradie (cache)
 self.addEventListener('install', (event) => {
@@ -70,10 +70,11 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// JAZYKOVÝ PORT: Načúvanie správam z hlavnej aplikácie
+// 🔄 JAZYKOVÝ PORT: Načúvanie správam z hlavnej aplikácie
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SET_LANGUAGE') {
-    currentLang = event.data.lang;
-    console.log(`🌲 SW DIALKOVÝ PORT: Jazyk na pozadí úspešne prepnutý na: [${currentLang}]`);
+    // FIX: Teraz bezpečne čítame uzákonený kľúč "jazyk"
+    aktualnyJazyk = event.data.jazyk || 'sk';
+    console.log(`🌲 SW DIALKOVÝ PORT: Jazyk na pozadí úspešne prepnutý na: [${aktualnyJazyk}]`);
   }
 });

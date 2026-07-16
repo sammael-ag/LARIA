@@ -1,9 +1,10 @@
 /**
- * LARIA v2.4.5: CardEditorScreen (Tesanie identity s Proof of Human Action)
+ * LARIA v2.5.1: CardEditorScreen (Tesanie identity s Proof of Human Action)
  * Master: Sammael | Muse: Aria
- * Status: CRYPTO_FORGING_ACTIVE_DEFINITIVE | RACE_CONDITION_SHIELD_ACTIVE
- * Oprava: Ošetrené asynchrónne preteky (Race Condition) pri zrode peňaženky. 
- * Opravené načítanie privátneho kľúča (.privateKey namiesto .key).
+ * Status: CRYPTO_FORGING_ACTIVE_DEFINITIVE | SAFETY_SHIELD_ACTIVATED
+ * Oprava: Odstránená schizofrénia a šum premennej "poznamka" (všade sa používa už len "fing").
+ * Smerovanie: Implementovaná transportná premenná "Signal" pre radar a bleskové notifikácie.
+ * Bezpečnosť: tel, email, fb, tg, revo, kRod žijú VÝHRADNE v trezore pre P2P Handshake.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -19,7 +20,7 @@ import { useLaria } from '../context/LariaContext';
 import { signLariaFing } from '../services/LariaLogic'; 
 
 const CardEditorScreen = ({ navigation }) => {
-  const { t, vault, syncIdentity, ensureLariaIdentity, generateAndSaveFirstSHA } = useLaria();
+  const { t, vault, syncIdentity, ensureLariaIdentity, generateAndSaveFirstSHA, jazyk } = useLaria();
   const txt = t('card_editor') || {};
   const alerts = txt.alerts || {};
   const catTxt = txt.categories || {};
@@ -45,7 +46,7 @@ const CardEditorScreen = ({ navigation }) => {
     { id: 'ine', label: catTxt.ine || 'Iné' },
   ];
 
-  // 🛠️ INICIALIZÁCIA STAVU: Nastavené isPublic na default = true
+  // 🛠️ INICIALIZÁCIA STAVU: Pridaná premenná Signal, zjednotený "jazyk", bez "poznamka"
   const [cardData, setCardData] = useState({
     sha: vault?.identity?.sha || '',
     date: vault?.identity?.date || new Date().toISOString(),
@@ -59,8 +60,8 @@ const CardEditorScreen = ({ navigation }) => {
     tg: vault?.identity?.tg || '',
     gal: vault?.identity?.gal || '',
     isPublic: vault?.identity?.isPublic !== undefined ? vault.identity.isPublic : true, 
-    Signal: vault?.identity?.Signal || '',
-    poznamka: vault?.identity?.poznamka || '',
+    Signal: vault?.identity?.Signal || '', // 📡 Smerovacia adresa pre radar
+    jazyk: vault?.identity?.jazyk || jazyk || 'sk', 
     krypt: vault?.identity?.krypt || '',
     revo: vault?.identity?.revo || '',
     kRod: vault?.identity?.kRod || ''
@@ -75,10 +76,12 @@ const CardEditorScreen = ({ navigation }) => {
       setCardData(prev => ({ 
         ...prev, 
         ...vault.identity,
-        isPublic: vault.identity.isPublic !== undefined ? vault.identity.isPublic : true 
+        jazyk: vault.identity.jazyk || jazyk || 'sk',
+        isPublic: vault.identity.isPublic !== undefined ? vault.identity.isPublic : true,
+        Signal: vault.identity.Signal || '' // 📡 Ochrana stavu pri aktualizácii z trezoru
       }));
     }
-  }, [vault?.identity]);
+  }, [vault?.identity, jazyk]);
 
   const getCategoryLabel = (id) => {
     const cat = TRANSLATED_CATEGORIES.find(c => c.id === id);
@@ -111,8 +114,6 @@ const CardEditorScreen = ({ navigation }) => {
       // 1. 🔥 KRYPTO-ZROD: Získame alebo vygenerujeme peňaženku
       const currentKryptWallet = await ensureLariaIdentity(); 
       
-      // 2. 🛡️ GARANTY: Adresu a privátny kľúč ťaháme na jedno bezpečné miesto v pamäti funkcie
-      // Opravené: čítame priamo .privateKey z vráteného objektu namiesto nesprávneho .key
       const walletAddress = currentKryptWallet?.address || cardData.krypt || vault?.identity?.krypt;
       const privateKey = currentKryptWallet?.privateKey || vault?.identity?.privateKey;
 
@@ -132,13 +133,13 @@ const CardEditorScreen = ({ navigation }) => {
 
       const fing = activeSha.substring(0, 12);
       
-      // Podpis chrániaci odtlačok prsta
+      // Podpis chrániaci odtlačok prsta (fing)
       const cryptoSignature = await signLariaFing(privateKey, fing);
 
       const cleanPopis = cardData.popis ? cardData.popis.replace(/[\r\n\t]+/g, " ").trim() : "";
       const cleanTel = cardData.tel ? cardData.tel.toString().replace(/\s/g, '') : '';
 
-      // 3. Pripravíme lokálne dáta pre vnútorný trezor (Vault)
+      // 3. Pripravíme lokálne dáta pre vnútorný trezor (Vault) - Tu zostáva kompletný balík pre Handshake
       const localData = {
         ...cardData,
         sha: activeSha,
@@ -148,8 +149,7 @@ const CardEditorScreen = ({ navigation }) => {
         status: { ...vault?.status, isOnline: cardData.isPublic }
       };
 
-      // 4. 🔥 MATRIX SHIELD PAYLOAD: Skladáme balíček s GARANTOVANOU adresou natvrdo.
-      // Žiadne ťahanie z asynchrónne sa meniaceho localData alebo cardData stavu!
+      // 4. 🔥 MATRIX SHIELD PAYLOAD: Skladáme orezaný balíček vrátane premennej Signal pre radar
       const matrixPayload = {
         honeypot_check: "human", 
         sha: activeSha, 
@@ -160,23 +160,19 @@ const CardEditorScreen = ({ navigation }) => {
         kat: localData.kat,  
         lok: localData.lok,  
         popis: localData.popis,
-        tel: localData.tel,  
-        email: localData.email,
-        fb: localData.fb,    
-        tg: localData.tg,    
         gal: localData.gal,  
         isPublic: localData.isPublic, 
-        Signal: localData.Signal,  
-        poznamka: localData.poznamka, 
-        krypt: walletAddress // 🚀 STRIKTNÁ POISTKA: Vyparovanie zastavené. Odchádza čistá, zaručená adresa.
+        Signal: localData.Signal, // 📡 Transportujeme smerovaciu adresu pre sieťové doručenie správ
+        jazyk: localData.jazyk || 'sk', 
+        krypt: walletAddress 
       };
 
-      // Najprv asynchrónne zapečatíme lokálny trezor
+      // Najprv asynchrónne zapečatíme lokálny trezor (všetky P2P premenné sú tu v bezpečí)
       await syncIdentity(localData);
       
       let result = { success: true };
       if (cardData.isPublic) {
-        console.log("📤 [CardEditor] Odpaľujem garantovaný payload do Matrixu...");
+        console.log("📤 [CardEditor] Odpaľujem bezpečný, orezaný payload do Matrixu...");
         result = await saveToGMatrix(matrixPayload);
       }
 
@@ -273,8 +269,8 @@ const CardEditorScreen = ({ navigation }) => {
 
             <View style={G.divider} />
 
-            {/* KONTAKTY */}
-            <Text style={[G.monoIdentity, { color: '#AAA', marginBottom: 10 }]}>{txt.label_handshake_contacts || "KONTAKTY PRE HANDSHAKE"}</Text>
+            {/* KONTAKTY PRE HANDSHAKE (Iba lokálny trezor) */}
+            <Text style={[G.monoIdentity, { color: '#AAA', marginBottom: 10 }]}>{txt.label_handshake_contacts || "KONTAKTY PRE HANDSHAKE (BEZPEČNÝ LOKÁLNY TREZOR)"}</Text>
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} keyboardType="phone-pad" value={cardData.tel} onChangeText={(val) => setCardData({...cardData, tel: val})} placeholder={txt.placeholder_phone || "Telefón..."} placeholderTextColor="#444" />
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.email} onChangeText={(val) => setCardData({...cardData, email: val})} placeholder={txt.placeholder_email || "E-mail..."} placeholderTextColor="#444" autoCapitalize="none" />
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.fb} onChangeText={(val) => setCardData({...cardData, fb: val})} placeholder={txt.placeholder_fb || "Facebook link..."} placeholderTextColor="#444" autoCapitalize="none" />

@@ -114,7 +114,7 @@ const SignalScreen = ({ route, navigation }) => {
   const zostavMojeMonolitneData = (aktualnaPoznamka = '') => {
     const idSource = vault?.identity || laria || {};
     return {
-      fing: idSource.poznamka || idSource.fing || '0x0000000000', 
+      fing: idSource.fing || '0x0000000000', 
       meno: idSource.meno || 'Sammael',
       kat: idSource.kat || 'Majster',
       lok: idSource.lok || 'V sieti',

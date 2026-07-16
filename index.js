@@ -219,7 +219,9 @@ const MasterWrapper = () => {
         : (rawResponse && Array.isArray(rawResponse.data) ? rawResponse.data : []);
 
       const cleanedData = dataArray.reduce((acc, item) => { 
-        if (!item.poznamka || item.poznamka.trim() === "") return acc; 
+        // 🪐 PURE CORE: Žiadne kompromisy. Ak neexistuje čistý 'fing', položku ignorujeme.
+        if (!item.fing || item.fing.trim() === "") return acc; 
+        
         acc.push({ 
           sha: item.sha, 
           meno: item.meno || txt.default_name || "Neznámy Majster", 
@@ -227,12 +229,12 @@ const MasterWrapper = () => {
           lok: item.lok || txt.default_location || "Neznáma lokalita", 
           popis: item.popis || "", 
           gal: item.gal || "", 
-          Signal: item.Signal || "", 
-          fing: item.poznamka.trim(), 
+          Signal: item.Signal || "", // 📡 Ponechané pre SignalContext
+          fing: item.fing.trim(),    // 🪐 Len čistý fing
           krypt: item.krypt || "" 
         }); 
         return acc; 
-      }, []); 
+      }, []);
 
       setAllData(cleanedData); 
 

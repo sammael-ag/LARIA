@@ -248,31 +248,31 @@ const SettingsScreen = ({ navigation }) => {
       console.log("📡 [LARIA_TRACE] Odpoveď z GMatrixService prijatá:", response);
 
       if (response && response.success && response.data) {
-        const matrixData = response.data;
-        
-        console.log("🔮 [LARIA_TRACE] Volám obnovitIdentityCezSHA z LariaContext...");
-        const success = await obnovitIdentityCezSHA(matrixData.sha, matrixData.meno);
+  const matrixData = response.data;
+  
+  console.log("🔮 [LARIA_TRACE] Volám obnovitIdentityCezSHA z LariaContext...");
+  const success = await obnovitIdentityCezSHA(matrixData.sha, matrixData.meno);
 
-        if (success) {
-          const fullIdentity = {
-            ...vault?.identity,
-            sha: matrixData.sha,
-            date: matrixData.date,
-            meno: matrixData.meno,
-            kat: matrixData.kat,
-            lok: matrixData.lok,
-            popis: matrixData.popis,
-            tel: matrixData.tel,
-            email: matrixData.email,
-            fb: matrixData.fb,
-            tg: matrixData.tg,
-            gal: matrixData.gal,
-            isPublic: matrixData.isPublic === true || matrixData.isPublic === "true",
-            Signal: matrixData.Signal,
-            poznamka: matrixData.sha.substring(0, 12),
-            krypt: matrixData.krypt
-          };
-
+  if (success) {
+    const fullIdentity = {
+      ...vault?.identity,
+      sha: matrixData.sha,
+      date: matrixData.date,
+      meno: matrixData.meno,
+      kat: matrixData.kat,
+      lok: matrixData.lok,
+      popis: matrixData.popis,
+      tel: matrixData.tel,
+      email: matrixData.email,
+      fb: matrixData.fb,
+      tg: matrixData.tg,
+      gal: matrixData.gal,
+      isPublic: matrixData.isPublic === true || matrixData.isPublic === "true",
+      Signal: matrixData.Signal, // 📡 PÔVODNÝ: Ponechaný bez zmeny pre plnú funkčnosť SignalContextu
+      fing: matrixData.fing || (matrixData.sha ? `0x${matrixData.sha.toLowerCase().substring(0, 10)}` : "NO_FING"), // 🪐 ZMENENÉ: Čistý fing namiesto starej poznámky
+      krypt: matrixData.krypt
+    };
+    
           await syncIdentity(fullIdentity);
 
           const successTitle = txt.alert_recovery_success_title || "OBNOVA ÚSPEŠNÁ";
