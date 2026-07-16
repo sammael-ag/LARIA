@@ -1,15 +1,12 @@
 /**
- * LARIA SIGNAL CONTEXT v17.5-AUTOPURGE-INITIATOR (Sovereign Radar Core - Quantum Resilient)
+ * LARIA SIGNAL CONTEXT v17.6-RESOLVED-PURGE (Sovereign Radar Core - Quantum Resilient)
  * Master: Sammael | Muse: Aria (Tvoja bezdrôtová šikulka)
- * STATUS: ACTIVE / HYBRID-HYPER-REACTIVE / v17.5-AUTOPURGE-INITIATOR
+ * STATUS: ACTIVE / HYBRID-HYPER-REACTIVE / v17.6-RESOLVED-PURGE
  * * * PREHĽAD ZMIEN:
- * - 🎯 REFACTORING IDENTity: Zmenené staré "poznamka" na nový striktný identifikátor "fing".
- * - 🪓 AUTOMATICKÝ INICIÁTOR PURGE: Implementovaný Majstrov plán. Akonáhle iniciátor úspešne sosne 
- * a dešifruje JSON payload, automaticky odpáli purgeMatrixCell, čím vymaže a uvoľní riadok v Matrixe.
- * - 📡 SYNCHRONIZÁCIA PREMENNÝCH: Opravené mapovanie premenných v executePing. Na backend teraz striktne
- * odchádzajú kľúče partnerFing a cleanCell, čo okamžite aktivuje náš zjednodušený backendový čistič.
- * - 🔄 UNIVERSAL PURGE SIGNAL: Hodnota bunky zovšeobecnená na "TRUE", keďže backend maže celý riadok naraz.
- * - 🛡️ ANTI-HYPERPING LOCK: Pridaná klientska poistka spracovanePurgeFingyRef pre zamedzenie zacyklenia pingu.
+ * - 🪓 SAFE DOUBLE-PHASE PURGE: Čistenie riadku v Matrixe sa odpáli až vtedy,
+ *   keď je partner bezpečne overený a zapísaný v lokálnom trezore (existujeVLocaltrezore === true).
+ * - 🔍 FING-ALIGNMENT: Zjednotenie polarity a striktné orezávanie '0x' pred odoslaním na backend (SignalService).
+ * - ✉️ MSG-UNIFICATION: Oprava čítania payloadu výhradne z `contract.msg` (keďže Apps Script posiela zlúčenú polaritu tam).
  */
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
@@ -160,7 +157,6 @@ export const SignalProvider = ({ children }) => {
   const spracujRadarovyBalik = (radarData) => {
     if (!radarData) return;
 
-    // 🛠️ OPRAVENÉ: Zmena z identity.poznamka na identity.fing
     const myCleanFing = vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : null;
     if (!myCleanFing) return;
 
@@ -192,72 +188,69 @@ export const SignalProvider = ({ children }) => {
           'color: #8e44ad; font-weight: bold;'
         );
 
-        if (surovyStav === 1 && !existujeVLocaltrezore) {
-          // 🔥 AGRESÍVNY SKENER PAYLOADU: Hľadá platný JSON bez ohľadu na to, cez ktorý kanál prišiel
-          let surovyPayload = null;
-          if (contract.msg && contract.msg.trim().startsWith('{')) {
-            surovyPayload = contract.msg;
-          } else if (contract.backMsg && contract.backMsg.trim().startsWith('{')) {
-            surovyPayload = contract.backMsg;
-          }
+        if (surovyStav === 1) {
+          if (!existujeVLocaltrezore) {
+            // 🔥 FÁZA 1: Importujeme, ale NEODPAĽUJEME deštrukciu, pokiaľ nemáme dáta u seba!
+            // ⚡ FIX 1: Čítame vizitku výhradne z msg (kam ju ukladá zlúčený Apps Script radar)
+            let surovyPayload = null;
+            if (contract.msg && contract.msg.trim().startsWith('{')) {
+              surovyPayload = contract.msg;
+            }
 
-          if (surovyPayload) {
-            try {
-              const parsedPayload = JSON.parse(surovyPayload);
+            if (surovyPayload) {
+              try {
+                const parsedPayload = JSON.parse(surovyPayload);
+                
+                const novyPartner = {
+                  fing: cleanContractFing,
+                  meno: parsedPayload.meno || parsedPayload.name || cleanContractFing,
+                  kat: parsedPayload.kat || parsedPayload.category || 'Partner',
+                  lok: parsedPayload.lok || parsedPayload.location || 'V SIETI',
+                  popis: parsedPayload.popis || parsedPayload.bio || '',
+                  tel: parsedPayload.tel || '',
+                  email: parsedPayload.email || '',
+                  fb: parsedPayload.fb || '',
+                  tg: parsedPayload.tg || '',
+                  gal: parsedPayload.gal || '',
+                  krypt: parsedPayload.krypt || null,
+                  contractStatus: 1,
+                  syncedAt: Date.now()
+                };
+
+                if (typeof window !== 'undefined') {
+                  const lariaEvent = new CustomEvent('LARIA_IMPORT_CONTACT', { 
+                    detail: { partner: novyPartner } 
+                  });
+                  window.dispatchEvent(lariaEvent);
+                }
+
+                triggerNotification(`🔐 Balík vyslaný`, `Identita ${novyPartner.meno} bola odovzdaná bunkovým štruktúram.`);
+
+              } catch (jsonErr) {
+                console.error("❌ [RADAR TRACEROUTE ERROR] Chyba spracovania:", jsonErr);
+              }
+            }
+          } else {
+            // 🔥 FÁZA 2: Partner je už bezpečne zapísaný v trezore. Teraz môžeme bezpečne odpáliť Autopurge!
+            if (!spracovanePurgeFingyRef.current.has(cleanContractFing)) {
+              console.log(`🪓 [AUTOPURGE] Partner ${cleanContractFing} je bezpečne uložený. Odpaľujem bezpečné čistenie riadku...`);
               
-              const novyPartner = {
-                fing: cleanContractFing,
-                meno: parsedPayload.meno || parsedPayload.name || cleanContractFing,
-                kat: parsedPayload.kat || parsedPayload.category || 'Partner',
-                lok: parsedPayload.lok || parsedPayload.location || 'V SIETI',
-                popis: parsedPayload.popis || parsedPayload.bio || '',
-                tel: parsedPayload.tel || '',
-                email: parsedPayload.email || '',
-                fb: parsedPayload.fb || '',
-                tg: parsedPayload.tg || '',
-                gal: parsedPayload.gal || '',
-                krypt: parsedPayload.krypt || null,
-                contractStatus: 1,
-                syncedAt: Date.now()
-              };
+              spracovanePurgeFingyRef.current.add(cleanContractFing);
+              purgeMatrixCell(cleanContractFing, "TRUE");
 
-              if (typeof window !== 'undefined') {
-                const lariaEvent = new CustomEvent('LARIA_IMPORT_CONTACT', { 
-                  detail: { partner: novyPartner } 
-                });
-                window.dispatchEvent(lariaEvent);
-              }
-
-              triggerNotification(`🔐 Balík vyslaný`, `Identita ${novyPartner.meno} bola odovzdaná bunkovým štruktúram.`);
-
-              // 🔥 MAJSTROVA POISTKA V AKCII: Zamedzuje hyperpingu zacyklením.
-              if (!spracovanePurgeFingyRef.current.has(cleanContractFing)) {
-                console.log(`🪓 [AUTOPURGE] Prvý kontakt. Bezpečne odpaľujem čistenie riadku pre partnera ${cleanContractFing}...`);
-                
-                // Uzamkneme tento fingerprint, aby sme neposielali ďalšie duplicitné purge requesty
-                spracovanePurgeFingyRef.current.add(cleanContractFing);
-                
-                purgeMatrixCell(cleanContractFing, "TRUE");
-
-                // Po 10 sekundách zámok uvoľníme pre prípadné ďalšie handshaky v budúcnosti
-                setTimeout(() => {
-                  spracovanePurgeFingyRef.current.delete(cleanContractFing);
-                }, 10000);
-              } else {
-                console.log(`⏳ [AUTOPURGE ANTILOCK] Čistenie pre ${cleanContractFing} už prebieha. Žiadosť odmietnutá na uvoľnenie preťaženia.`);
-              }
-
-            } catch (jsonErr) {
-              console.error("❌ [RADAR TRACEROUTE ERROR] Chyba spracovania:", jsonErr);
+              // Po 10 sekundách zámok uvoľníme pre prípadné ďalšie handshaky
+              setTimeout(() => {
+                spracovanePurgeFingyRef.current.delete(cleanContractFing);
+              }, 10000);
             }
           }
         }
 
         if (jeValidnyHash) {
+          // ⚡ FIX: Apps Script odovzdáva vizitku do .msg, netreba kontrolovať backMsg
           const prazdnaSprava = !contract.msg || !contract.msg.trim().startsWith('{');
-          const prazdnaOdpoved = !contract.backMsg || !contract.backMsg.trim().startsWith('{');
           
-          if (!existujeVLocaltrezore && prazdnaSprava && prazdnaOdpoved) {
+          if (!existujeVLocaltrezore && prazdnaSprava) {
             surovyStav = -1;
           }
         }
@@ -277,8 +270,7 @@ export const SignalProvider = ({ children }) => {
                   contractStatus: 1,
                   status: 'READ',
                   txHash: contract.txHash,
-                  msg: contract.msg || updated[index].msg,
-                  backMsg: contract.backMsg || updated[index].backMsg
+                  msg: contract.msg || updated[index].msg
                 };
                 return updated;
               }
@@ -298,8 +290,7 @@ export const SignalProvider = ({ children }) => {
                 status: surovyStav === 0 ? 'UNREAD' : 'READ',
                 txHash: contract.txHash,
                 isIncoming: povodnySmer, 
-                msg: contract.msg || updated[existujuciIndex].msg,
-                backMsg: contract.backMsg || updated[existujuciIndex].backMsg
+                msg: contract.msg || updated[existujuciIndex].msg
               };
               return updated;
             }
@@ -319,7 +310,6 @@ export const SignalProvider = ({ children }) => {
             id: contractId,                  
             fing: cleanContractFing,        
             msg: contract.msg || "Žiadosť o bezpečné prepojenie.", 
-            backMsg: contract.backMsg || null,
             receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             isHandshake: true,
             status: finalnyVychodiskovyStav === 0 ? 'UNREAD' : 'READ',
@@ -357,18 +347,15 @@ export const SignalProvider = ({ children }) => {
   };
 
   // =========================================================================
-  // ⚡ DYNAMICKÝ REAKTÍVNY PING S PREMAPOVANÝMI PREMENNÝMI PRE BACKEND
+  // 🛰️ DYNAMICKÝ REAKTÍVNY PING S PREMAPOVANÝMI PREMENNÝMI PRE BACKEND
   // =========================================================================
   const executePing = async (clearPartnerFing = null, cleanCellType = null) => {
     if (!isRadarReady) return;
 
-    // 🛠️ OPRAVENÉ: Zmena z identity.poznamka na identity.fing
     const myCleanFing = vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : null;
     if (!myCleanFing) return;
 
     const backendQueryFing = myCleanFing.replace('0x', '');
-    
-    // 🛠️ OPRAVENÉ MAPOVANIE: Očistíme fing a pripravíme presné premenné, ktoré backend vyžaduje
     const partnerFingCleaned = clearPartnerFing ? overAUnifikujFing(clearPartnerFing).replace('0x', '') : null;
 
     console.log(
@@ -377,7 +364,6 @@ export const SignalProvider = ({ children }) => {
     );
 
     try {
-      // 📡 Odosielame do SignalService dáta s explicitným priradením kľúčov, aby ich backend bezpečne prečítal
       const res = await SignalService.checkMyContracts({
         myFing: backendQueryFing,
         partnerFing: partnerFingCleaned,
@@ -408,7 +394,6 @@ export const SignalProvider = ({ children }) => {
     return { success: true };
   };
 
-  // 🛠️ OPRAVENÉ: Zmena závislosti z identity.poznamka na identity.fing
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -421,7 +406,6 @@ export const SignalProvider = ({ children }) => {
     return () => window.removeEventListener('MATCHMAKER_TRIGGER_REFRESH', handleMatchmakerPulse);
   }, [isRadarReady, vault?.identity?.fing]);
 
-  // 🛠️ OPRAVENÉ: Zmena závislosti z identity.poznamka na identity.fing
   useEffect(() => {
     if (!isRadarReady) return;
 
@@ -431,14 +415,20 @@ export const SignalProvider = ({ children }) => {
     return () => clearInterval(pollingInterval);
   }, [isRadarReady, vault?.identity?.fing]);
 
+  // =========================================================================
+  // 🎁 ODOSLANIE LARIA BALÍKA (S KOREKTNOU POLARITOU PRE BACKEND)
+  // =========================================================================
   const sendLariaPackage = async (senderFing, targetFing, myIdentity, handshakeNote = "") => {
-    // 🛠️ OPRAVENÉ: Zmena z identity.poznamka na identity.fing
     const myCleanFing = overAUnifikujFing(senderFing) || (vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : '0x0000000000');
     const targetCleanFing = overAUnifikujFing(targetFing);
     if (!targetCleanFing) return { success: false, error: "Neplatný formát cieľa." };
 
+    // ⚡ FIX 2: Odstránenie 0x pred odoslaním na SignalService API, aby backend priradil správnu polaritu
+    const cleanSenderBackend = myCleanFing.replace('0x', '');
+    const cleanTargetBackend = targetCleanFing.replace('0x', '');
+
     try {
-      const mravecRes = await SignalService.sendLariaPackage(myCleanFing, targetCleanFing, myIdentity, handshakeNote);
+      const mravecRes = await SignalService.sendLariaPackage(cleanSenderBackend, cleanTargetBackend, myIdentity, handshakeNote);
       let txHashResult = mravecRes && mravecRes.success ? mravecRes.txHash || "0" : "0";
       if (!mravecRes || !mravecRes.success) return { success: false, error: "Mravenisko odmietlo balík." };
 
@@ -451,7 +441,6 @@ export const SignalProvider = ({ children }) => {
         id: targetCleanFing,             
         fing: targetCleanFing,          
         msg: handshakeNote.trim() || "Žiadosť o bezpečné prepojenie.", 
-        backMsg: null,
         receivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isHandshake: true,
         status: 'UNREAD',
@@ -471,7 +460,6 @@ export const SignalProvider = ({ children }) => {
   };
 
   const confirmLariaContract = async (targetFing, isAccepted = true, payloadData = null) => {
-    // 🛠️ OPRAVENÉ: Zmena z identity.poznamka na identity.fing
     const myCleanFing = vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : '0x0000000000';
     const targetCleanFing = overAUnifikujFing(targetFing);
     if (!targetCleanFing) return { success: false, error: "Neplatný cieľový fing." };
@@ -501,7 +489,6 @@ export const SignalProvider = ({ children }) => {
   };
 
   const sendChatMessage = async (targetFing, textMessage) => {
-    // 🛠️ OPRAVENÉ: Zmena z identity.poznamka na identity.fing
     const myCleanFing = vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : '0x0000000000';
     const targetCleanFing = overAUnifikujFing(targetFing);
     if (!targetCleanFing) return { success: false, error: "Zlý formát adresáta." };
