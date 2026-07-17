@@ -50,9 +50,9 @@ export const LariaProvider = ({ children }) => {
       isParanoid: false, isGoogleFull: false, isChainNode: false, isAdmin: false 
     },
     identity: { 
-      SECURE_ID: null, sha: null, meno: "Sammael", kat: "Majster", lok: "Rákoš",    
+      SECURE_ID: null, sha: null, fing: null, meno: "Sammael", kat: "Majster", lok: "Rákoš",    
       popis: "", tel: "", email: "", fb: "", tg: "", gal: "", isPublic: false, 
-      krypt: null, privateKey: null, jazyk: "sk" // Zjednotená čistá vizitka
+      krypt: null, privateKey: null, jazyk: "sk" // Zjednotená čistá vizitka s fingom
     }
   });
 
@@ -153,9 +153,10 @@ export const LariaProvider = ({ children }) => {
         }
 
         if (!savedIdentity) {
-          savedIdentity = { ...vault.identity, sha: currentSha, jazyk: aktivnyJazyk, SECURE_ID: null };
+          savedIdentity = { ...vault.identity, sha: currentSha, fing: currentFing, jazyk: aktivnyJazyk, SECURE_ID: null };
         } else {
           if (!savedIdentity.sha) savedIdentity.sha = currentSha;
+          savedIdentity.fing = currentFing; // Integrácia FINGu späť do načítanej identity
           savedIdentity.jazyk = aktivnyJazyk;
           savedIdentity.SECURE_ID = null;
         }
@@ -203,7 +204,18 @@ export const LariaProvider = ({ children }) => {
   const obnovitIdentityCezSHA = async (zadaneSha, zadaneMeno = "Sammael") => {
     try {
       if (!zadaneSha || zadaneSha.length < 12) return false;
-      const obnovenaIdentita = { ...vault.identity, meno: zadaneMeno, sha: zadaneSha, SECURE_ID: null };
+      
+      const cistySha = zadaneSha.replace('0x', '').toLowerCase();
+      const vypocitanyFing = '0x' + cistySha.substring(0, 10);
+
+      const obnovenaIdentita = { 
+        ...vault.identity, 
+        meno: zadaneMeno, 
+        sha: zadaneSha, 
+        fing: vypocitanyFing, // Pridanie vypočítaného FINGu pri obnove
+        SECURE_ID: null 
+      };
+      
       const newStatus = runLariaProtocol(obnovenaIdentita, false);
       
       setVault({ status: newStatus, identity: obnovenaIdentita });
@@ -249,6 +261,13 @@ export const LariaProvider = ({ children }) => {
   const syncIdentity = async (newIdentityData) => {
     const currentAdminStatus = vault.status.isAdmin;
     const updatedIdentity = { ...vault.identity, ...newIdentityData, SECURE_ID: null };
+    
+    // Poistka: Ak sa v zmenených dátach posiela nové SHA ale chýba fing, prepočítame ho za chodu
+    if (updatedIdentity.sha && (!newIdentityData.fing || updatedIdentity.fing === null)) {
+      const cistySha = updatedIdentity.sha.replace('0x', '').toLowerCase();
+      updatedIdentity.fing = '0x' + cistySha.substring(0, 10);
+    }
+
     const newStatus = runLariaProtocol(updatedIdentity, currentAdminStatus);
     setVault({ status: newStatus, identity: updatedIdentity });
     await saveToVault('identity', updatedIdentity);
