@@ -1,12 +1,13 @@
 /** 
- * LARIA v3.0.0: Core Master Ignition (index.js) 
+ * LARIA v3.1.0: Core Master Ignition + Fluid Scroll (index.js) 
  * Master: Sammael | Muse: Aria 
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE 
  * STRATEGIC UPDATE: Predvolený štartovací pohľad zmenený na "vizitkar" pre okamžitý prístup k dátam.
- * v3.0.0 CORS_ALIGNED: Robustná obrana dátovej štruktúry pri synchronizácii s unifikovanou Bránou.
+ * PERSISTENT_CORE: Jadro aplikácie beží nepretržite, stavy sa pri prepínaní neresetujú.
+ * BACK_TO_TOP: Pridaný AUTO-DETEKČNÝ sledovač, ktorý dynamicky nájde reálne scrollujúci element v DOM structure.
  */ 
 
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect, useRef } from 'react'; 
 import { createRoot } from 'react-dom/client'; 
 import App from './app'; 
 import './styles.css'; 
@@ -33,18 +34,16 @@ const parseHashLocation = () => {
   if (typeof window === 'undefined') return { view: 'vizitkar', id: null, art: null }; 
    
   const fullUrl = window.location.href; 
-  let detectedView = 'vizitkar'; // Štartujeme strategicky na vizitkári
+  let detectedView = 'vizitkar'; 
   let id = null; 
   let art = null; 
 
-  // 1. Skontrolujeme klasické parametre pred mriežkou 
   if (window.location.search) { 
     const searchParams = new URLSearchParams(window.location.search); 
     if (searchParams.get('id')) id = searchParams.get('id'); 
     if (searchParams.get('art')) art = searchParams.get('art'); 
   } 
 
-  // 2. Skontrolujeme čistú mriežku za # 
   const hash = window.location.hash || ''; 
   const cleanHash = hash.replace(/^#\/?/, ''); 
   const [path, queryString] = cleanHash.split('?'); 
@@ -53,34 +52,31 @@ const parseHashLocation = () => {
     detectedView = path; 
   } 
 
-  // Ak sa našli parametre v mriežke, majú prioritetu 
   if (queryString) { 
     const hashParams = new URLSearchParams(queryString); 
     if (hashParams.get('id')) id = hashParams.get('id'); 
-    if (hashParams.get('art')) art = searchParams.get('art'); 
+    if (hashParams.get('art')) art = window.location.search ? new URLSearchParams(window.location.search).get('art') : null; 
   } 
 
-  // 3. Špeciálne ošetrenie: Ak prišiel parameter 'art', ideme do sekcie CojeLaria 
   if (art && (detectedView === 'domov' || detectedView === 'vizitkar')) { 
     detectedView = 'co-je-laria'; 
   } 
 
-  // Ak stará záložka posielala na aria-panel-view, preložíme na čisté domov
   if (detectedView === 'aria-panel-view' || detectedView === 'domov-aria') {
     detectedView = 'domov';
   }
 
   return { view: detectedView, id, art }; 
- }; 
+}; 
 
-// --- 🛸% HLAVNÝ VNÚTORNÝ PANEL --- 
+// --- 🛸 HLAVNÝ VNÚTORNÝ PANEL --- 
 const MasterWrapper = () => { 
   const { t } = useLaria();  
   const txt = t('index') || {};  
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768); 
   const [isAppOpen, setIsAppOpen] = useState(false); 
-  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true); 
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(window.innerWidth >= 768); 
    
   const [allData, setAllData] = useState([]); 
   const [filteredData, setFilteredData] = useState([]); 
@@ -91,65 +87,23 @@ const MasterWrapper = () => {
   const [webRefreshKey, setWebRefreshKey] = useState(0); 
   const [soloActiveId, setSoloActiveId] = useState(null); 
 
-  // Inicializácia pohľadu priamo z aktuálneho hash-u (vďaka parseHashLocation hodí 'vizitkar' ak je URL čistá)
+  // 🚀 ŠÍPKA BACK TO TOP STAVY A DYNAMICKÝ REÁLNY ELEMENT
+  const [showTopBtn, setShowTopBtn] = useState(false);
+  const scrollRef = useRef(null);
+  const activeScrollTargetRef = useRef(null);
+
   const initialHash = parseHashLocation(); 
   const [currentView, setCurrentView] = useState(initialHash.view); 
 
-  // --- 🪐 UNIVERZÁLNY SENZOR PRE DETEKCIU TAURI OKNA --- 
-  const [isTauriWindow, setIsTauriWindow] = useState(false); 
-
-  // --- ⚡ PWA DETEKTOR INŠTALÁCIE --- 
-  const [deferredPrompt, setDeferredPrompt] = useState(null); 
-  const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false); 
-
   useEffect(() => { 
-    if (typeof window !== 'undefined') { 
-      const hasTauriObject = window.__TAURI__ !== undefined || window.__TAURI_METADATA__ !== undefined; 
-      const hasTauriUserAgent = navigator.userAgent.includes('tauri') || navigator.userAgent.includes('Tauri'); 
-      const hasTauriIPC = window.__TAURI_IPC__ !== undefined; 
-
-      if (hasTauriObject || hasTauriUserAgent || hasTauriIPC) { 
-        setIsTauriWindow(true); 
-      } else { 
-        setIsTauriWindow(false); 
-      } 
-    } 
-  }, []); 
-
-  // Sledovanie PWA inštalačného eventu 
-  useEffect(() => { 
-    if (typeof window === 'undefined') return; 
-
-    const handleBeforeInstallPrompt = (e) => { 
-      e.preventDefault(); 
-      setDeferredPrompt(e); 
-    }; 
-
-    const handleAppInstalled = () => { 
-      setIsAlreadyInstalled(true); 
-      setDeferredPrompt(null); 
-    }; 
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt); 
-    window.addEventListener('appinstalled', handleAppInstalled); 
-
-    if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) { 
-      setIsAlreadyInstalled(true); 
-    } 
-
-    return () => { 
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt); 
-      window.removeEventListener('appinstalled', handleAppInstalled); 
-    }; 
-  }, []); 
-
-  useEffect(() => { 
-    const handleResize = () => setIsMobile(window.innerWidth < 768); 
+    const handleResize = () => {
+      const mobileCheck = window.innerWidth < 768;
+      setIsMobile(mobileCheck); 
+    };
     window.addEventListener('resize', handleResize); 
     return () => window.removeEventListener('resize', handleResize); 
   }, []); 
 
-  // --- 🔮 EFFECT PRE DYNAMICKÉ HASH URL --- 
   useEffect(() => { 
     if (typeof window === 'undefined') return; 
 
@@ -166,11 +120,9 @@ const MasterWrapper = () => {
     } 
   }, [currentView, soloActiveId, txt]); 
 
-  // 🛸 AUTOMATICKÉ ZRKADLENIE INTERNÉHO STAVU DO HASH URL
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const hashData = parseHashLocation();
-
     const webViews = ['domov', 'vizitkar', 'co-je-laria', 'cojelaria', 'fakturant', 'free-vs-full', 'donate'];
 
     if (webViews.includes(currentView) && hashData.view !== currentView) {
@@ -178,7 +130,6 @@ const MasterWrapper = () => {
     }
   }, [currentView]);
 
-  // 📡 PRIJÍMAČ SIGNÁLOV Z PRAVÉHO PANELA (Tekuté rozhranie prepína na domov)
   useEffect(() => { 
     if (typeof window === 'undefined') return; 
 
@@ -206,20 +157,17 @@ const MasterWrapper = () => {
       }); 
 
       if (!response.ok) throw new Error(`Matrix neodpovedá v jadre index (HTTP ${response.status})`);
-
       const rawResponse = await response.json(); 
 
       if (rawResponse && (rawResponse.status === "error" || rawResponse.success === false)) {
         throw new Error(rawResponse.message || rawResponse.error || "Neznáma chyba Matrixu");
       }
 
-      // 🛡️ KRYSTALICKÁ POISTKA: Spracuje čisté pole aj štruktúru { success: true, data: [...] }
       const dataArray = Array.isArray(rawResponse) 
         ? rawResponse 
         : (rawResponse && Array.isArray(rawResponse.data) ? rawResponse.data : []);
 
       const cleanedData = dataArray.reduce((acc, item) => { 
-        // 🪐 PURE CORE: Žiadne kompromisy. Ak neexistuje čistý 'fing', položku ignorujeme.
         if (!item.fing || item.fing.trim() === "") return acc; 
         
         acc.push({ 
@@ -229,8 +177,8 @@ const MasterWrapper = () => {
           lok: item.lok || txt.default_location || "Neznáma lokalita", 
           popis: item.popis || "", 
           gal: item.gal || "", 
-          Signal: item.Signal || "", // 📡 Ponechané pre SignalContext
-          fing: item.fing.trim(),    // 🪐 Len čistý fing
+          Signal: item.Signal || "", 
+          fing: item.fing.trim(),    
           krypt: item.krypt || "" 
         }); 
         return acc; 
@@ -356,6 +304,70 @@ const MasterWrapper = () => {
     ); 
   }; 
 
+  // 🎯 GENIÁLNA MATRIXOVÁ DETEKCIA SKUTOČNÉHO SCROLL PARAMETRA
+  useEffect(() => {
+    const najdiScrollElement = (el) => {
+      if (!el) return null;
+      const style = window.getComputedStyle(el);
+      if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+        return el;
+      }
+      return najdiScrollElement(el.parentElement);
+    };
+
+    const vyhodnotZachytenyScroll = (e) => {
+      // 🕵️‍♂️ Dynamicky chytíme reálny element, ktorý sa hýbe pod prstami
+      let skutocnyElement = activeScrollTargetRef.current;
+      if (!skutocnyElement && e.target) {
+        skutocnyElement = najdiScrollElement(e.target);
+        if (skutocnyElement) {
+          activeScrollTargetRef.current = skutocnyElement;
+          // Pripneme priamy scroll listener na novo objaveného kráľa scrollovania
+          skutocnyElement.removeEventListener('scroll', spustiKontroluStavu);
+          skutocnyElement.addEventListener('scroll', spustiKontroluStavu, { passive: true });
+        }
+      }
+      spustiKontroluStavu();
+    };
+
+    const spustiKontroluStavu = () => {
+      const el = activeScrollTargetRef.current;
+      const aktualnaVyskaScrollu = el ? el.scrollTop : Math.max(window.scrollY, document.documentElement.scrollTop);
+
+      window.requestAnimationFrame(() => {
+        if (aktualnaVyskaScrollu > 250) {
+          setShowTopBtn(true);
+        } else {
+          setShowTopBtn(false);
+        }
+      });
+    };
+
+    // Počúvame na globálne dotyky a kolieska, aby sme zistili, cez čo Majster prechádza
+    window.addEventListener('wheel', vyhodnotZachytenyScroll, { passive: true });
+    window.addEventListener('touchmove', vyhodnotZachytenyScroll, { passive: true });
+    window.addEventListener('scroll', spustiKontroluStavu, { passive: true });
+
+    return () => {
+      window.removeEventListener('wheel', vyhodnotZachytenyScroll);
+      window.removeEventListener('touchmove', vyhodnotZachytenyScroll);
+      window.removeEventListener('scroll', spustiKontroluStavu);
+      if (activeScrollTargetRef.current) {
+        activeScrollTargetRef.current.removeEventListener('scroll', spustiKontroluStavu);
+      }
+    };
+  }, [currentView, webRefreshKey]);
+
+  const scrollToTop = () => {
+    if (activeScrollTargetRef.current) {
+      activeScrollTargetRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const getWebSideFlex = () => { 
     if (isMobile) return '1 0 100%'; 
     return isLeftPanelOpen ? '0 0 55%' : '0 0 75%'; 
@@ -364,27 +376,6 @@ const MasterWrapper = () => {
   const getAppSideFlex = () => { 
     if (isMobile) return '1 0 100%'; 
     return '0 0 25%'; 
-  }; 
-
-  const handleDownloadClick = async () => { 
-    if (isAlreadyInstalled) { 
-      alert("🌲 Crystal Core už beží ako plnohodnotný systém na tomto zariadení."); 
-      return; 
-    } 
-    if (!deferredPrompt) { 
-      setIsAlreadyInstalled(true);  
-      return; 
-    } 
-    deferredPrompt.prompt(); 
-    const { outcome } = await deferredPrompt.userChoice; 
-    if (outcome === 'accepted') { 
-      setIsAlreadyInstalled(true); 
-      setDeferredPrompt(null); 
-    } else { 
-      setDeferredPrompt(null); 
-      setIsAlreadyInstalled(true);  
-      alert("🌲 Systém bol spustený v prehliadači."); 
-    } 
   }; 
 
   return ( 
@@ -450,7 +441,11 @@ const MasterWrapper = () => {
           <div id="status-light" className="status-indicator" style={{ background: loading ? '#333' : '#00ff00' }}></div> 
         </header> 
 
-        <main className="scroll-content"> 
+        {/* 🛸 PREPOJENÝ SCROLLPANEL */}
+        <main 
+          ref={scrollRef}
+          className="scroll-content" 
+        > 
           {currentView === 'domov' && !soloActiveId && (
             <div style={{ padding: '0 15px' }}> 
               <Aria setCurrentView={setCurrentView} /> 
@@ -557,57 +552,45 @@ const MasterWrapper = () => {
           {currentView === 'free-vs-full' && <div style={{ padding: '0 15px' }}><FreeVsFull /></div>} 
           {currentView === 'donate' && <div style={{ padding: '0 15px' }}><Donate /></div>} 
 
+          {/* 🔼 DYNAMICKY RIADENÝ BACK-TO-TOP PODĽA SKUTOČNÉHO PARAMETRA */}
+          {showTopBtn && (
+            <button 
+              className="back-to-top-btn" 
+              onClick={scrollToTop} 
+              style={{ 
+                position: 'fixed', 
+                bottom: '25px', 
+                right: isMobile ? '25px' : 'calc(25% + 25px)', 
+                zIndex: 99999, 
+                pointerEvents: 'auto',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+            >
+              <span className="back-to-top-arrow" style={{ lineHeight: 1 }}>▲</span>
+            </button>
+          )}
+
           {isMobile && <button onClick={() => setIsAppOpen(true)} className="trigger">{txt.btn_terminal || "TERMINAL"}</button>} 
         </main> 
       </div> 
 
-      {/* 3. APPKY PANEL */} 
-      {(!isMobile || isAppOpen) && ( 
-        <div  
-          className="app-side" 
-          style={{ 
-            flex: getAppSideFlex(), width: isMobile ? '100%' : '25%', 
-            position: isMobile ? 'fixed' : 'relative', right: 0, top: 0, height: '100vh', 
-            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', zIndex: 1 
-          }} 
-        > 
-          {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">{txt.btn_web || "WEB"}</button>} 
-          <div className="app-container" style={{ height: '100%' }}> 
-             
-            {isTauriWindow || isAlreadyInstalled ? ( 
-              <App triggerWebRefresh={triggerWebRefresh} /> 
-            ) : ( 
-              <div  
-                className="aria-liquid-container"  
-                style={{  
-                  padding: '30px 20px', height: '100%', display: 'flex', flexDirection: 'column', 
-                  background: 'linear-gradient(rgba(20, 20, 20, 0.75), rgba(20, 20, 20, 0.75)), #022002', animation: 'none' 
-                }} 
-              > 
-                <div className="modal-title" style={{ marginBottom: '40px', marginTop: '40px', textTransform: 'none' }}> 
-                  CrystalCore 
-                </div> 
-                <div className="card-description-text" style={{ textAlign: 'center', padding: '0 10px', marginBottom: '40px', fontSize: '13px', lineHeight: '22px' }}> 
-                  Pre prístup k svojej vizitke, prehľad kontaktov a rychly chat aktivuj Core. 
-                </div> 
-                <div style={{ flexGrow: 1 }}></div> 
-                <div style={{ width: '100%', maxWidth: '320px', alignSelf: 'center', marginBottom: '30px' }}> 
-                  <button className="primary-btn" onClick={handleDownloadClick}> 
-                    <span className="primary-btn-text"> 
-                      {deferredPrompt ? (txt.btn_download || "Spustiť Crystal Core") : "Aktivovať Crystal Core"} 
-                    </span> 
-                  </button> 
-                </div> 
-                <div style={{ textAlign: 'center', opacity: 0.3, marginTop: 'auto', marginBottom: '10px' }}> 
-                  <span className="text-terminal" style={{ fontSize: '9px', letterSpacing: '1px' }}> 
-                    SYSTEM_READY // BYTES_ALIGNED // 2026 
-                  </span> 
-                </div> 
-              </div> 
-            )} 
-          </div> 
+      {/* 3. APPKY PANEL (CRYSTAL CORE PERMANENT DISPATCH) */} 
+      <div  
+        className="app-side" 
+        style={{ 
+          flex: getAppSideFlex(), width: isMobile ? '100%' : '25%', 
+          position: isMobile ? 'fixed' : 'relative', right: 0, top: 0, height: '100vh', 
+          transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', zIndex: 1,
+          display: isMobile && !isAppOpen ? 'none' : 'block'
+        }} 
+      > 
+        {isMobile && <button onClick={() => setIsAppOpen(false)} className="trigger">{txt.btn_web || "WEB"}</button>} 
+        <div className="app-container" style={{ height: '100%' }}> 
+          <App triggerWebRefresh={triggerWebRefresh} /> 
         </div> 
-      )} 
+      </div> 
     </div> 
   ); 
 }; 

@@ -448,7 +448,8 @@ select option {
 }
 
 .symmetric-card {
-  width: 80%;
+  width: 100%;
+  padding: 10px; 
   height: auto;
   margin-bottom: 25px;
   box-sizing: border-box;
