@@ -73,7 +73,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
         {
           id: 'init_ready',
           user: 'Aria',
-          text: `Ahoj ${masterName}, kanál je bezpečne prepojený s Mraveniskom. Počúvam ťa...`,
+          text: `Ahoj. Som Aria, ak potrebuješ, pýtaj sa. Kryjem Ti chrbát ...`,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
