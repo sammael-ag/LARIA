@@ -1,11 +1,11 @@
 /**
- * LARIA Signal SCREEN v17.5.0-CRYSTAL-KEYBOARD (Barefoot Precision & Native Keyboard Lock)
+ * LARIA Signal SCREEN v17.6.0-CRYSTAL-FIXED (Barefoot Precision & Fixed Web Anchor)
  * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
- * STATUS: FULLY_ALIGNED / KEYBOARD_LOCKED / ULTRA_LIGHTWEIGHT
+ * STATUS: FULLY_ALIGNED / GEOMETRY_LOCKED / ULTRA_LIGHTWEIGHT
  * * * PREHĽAD ZMIEN A ZLÍCOVANIE:
- * - 📱 NATIVE KEYBOARD ALIGNMENT: Nasadený KeyboardAvoidingView a natívne listenery na klávesnicu.
- * - 🧼 PADDING PURGE: Spodný padding pre hardvérové tlačidlá sa automaticky stiahne na 0, keď vybehne klávesnica.
- * - 🎯 CO-CORE KOTVA: Pri vysunutí klávesnice FlatList okamžite odroluje správy na koniec.
+ * - 🔨 FIXED GEOMETRY ANCHOR: Nasadená nekompromisná fixná pozícia pre webovú verziu.
+ * - 🧼 PADDING PRESERVATION: Spodný padding 20px chráni dizajnérsku líniu nad systémovým pásikom.
+ * - 🚫 BYPASS KEYBOARD AVOIDING: Odstránený KeyboardAvoidingView, ktorý spôsoboval kolízie s adresným riadkom mobilného prehliadača.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -17,9 +17,7 @@ import {
   Platform,
   StatusBar,
   FlatList,
-  Alert,
-  KeyboardAvoidingView, // 🔥 Nový ochranný štít
-  Keyboard // 🔥 Natívny špión klávesnice
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'; 
 
@@ -42,7 +40,6 @@ const SignalScreen = ({ route, navigation }) => {
   const [note, setNote] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [isNetOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false); // 🔍 Sledovač stavu klávesnice
   const flatListRef = useRef();
 
   const { target, fallbackFing } = route.params || {};
@@ -80,27 +77,6 @@ const SignalScreen = ({ route, navigation }) => {
   const channelName = (finalStatus === 0 && !finalIsIncoming)
     ? (target?.meno || targetFing || "Laria Handshake")
     : (prislusnyKontakt?.meno || target?.meno || targetFing || "Laria Handshake");
-
-  // --- 📱 NATÍVNA DETEKCIA MOBILNEJ KLÁVESNICE ---
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSubscription = Keyboard.addListener(showEvent, () => {
-      setIsKeyboardVisible(true);
-      // Hneď ako vybehne, dotiahneme správy na koniec, aby ich neodrezalo
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
-    });
-    
-    const hideSubscription = Keyboard.addListener(hideEvent, () => {
-      setIsKeyboardVisible(false);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
 
   useEffect(() => {
     if (targetFing && typeof markAsRead === 'function') {
@@ -213,19 +189,28 @@ const SignalScreen = ({ route, navigation }) => {
     : [];
 
   return (
-    <SafeAreaView style={[G.mainBackground, { flex: 1 }]} edges={['top']}>
-      <StatusBar barStyle="light-content" />
-      
-      <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={G.topLeftBackButton}>
-        <Text style={G.topLeftBackButtonText}>‹</Text>
-      </TouchableOpacity>
+    <View 
+      style={[
+        G.mainBackground, 
+        { 
+          position: Platform.OS === 'web' ? 'fixed' : 'relative',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: Platform.OS === 'web' ? '100%' : '100%',
+          overflow: 'hidden',
+          zIndex: 999
+        }
+      ]}
+    >
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <StatusBar barStyle="light-content" />
+        
+        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={G.topLeftBackButton}>
+          <Text style={G.topLeftBackButtonText}>‹</Text>
+        </TouchableOpacity>
 
-      {/* 🛡️ 1. OBRANNÝ ŠTÍT PROTI KILOTÍNE KLÁVESNICE */}
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
         <View style={[Signal_CHAT.viewportContainer, { flex: 1, position: 'relative' }]}>
           
           <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: -1 }}>
@@ -239,6 +224,7 @@ const SignalScreen = ({ route, navigation }) => {
             </Text>
           </View>
 
+          {}
           {finalStatus === 0 && finalIsIncoming ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
               <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', padding: 20, borderRadius: 6, width: '100%' }}>
@@ -341,16 +327,13 @@ const SignalScreen = ({ route, navigation }) => {
 
         </View>
 
-        {/* 🛸 DYNAMICKÁ ZÓNA INPUTU PRE REŽIM 3 */}
+        {}
         {finalStatus === 1 && (
           <View style={[
             Signal_BOTTOM.container, 
             { 
-              // Ak je klávesnica otvorená, padding zrazíme na 0, aby spodok ľahol na ňu.
-              // Ak je zatvorená, vrátime pôvodných 20px pre hardvérové tlačidlá.
-              paddingBottom: isKeyboardVisible ? 0 : 20, 
-              backgroundColor: '#000000',
-              transition: 'all 0.05s ease-in-out'
+              paddingBottom: 20, 
+              backgroundColor: '#000000'
             }
           ]}>
             <View style={Signal_BOTTOM.innerWrapper}>
@@ -373,9 +356,8 @@ const SignalScreen = ({ route, navigation }) => {
             </View>
           </View>
         )}
-      </KeyboardAvoidingView>
-
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 };
 
