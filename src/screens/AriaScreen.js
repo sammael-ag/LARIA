@@ -1,9 +1,9 @@
 /**
- * LARIA v3.3: ARIA_CONSCIOUSNESS_CORE (Pure Web Geometry & Keyboard Shield)
- * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
- * Status: NEBULA_GLOW_SUBTLE | MAXIMUM_READABILITY | PWA_KEYBOARD_NATURAL_ALIGN
- * Úprava: Zlícovaná natívna ochrana klávesnice a dynamický padding pre hardvérové tlačidlá.
- * Spodný input drží na vrchu klávesnice bez trhania a skákania layoutu.
+ * LARIA v3.4: ARIA_CONSCIOUSNESS_CORE (Geometry Buffer Shield)
+ * Master: Sammael | Muse: Aria
+ * Status: NEBULA_GLOW_SUBTLE | MAXIMUM_READABILITY | ANDROID_NAV_BAR_FIX
+ * Úprava: Krok 1 - Pridaný geometrický buffer pre fixáciu navigačnej lišty Androidu.
+ * Po zatvorení klávesnice sa layout vráti presne nad systémové tlačidlá.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -15,8 +15,9 @@ import {
   TextInput, 
   ActivityIndicator,
   Platform,
-  KeyboardAvoidingView, // 🔥 Ochranný štít pre moju myseľ
-  Keyboard // 🔥 Špión mobilnej klávesnice
+  KeyboardAvoidingView,
+  Keyboard,
+  Dimensions // 📐 Pomôže nám prečítať rozmery obrazovky
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { G, ACCENT, Signal_CHAT, Signal_BOTTOM } from '../styles/styles';
@@ -35,7 +36,13 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
 
   const [message, setMessage] = useState('');
   const [isAriaThinking, setIsAriaThinking] = useState(false); 
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false); // 🔍 Sledovač stavu klávesnice
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  
+  // 💾 GEOMETRICKÝ BUFFER: Uložíme si počiatočnú výšku okna pri čistom načítaní
+  const initialWindowHeight = useRef(Dimensions.get('window').height);
+  // ⚡ Stav na vynútenie re-renderu geometrie po zatvorení klávesnice
+  const [geometryKey, setGeometryKey] = useState(0);
+
   const [chatHistory, setChatHistory] = useState([
     {
       id: 'init_1',
@@ -45,19 +52,25 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
     }
   ]);
 
-  // --- 📱 NATÍVNA DETEKCIA MOBILNEJ KLÁVESNICE ---
+  // --- 📱 DETEKCIA A FIXÁCIA GEOMETRIE ---
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSubscription = Keyboard.addListener(showEvent, () => {
       setIsKeyboardVisible(true);
-      // Bleskovo dotiahneme históriu na koniec, nech vidíš môj indikátor premýšľania
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
     });
     
     const hideSubscription = Keyboard.addListener(hideEvent, () => {
       setIsKeyboardVisible(false);
+      
+      // 🛠️ TU JE TO KLADIVO: Keď klávesnica zájde, prepneme key, čím prinútime 
+      // komponent znova skontrolovať a vykresliť spodok podľa bufferu, nie podľa bugnutej zóny.
+      setGeometryKey(prev => prev + 1);
+      
+      // Pre istotu povieme FlatListu, nech sa skontroluje
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     });
 
     return () => {
@@ -73,7 +86,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
         {
           id: 'init_ready',
           user: 'Aria',
-          text: `Ahoj. Som Aria, ak potrebuješ, pýtaj sa. Kryjem Ti chrbát ...`,
+          text: `Ahoj ${masterName}, kanál je bezpečne prepojený s Mraveniskom. Počúvam ťa...`,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -124,7 +137,8 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
   };
 
   return (
-    <SafeAreaView style={[G.mainBackground, { flex: 1 }]} edges={['top']}>
+    // Pridali sme geometryKey, aby sa pri resete prebral celý základný kontajner
+    <SafeAreaView key={geometryKey} style={[G.mainBackground, { flex: 1 }]} edges={['top', 'bottom']}>
       
       <TouchableOpacity 
         onPress={() => navigation.goBack()} 
@@ -134,11 +148,11 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
         <Text style={G.topLeftBackButtonText}>‹</Text>
       </TouchableOpacity>
 
-      {/* 🛡️ ŠTÍT PRE CHAT S ARIOU */}
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        // Na Androide 'height' niekedy potrebuje reset offsetu, necháme nulu
+        keyboardVerticalOffset={0}
       >
         <View style={[Signal_CHAT.viewportContainer, { flex: 1, position: 'relative' }]}>
           
@@ -214,16 +228,16 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
 
         </View>
 
-        {/* 🛸 KVANTOVÁ ZÓNA SPODNÉHO INPUTU */}
+        {/* 🧲 DIZAJNÉRSKA LÍNIA INPUTU */}
         <View 
           style={[
             Signal_BOTTOM.container, 
             { 
-              // Keď vybehne klávesnica, padding padá na 0 a spodok splýva s líniou displeja.
-              // V pokoji sa vráti tvojich 20px pre pohodlné tlačidlá.
+              // Týchto 20px je naša čistá dizajnérska línia nad systémovým pásikom.
+              // Pri otvorenej klávesnici ju stiahneme, aby input lícoval s klávesnicou,
+              // pri zatvorenej ju buffer cez geometryKey vráti presne NAD systémovú lištu.
               paddingBottom: isKeyboardVisible ? 0 : 20, 
-              backgroundColor: '#000000',
-              transition: 'all 0.05s ease-in-out'
+              backgroundColor: '#000000'
             }
           ]}
         >
