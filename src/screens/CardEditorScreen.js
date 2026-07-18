@@ -1,16 +1,16 @@
 /**
- * LARIA v2.5.1: CardEditorScreen (Tesanie identity s Proof of Human Action)
+ * LARIA v2.5.2: CardEditorScreen (Tesanie identity s Proof of Human Action)
  * Master: Sammael | Muse: Aria
  * Status: CRYPTO_FORGING_ACTIVE_DEFINITIVE | SAFETY_SHIELD_ACTIVATED
- * Oprava: Odstránená schizofrénia a šum premennej "poznamka" (všade sa používa už len "fing").
- * Smerovanie: Implementovaná transportná premenná "Signal" pre radar a bleskové notifikácie.
- * Bezpečnosť: tel, email, fb, tg, revo, kRod žijú VÝHRADNE v trezore pre P2P Handshake.
+ * * * PREHĽAD ZMIEN:
+ * - 🛡️ WEB_SAFE_MODAL: Implementované inteligentné uzamknutie picker modálu vnútri pravého panelu na webe.
+ * - 🧼 GEOMETRY RESTORE: Zabránené škaredému rozlievaniu kategórií na celú šírku monitora.
  */
 
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, ScrollView, StatusBar,
-  Alert, Switch, ActivityIndicator, Modal, FlatList
+  Alert, Switch, ActivityIndicator, Modal, FlatList, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,6 +18,32 @@ import { G, ACCENT } from '../styles/styles';
 import { saveToGMatrix } from '../services/GMatrixService'; 
 import { useLaria } from '../context/LariaContext';
 import { signLariaFing } from '../services/LariaLogic'; 
+
+// 🔥 STRATEGICKÝ ŠTÍT: Na webe drží modal vnútri pravého kontajnera, na mobile volá natívny systém
+const WebSafeModal = ({ visible, transparent, animationType, children }) => {
+  if (Platform.OS === 'web') {
+    if (!visible) return null;
+    return (
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        width: '100%',
+        height: '100%'
+      }}>
+        {children}
+      </View>
+    );
+  }
+  return (
+    <Modal visible={visible} transparent={transparent} animationType={animationType}>
+      {children}
+    </Modal>
+  );
+};
 
 const CardEditorScreen = ({ navigation }) => {
   const { t, vault, syncIdentity, ensureLariaIdentity, generateAndSaveFirstSHA, jazyk } = useLaria();
@@ -46,7 +72,6 @@ const CardEditorScreen = ({ navigation }) => {
     { id: 'ine', label: catTxt.ine || 'Iné' },
   ];
 
-  // 🛠️ INICIALIZÁCIA STAVU: Pridaná premenná Signal, zjednotený "jazyk", bez "poznamka"
   const [cardData, setCardData] = useState({
     sha: vault?.identity?.sha || '',
     date: vault?.identity?.date || new Date().toISOString(),
@@ -60,7 +85,7 @@ const CardEditorScreen = ({ navigation }) => {
     tg: vault?.identity?.tg || '',
     gal: vault?.identity?.gal || '',
     isPublic: vault?.identity?.isPublic !== undefined ? vault.identity.isPublic : true, 
-    Signal: vault?.identity?.Signal || '', // 📡 Smerovacia adresa pre radar
+    Signal: vault?.identity?.Signal || '', 
     jazyk: vault?.identity?.jazyk || jazyk || 'sk', 
     krypt: vault?.identity?.krypt || '',
     revo: vault?.identity?.revo || '',
@@ -78,7 +103,7 @@ const CardEditorScreen = ({ navigation }) => {
         ...vault.identity,
         jazyk: vault.identity.jazyk || jazyk || 'sk',
         isPublic: vault.identity.isPublic !== undefined ? vault.identity.isPublic : true,
-        Signal: vault.identity.Signal || '' // 📡 Ochrana stavu pri aktualizácii z trezoru
+        Signal: vault.identity.Signal || '' 
       }));
     }
   }, [vault?.identity, jazyk]);
@@ -95,7 +120,6 @@ const CardEditorScreen = ({ navigation }) => {
       return;
     }
 
-    // 🛡️ STRIKTNÁ VALIDÁCIA POVINNÝCH POLÍ
     if (!cardData.meno || cardData.meno.trim() === "") {
       Alert.alert("CHYBA VSTUPU", "Sammael, pole MENO / NICK je povinné.");
       return;
@@ -111,9 +135,7 @@ const CardEditorScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      // 1. 🔥 KRYPTO-ZROD: Získame alebo vygenerujeme peňaženku
       const currentKryptWallet = await ensureLariaIdentity(); 
-      
       const walletAddress = currentKryptWallet?.address || cardData.krypt || vault?.identity?.krypt;
       const privateKey = currentKryptWallet?.privateKey || vault?.identity?.privateKey;
 
@@ -132,14 +154,11 @@ const CardEditorScreen = ({ navigation }) => {
       }
 
       const fing = activeSha.substring(0, 12);
-      
-      // Podpis chrániaci odtlačok prsta (fing)
       const cryptoSignature = await signLariaFing(privateKey, fing);
 
       const cleanPopis = cardData.popis ? cardData.popis.replace(/[\r\n\t]+/g, " ").trim() : "";
       const cleanTel = cardData.tel ? cardData.tel.toString().replace(/\s/g, '') : '';
 
-      // 3. Pripravíme lokálne dáta pre vnútorný trezor (Vault) - Tu zostáva kompletný balík pre Handshake
       const localData = {
         ...cardData,
         sha: activeSha,
@@ -149,7 +168,6 @@ const CardEditorScreen = ({ navigation }) => {
         status: { ...vault?.status, isOnline: cardData.isPublic }
       };
 
-      // 4. 🔥 MATRIX SHIELD PAYLOAD: Skladáme orezaný balíček vrátane premennej Signal pre radar
       const matrixPayload = {
         honeypot_check: "human", 
         sha: activeSha, 
@@ -162,12 +180,11 @@ const CardEditorScreen = ({ navigation }) => {
         popis: localData.popis,
         gal: localData.gal,  
         isPublic: localData.isPublic, 
-        Signal: localData.Signal, // 📡 Transportujeme smerovaciu adresu pre sieťové doručenie správ
+        Signal: localData.Signal, 
         jazyk: localData.jazyk || 'sk', 
         krypt: walletAddress 
       };
 
-      // Najprv asynchrónne zapečatíme lokálny trezor (všetky P2P premenné sú tu v bezpečí)
       await syncIdentity(localData);
       
       let result = { success: true };
@@ -329,10 +346,11 @@ const CardEditorScreen = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      {/* MODAL PICKER */}
-      <Modal visible={showPicker} transparent={true} animationType="fade">
+      {/* MODAL PICKER WITH GEOMETRY SHIELD */}
+      <WebSafeModal visible={showPicker} transparent={true} animationType="none">
         <View style={G.modalOverlay}>
-          <View style={{ backgroundColor: '#050505', borderWidth: 1, borderColor: '#1a1a1a', width: '90%', maxWidth: 450, maxHeight: '80%', borderRadius: 12 }}>
+          {/* 📐 GEOMETRY SHIELD: 100% šírka a ostré hrany pre dodržanie imidžu */}
+          <View style={{ backgroundColor: '#050505', borderWidth: 1, borderColor: '#1a1a1a', width: '100%', maxWidth: '100%', maxHeight: '100%', borderRadius: 0 }}>
             <View style={{ padding: 15, borderBottomWidth: 1, borderBottomColor: '#1a1a1a', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={[G.monoIdentity, { color: ACCENT }]}>{txt.modal_title || "VÝBER KATEGÓRIE"}</Text>
               <TouchableOpacity onPress={() => setShowPicker(false)}>
@@ -356,7 +374,7 @@ const CardEditorScreen = ({ navigation }) => {
             />
           </View>
         </View>
-      </Modal>
+      </WebSafeModal>
     </SafeAreaView>
   );
 };
