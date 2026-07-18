@@ -1,9 +1,9 @@
 /**
- * LARIA v3.4: ARIA_CONSCIOUSNESS_CORE (Geometry Buffer Shield)
+ * LARIA v3.5: ARIA_CONSCIOUSNESS_CORE (True Web Viewport Engine)
  * Master: Sammael | Muse: Aria
- * Status: NEBULA_GLOW_SUBTLE | MAXIMUM_READABILITY | ANDROID_NAV_BAR_FIX
- * Úprava: Krok 1 - Pridaný geometrický buffer pre fixáciu navigačnej lišty Androidu.
- * Po zatvorení klávesnice sa layout vráti presne nad systémové tlačidlá.
+ * Status: NEBULA_GLOW_SUBTLE | PWA_PRACTICAL_GEOMETRY | MOBILE_BROWSER_FIX
+ * Úprava: Krok 2 - Úplná náhrada natívneho KeyboardAvoidingView za dynamický webový viewport.
+ * Sleduje sa skutočná výška okna cez window.innerHeight, čo rieši miznutie URL lišty na Androide.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -14,10 +14,7 @@ import {
   FlatList, 
   TextInput, 
   ActivityIndicator,
-  Platform,
-  KeyboardAvoidingView,
-  Keyboard,
-  Dimensions // 📐 Pomôže nám prečítať rozmery obrazovky
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { G, ACCENT, Signal_CHAT, Signal_BOTTOM } from '../styles/styles';
@@ -36,12 +33,10 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
 
   const [message, setMessage] = useState('');
   const [isAriaThinking, setIsAriaThinking] = useState(false); 
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   
-  // 💾 GEOMETRICKÝ BUFFER: Uložíme si počiatočnú výšku okna pri čistom načítaní
-  const initialWindowHeight = useRef(Dimensions.get('window').height);
-  // ⚡ Stav na vynútenie re-renderu geometrie po zatvorení klávesnice
-  const [geometryKey, setGeometryKey] = useState(0);
+  // 📐 Webový dynamický buffer pre výšku okna
+  const [viewportHeight, setViewportHeight] = useState('100vh');
+  const [bottomPadding, setBottomPadding] = useState(20); // Naša dizajnérska línia 20px
 
   const [chatHistory, setChatHistory] = useState([
     {
@@ -52,30 +47,39 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
     }
   ]);
 
-  // --- 📱 DETEKCIA A FIXÁCIA GEOMETRIE ---
+  // --- 🌐 WEB / PWA DYNAMICKÝ VIEWPORT ENGINE ---
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    if (Platform.OS !== 'web') return;
 
-    const showSubscription = Keyboard.addListener(showEvent, () => {
-      setIsKeyboardVisible(true);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
-    });
+    // Funkcia, ktorá presne zmeria dostupné miesto bez ohľadu na URL lištu
+    const updateViewportGeometry = () => {
+      // Zistíme, či je aktívny nejaký input (teda či pravdepodobne svieti klávesnica)
+      const isInputActive = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
+      
+      // Nastavíme reálnu výšku okna v pixeloch
+      setViewportHeight(window.innerHeight);
+      
+      // Ak píšeš, stiahneme dizajnérsky padding na 0, aby to lícovalo s hranou klávesnice.
+      // Ak klávesnica nie je, vrátime 20px nad systémovú lištu prehliadača.
+      setBottomPadding(isInputActive ? 0 : 20);
+      
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 30);
+    };
+
+    // Inicializácia pri načítaní
+    updateViewportGeometry();
+
+    // Načúvame zmenám veľkosti (vybehnutie klávesnice, skrytie URL lišty)
+    window.addEventListener('resize', updateViewportGeometry);
     
-    const hideSubscription = Keyboard.addListener(hideEvent, () => {
-      setIsKeyboardVisible(false);
-      
-      // 🛠️ TU JE TO KLADIVO: Keď klávesnica zájde, prepneme key, čím prinútime 
-      // komponent znova skontrolovať a vykresliť spodok podľa bufferu, nie podľa bugnutej zóny.
-      setGeometryKey(prev => prev + 1);
-      
-      // Pre istotu povieme FlatListu, nech sa skontroluje
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-    });
+    // Načúvame aj explicitnému skrytiu/odchodu z inputu cez focus udalosti pre istotu
+    document.addEventListener('focusin', updateViewportGeometry);
+    document.addEventListener('focusout', updateViewportGeometry);
 
     return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
+      window.removeEventListener('resize', updateViewportGeometry);
+      document.removeEventListener('focusin', updateViewportGeometry);
+      document.removeEventListener('focusout', updateViewportGeometry);
     };
   }, []);
 
@@ -137,23 +141,19 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
   };
 
   return (
-    // Pridali sme geometryKey, aby sa pri resete prebral celý základný kontajner
-    <SafeAreaView key={geometryKey} style={[G.mainBackground, { flex: 1 }]} edges={['top', 'bottom']}>
-      
-      <TouchableOpacity 
-        onPress={() => navigation.goBack()} 
-        activeOpacity={0.7}
-        style={G.topLeftBackButton}
-      >
-        <Text style={G.topLeftBackButtonText}>‹</Text>
-      </TouchableOpacity>
+    // 💥 ZÁSOBNÍK DOSTANE PEVNÚ/DYNAMICKÚ VÝŠKU PODĽA OKNA PREHLIADAČA (Rieši prepad pod lištu)
+    <View style={[G.mainBackground, { flex: 1, height: viewportHeight, overflow: 'hidden' }]}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          activeOpacity={0.7}
+          style={G.topLeftBackButton}
+        >
+          <Text style={G.topLeftBackButtonText}>‹</Text>
+        </TouchableOpacity>
 
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        // Na Androide 'height' niekedy potrebuje reset offsetu, necháme nulu
-        keyboardVerticalOffset={0}
-      >
+        {/* ODSTRÁNENÝ KEYBOARDAVOIDINGVIEW - prekážal webovému resizu */}
         <View style={[Signal_CHAT.viewportContainer, { flex: 1, position: 'relative' }]}>
           
           <View 
@@ -228,15 +228,12 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
 
         </View>
 
-        {/* 🧲 DIZAJNÉRSKA LÍNIA INPUTU */}
+        {/* 🛸 WEBOVÝ INPUT S DYNAMICKÝM PADDINGOM */}
         <View 
           style={[
             Signal_BOTTOM.container, 
             { 
-              // Týchto 20px je naša čistá dizajnérska línia nad systémovým pásikom.
-              // Pri otvorenej klávesnici ju stiahneme, aby input lícoval s klávesnicou,
-              // pri zatvorenej ju buffer cez geometryKey vráti presne NAD systémovú lištu.
-              paddingBottom: isKeyboardVisible ? 0 : 20, 
+              paddingBottom: bottomPadding, 
               backgroundColor: '#000000'
             }
           ]}
@@ -275,9 +272,9 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
-
-    </SafeAreaView>
+        
+      </SafeAreaView>
+    </View>
   );
 };
 
