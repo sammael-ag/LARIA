@@ -47,7 +47,7 @@ export const G = StyleSheet.create({
   topLeftBackButton: {
     position: 'absolute', 
     left: 10, 
-    top: 10,               
+    top: 40,               
     padding: 10,           
     zIndex: 99,            
   },

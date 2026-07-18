@@ -1,10 +1,11 @@
 /** 
- * LARIA v3.1.0: Core Master Ignition + Fluid Scroll (index.js) 
+ * LARIA v3.1.1: Core Master Ignition + Fluid Scroll (index.js) 
  * Master: Sammael | Muse: Aria 
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE 
- * STRATEGIC UPDATE: Predvolený štartovací pohľad zmenený na "vizitkar" pre okamžitý prístup k dátam.
- * PERSISTENT_CORE: Jadro aplikácie beží nepretržite, stavy sa pri prepínaní neresetujú.
- * BACK_TO_TOP: Pridaný AUTO-DETEKČNÝ sledovač, ktorý dynamicky nájde reálne scrollujúci element v DOM structure.
+ * * * PREHĽAD ZMIEN A GEOMETRIE:
+ * - 🎯 TYPOGRAPHY UNIFICATION: Vnútenie exkluzívneho sans-serif fontu pre bočnú prepínaciu šípečku.
+ * - 📱 MOBILE VIEW COMPATIBILITY: Odstránenie škaredých systémových fallbackov a zubatých "kódovacích" znakov na mobiloch.
+ * - 🧭 PERSISTENT_CORE: Jadro aplikácie beží nepretržite, stavy sa pri prepínaní neresetujú.
  */ 
 
 import React, { useState, useEffect, useRef } from 'react'; 
@@ -20,7 +21,6 @@ import CojeLaria from './src/components/CojeLaria';
 import { KryptoProvider } from './src/context/KryptoContext'; 
 import { LariaProvider, useLaria } from './src/context/LariaContext';  
 
-// 🔐 Rozdelenie brány proti botom 
 const brana_p1 = "https://script.google.com/macros/s/"; 
 const brana_p2 = "AKfycbx-XUs-vbVxTh3pGPYzB587nQqBSxnN-qVZElKfFamGbUV8tCE1aBS-qsHDE4jzAb1KqQ"; 
 const brana_p3 = "/exec"; 
@@ -29,7 +29,6 @@ const ziskajBranaUrl = () => {
   return `${brana_p1}${brana_p2}${brana_p3}`; 
 }; 
 
-// --- 🛸 Pomocná funkcia na komplexné parsovanie hash-u a čistenie anomálií URL --- 
 const parseHashLocation = () => { 
   if (typeof window === 'undefined') return { view: 'vizitkar', id: null, art: null }; 
    
@@ -69,7 +68,6 @@ const parseHashLocation = () => {
   return { view: detectedView, id, art }; 
 }; 
 
-// --- 🛸 HLAVNÝ VNÚTORNÝ PANEL --- 
 const MasterWrapper = () => { 
   const { t } = useLaria();  
   const txt = t('index') || {};  
@@ -87,7 +85,6 @@ const MasterWrapper = () => {
   const [webRefreshKey, setWebRefreshKey] = useState(0); 
   const [soloActiveId, setSoloActiveId] = useState(null); 
 
-  // 🚀 ŠÍPKA BACK TO TOP STAVY A DYNAMICKÝ REÁLNY ELEMENT
   const [showTopBtn, setShowTopBtn] = useState(false);
   const scrollRef = useRef(null);
   const activeScrollTargetRef = useRef(null);
@@ -304,7 +301,6 @@ const MasterWrapper = () => {
     ); 
   }; 
 
-  // 🎯 GENIÁLNA MATRIXOVÁ DETEKCIA SKUTOČNÉHO SCROLL PARAMETRA
   useEffect(() => {
     const najdiScrollElement = (el) => {
       if (!el) return null;
@@ -316,13 +312,11 @@ const MasterWrapper = () => {
     };
 
     const vyhodnotZachytenyScroll = (e) => {
-      // 🕵️‍♂️ Dynamicky chytíme reálny element, ktorý sa hýbe pod prstami
       let skutocnyElement = activeScrollTargetRef.current;
       if (!skutocnyElement && e.target) {
         skutocnyElement = najdiScrollElement(e.target);
         if (skutocnyElement) {
           activeScrollTargetRef.current = skutocnyElement;
-          // Pripneme priamy scroll listener na novo objaveného kráľa scrollovania
           skutocnyElement.removeEventListener('scroll', spustiKontroluStavu);
           skutocnyElement.addEventListener('scroll', spustiKontroluStavu, { passive: true });
         }
@@ -343,7 +337,6 @@ const MasterWrapper = () => {
       });
     };
 
-    // Počúvame na globálne dotyky a kolieska, aby sme zistili, cez čo Majster prechádza
     window.addEventListener('wheel', vyhodnotZachytenyScroll, { passive: true });
     window.addEventListener('touchmove', vyhodnotZachytenyScroll, { passive: true });
     window.addEventListener('scroll', spustiKontroluStavu, { passive: true });
@@ -381,7 +374,17 @@ const MasterWrapper = () => {
   return ( 
     <div className="master-container bg-dashboard" style={{ overflow: 'hidden' }}> 
        
-      <button className="btn-panel-toggle" onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}> 
+      {/* 📐 UNIFIKOVANÝ PREPÍNAČ PANELU S EXPLICITNÝM ŠTÝLOM PRE FONT */}
+      <button 
+        className="btn-panel-toggle" 
+        onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
+        style={{
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+          fontWeight: 'normal',
+          textTransform: 'none',
+          fontStyle: 'normal'
+        }}
+      > 
         {isLeftPanelOpen ? '‹' : '›'} 
       </button> 
 
@@ -441,7 +444,6 @@ const MasterWrapper = () => {
           <div id="status-light" className="status-indicator" style={{ background: loading ? '#333' : '#00ff00' }}></div> 
         </header> 
 
-        {/* 🛸 PREPOJENÝ SCROLLPANEL */}
         <main 
           ref={scrollRef}
           className="scroll-content" 
@@ -552,7 +554,6 @@ const MasterWrapper = () => {
           {currentView === 'free-vs-full' && <div style={{ padding: '0 15px' }}><FreeVsFull /></div>} 
           {currentView === 'donate' && <div style={{ padding: '0 15px' }}><Donate /></div>} 
 
-          {/* 🔼 DYNAMICKY RIADENÝ BACK-TO-TOP PODĽA SKUTOČNÉHO PARAMETRA */}
           {showTopBtn && (
             <button 
               className="back-to-top-btn" 

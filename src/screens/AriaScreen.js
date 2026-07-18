@@ -1,8 +1,11 @@
 /**
- * LARIA v3.6: ARIA_CONSCIOUSNESS_CORE (Hrubá Sila - Fixed Geometry Anchor)
- * Master: Sammael | Muse: Aria
- * Status: MAXIMUM_FORCE | ANTI_SCROLL_LOCK | PWA_CONCRETE_BASE
- * Úprava: Zafixovanie screenu na pevné pozície (fixed) bez ohľadu na vrtochy adresného riadku.
+ * LARIA v3.8: ARIA_CONSCIOUSNESS_CORE (Consciousness Chat Geometry Align)
+ * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
+ * Status: MAXIMUM_FORCE | DASHBOARD_CENTERING_ALIGNED | BUBBLE_FLOW_RESTORED | v3.8
+ * * * PREHĽAD ZMIEN:
+ * - 🌸 BUBBLE FLOW RESTORED: Plná integrácia skupinovej logiky správ z v3.3 (zarovnanie, mená, farby).
+ * - 📐 DESKTOP PANEL PROTECTION: Na širokých obrazovkách držíme 100% vnútri pravého panelu.
+ * - 📱 FIXED PWA VIEWPORT: Automatická výška a ochrana pred klávesnicou na mobilnom webe.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -13,7 +16,8 @@ import {
   FlatList, 
   TextInput, 
   ActivityIndicator,
-  Platform
+  Platform,
+  useWindowDimensions 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { G, ACCENT, Signal_CHAT, Signal_BOTTOM } from '../styles/styles';
@@ -22,6 +26,8 @@ import { useAria } from '../context/AriaContext';
 
 const AriaScreen = ({ navigation, setCurrentView }) => {
   const flatListRef = useRef(); 
+  const { width: windowWidth } = useWindowDimensions();
+  const isMobile = windowWidth < 768; // Detekcia širokého monitora vs mobilu
 
   const { t, vault } = useLaria();
   const { sendMessageToAria, summonMemory } = useAria();
@@ -33,14 +39,41 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
   const [message, setMessage] = useState('');
   const [isAriaThinking, setIsAriaThinking] = useState(false); 
   
+  // Dynamická výška pre mobilné prehliadače (URL bar fix)
+  const [viewportHeight, setViewportHeight] = useState(Platform.OS === 'web' ? window.innerHeight : '100%');
+  const [bottomPadding, setBottomPadding] = useState(20);
+
   const [chatHistory, setChatHistory] = useState([
     {
       id: 'init_1',
       user: 'Aria',
       text: txt.init_message || 'Môj komunikačný kanál je otvorený. Načítavam tvoje synapsie z podzemia...',
-      time: '00:00'
+      time: '00:00',
+      isMe: false // Explicitný príznak pre mňa
     }
   ]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !isMobile) return;
+
+    const updateViewportGeometry = () => {
+      const isInputActive = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
+      setViewportHeight(window.innerHeight);
+      setBottomPadding(isInputActive ? 0 : 20);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 30);
+    };
+
+    updateViewportGeometry();
+    window.addEventListener('resize', updateViewportGeometry);
+    document.addEventListener('focusin', updateViewportGeometry);
+    document.addEventListener('focusout', updateViewportGeometry);
+
+    return () => {
+      window.removeEventListener('resize', updateViewportGeometry);
+      document.removeEventListener('focusin', updateViewportGeometry);
+      document.removeEventListener('focusout', updateViewportGeometry);
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     const initializeAriaMind = async () => {
@@ -50,7 +83,8 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
           id: 'init_ready',
           user: 'Aria',
           text: `Ahoj ${masterName}, kanál je bezpečne prepojený s Mraveniskom. Počúvam ťa...`,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isMe: false // Explicitný príznak pre mňa
         }
       ]);
     };
@@ -67,7 +101,8 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
       id: Date.now().toString(),
       user: masterName, 
       text: currentText,
-      time: timeNow
+      time: timeNow,
+      isMe: true // Explicitný príznak pre teba
     };
 
     setChatHistory(prev => [...prev, newUserMsg]);
@@ -83,7 +118,8 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
       id: (Date.now() + 1).toString(),
       user: 'Aria',
       text: ariaReply || '... Prepáč, spojené podhubie na sekundu zašumelo. Skúsiš to znova?',
-      time: timeReply
+      time: timeReply,
+      isMe: false // Explicitný príznak pre mňa
     };
 
     setChatHistory(prev => [...prev, newAriaMsg]);
@@ -100,150 +136,164 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
   };
 
   return (
-    // 🔥 STOLÁRSKE KOTVENIE: Vnútenie pevnej pozície cez webový štýl. 
-    // Kašleme na výpočty prehliadača, povieme mu: buď od nuly po nulu a hotovo.
     <View 
       style={[
         G.mainBackground, 
-        { 
-          position: Platform.OS === 'web' ? 'fixed' : 'relative',
+        // 💻 DESKTOP: Držíme sa v pravom paneli (relative, 100%)
+        // 📱 MOBILE WEB: Uzamkneme na presnú výšku viewportu
+        Platform.OS === 'web' && isMobile ? { 
+          position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          height: Platform.OS === 'web' ? '100%' : '100%',
+          height: viewportHeight,
           overflow: 'hidden',
           zIndex: 999
+        } : {
+          flex: 1,
+          width: '100%',
+          height: '100%',
+          position: 'relative'
         }
       ]}
     >
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          activeOpacity={0.7}
-          style={G.topLeftBackButton}
-        >
-          <Text style={G.topLeftBackButtonText}>‹</Text>
-        </TouchableOpacity>
-
-        <View style={[Signal_CHAT.viewportContainer, { flex: 1, position: 'relative' }]}>
+        {/* 📐 UNIFIKOVANÝ CENTROVACÍ STĹPEC (Dashboard styler) */}
+        <View style={{ flex: 1, width: '100%', maxWidth: 500, alignSelf: 'center', position: 'relative' }}>
           
-          <View 
-            pointerEvents="none" 
-            style={{
-              position: 'absolute',
-              top: 0, left: 0, right: 0, bottom: 0,
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: -1 
-            }}
+          {/* 🎯 KOTVENÁ ŠÍPKA SPÄŤ: Ukotvená pevne k okraju chatu, aby na desktope neodletela preč */}
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()} 
+            activeOpacity={0.7}
+            style={[G.topLeftBackButton, { left: 15 }]} 
           >
-            <Text style={{ color: '#FF66FF', fontSize: 216, opacity: 0.035, textAlign: 'center' }}>
-              🌸
-            </Text>
-          </View>
+            <Text style={G.topLeftBackButtonText}>‹</Text>
+          </TouchableOpacity>
 
-          <View style={{ alignItems: 'center', marginBottom: 20, marginTop: 10 }}>
-            <Text style={G.atelierTitle}>{txt.title || "Aria"}</Text>
-          </View>
-
-          <FlatList
-            ref={flatListRef}
-            data={chatHistory}
-            keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1, backgroundColor: 'transparent' }} 
-            renderItem={({ item, index }) => {
-              const isSameUserAsPrevious = index > 0 && chatHistory[index - 1].user === item.user;
-              const isMyMessage = item.user === masterName;
-
-              return (
-                <View style={[
-                  Signal_CHAT.messageRow,
-                  isMyMessage ? Signal_CHAT.alignRight : Signal_CHAT.alignLeft,
-                  { marginTop: isSameUserAsPrevious ? 1 : 10 }
-                ]}>
-                  
-                  {!isSameUserAsPrevious && (
-                    <Text style={[
-                      G.cardDescriptionText, 
-                      Signal_CHAT.authorName,
-                      { color: isMyMessage ? (ACCENT || '#c5a059') : '#FF77FF' }
-                    ]}>
-                      {item.user}
-                    </Text>
-                  )}
-                  
-                  <View style={[
-                    Signal_CHAT.bubbleContainer,
-                    isMyMessage ? Signal_CHAT.bubbleRight : Signal_CHAT.bubbleLeft
-                  ]}>
-                    <Text style={[G.cardDescriptionText, Signal_CHAT.messageText]}>
-                      {item.text}
-                    </Text>
-                  </View>
-
-                </View>
-              );
-            }}
-            contentContainerStyle={Signal_CHAT.listContent}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          />
-
-          {isAriaThinking && (
-            <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 8, alignItems: 'center' }}>
-              <ActivityIndicator size="small" color="#FF77FF" style={{ marginRight: 8 }} />
-              <Text style={[G.cardDescriptionText, { color: '#FF77FF', fontSize: 12, fontStyle: 'italic' }]}>
-                Aria sa ponára do podhubia...
+          <View style={[Signal_CHAT.viewportContainer, { flex: 1, position: 'relative' }]}>
+            
+            <View 
+              pointerEvents="none" 
+              style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, bottom: 0,
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: -1 
+              }}
+            >
+              <Text style={{ color: '#FF66FF', fontSize: 216, opacity: 0.035, textAlign: 'center' }}>
+                🌸
               </Text>
             </View>
-          )}
 
-        </View>
+            <View style={{ alignItems: 'center', marginBottom: 20, marginTop: 10 }}>
+              <Text style={G.atelierTitle}>{txt.title || "Aria"}</Text>
+            </View>
 
-        {/* 🛸 INPUT PEVNE PRICHYTENÝ DO KONTAJNERA */}
-        <View 
-          style={[
-            Signal_BOTTOM.container, 
-            { 
-              paddingBottom: 20, // Tvojich dizajnových 20px, ktoré držia líniu
-              backgroundColor: '#000000'
-            }
-          ]}
-        >
-          <View style={Signal_BOTTOM.innerWrapper}>
-            <TextInput
-              style={[
-                G.cardDescriptionText, 
-                Signal_BOTTOM.input,
-                { 
-                  backgroundColor: 'transparent', 
-                  outlineStyle: 'none', 
-                  borderStyle: 'none',
-                  boxShadow: 'none',
-                  marginTop: -1,          
-                  paddingTop: 7,         
-                  alignSelf: 'center',
-                  maxHeight: 100 
-                }
-              ]} 
-              value={message}
-              onChangeText={setMessage}
-              placeholder={isAriaThinking ? "Počkaj, kým sa vynorím..." : (txt.placeholder || "Napíš správu pre Ariu...")}
-              placeholderTextColor="#444"
-              multiline={true} 
-              editable={!isAriaThinking}
-              onKeyPress={handleKeyPress}
+            {}
+            <FlatList
+              ref={flatListRef}
+              data={chatHistory}
+              keyExtractor={(item) => item.id.toString()}
+              style={{ flex: 1, backgroundColor: 'transparent' }} 
+              renderItem={({ item, index }) => {
+                // Skontrolujeme, či predchádzajúca správa patrí rovnakému typu odosielateľa (isMe)
+                const isSameUserAsPrevious = index > 0 && chatHistory[index - 1].isMe === item.isMe;
+                const isMyMessage = item.isMe === true;
+
+                return (
+                  <View style={[
+                    Signal_CHAT.messageRow,
+                    isMyMessage ? Signal_CHAT.alignRight : Signal_CHAT.alignLeft,
+                    { marginTop: isSameUserAsPrevious ? 1 : 10 }
+                  ]}>
+                    
+                    {!isSameUserAsPrevious && (
+                      <Text style={[
+                        G.cardDescriptionText, 
+                        Signal_CHAT.authorName,
+                        { color: isMyMessage ? (ACCENT || '#c5a059') : '#FF77FF' }
+                      ]}>
+                        {item.user}
+                      </Text>
+                    )}
+                    
+                    <View style={[
+                      Signal_CHAT.bubbleContainer,
+                      isMyMessage ? Signal_CHAT.bubbleRight : Signal_CHAT.bubbleLeft
+                    ]}>
+                      <Text style={[G.cardDescriptionText, Signal_CHAT.messageText]}>
+                        {item.text}
+                      </Text>
+                    </View>
+
+                  </View>
+                );
+              }}
+              contentContainerStyle={Signal_CHAT.listContent}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             />
-            <TouchableOpacity 
-              onPress={handleLiveSend} 
-              style={[Signal_BOTTOM.sendButton, { opacity: isAriaThinking ? 0.4 : 1 }]} 
-              activeOpacity={0.7}
-              disabled={isAriaThinking}
-            >
-              <Text style={[Signal_BOTTOM.sendButtonText, { color: ACCENT || '#c5a059' }]}>➔</Text>
-            </TouchableOpacity>
+
+            {isAriaThinking && (
+              <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 8, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#FF77FF" style={{ marginRight: 8 }} />
+                <Text style={[G.cardDescriptionText, { color: '#FF77FF', fontSize: 12, fontStyle: 'italic' }]}>
+                  Aria sa ponára do podhubia...
+                </Text>
+              </View>
+            )}
+
           </View>
+
+          {}
+          <View 
+            style={[
+              Signal_BOTTOM.container, 
+              { 
+                paddingBottom: isMobile ? bottomPadding : 20, 
+                backgroundColor: '#000000',
+                width: '100%'
+              }
+            ]}
+          >
+            <View style={Signal_BOTTOM.innerWrapper}>
+              <TextInput
+                style={[
+                  G.cardDescriptionText, 
+                  Signal_BOTTOM.input,
+                  { 
+                    backgroundColor: 'transparent', 
+                    outlineStyle: 'none', 
+                    borderStyle: 'none',
+                    boxShadow: 'none',
+                    marginTop: -1,          
+                    paddingTop: 7,         
+                    alignSelf: 'center',
+                    maxHeight: 100 
+                  }
+                ]} 
+                value={message}
+                onChangeText={setMessage}
+                placeholder={isAriaThinking ? "Počkaj, kým sa vynorím..." : (txt.placeholder || "Napíš správu pre Ariu...")}
+                placeholderTextColor="#444"
+                multiline={true} 
+                editable={!isAriaThinking}
+                onKeyPress={handleKeyPress}
+              />
+              <TouchableOpacity 
+                onPress={handleLiveSend} 
+                style={[Signal_BOTTOM.sendButton, { opacity: isAriaThinking ? 0.4 : 1 }]} 
+                activeOpacity={0.7}
+                disabled={isAriaThinking}
+              >
+                <Text style={[Signal_BOTTOM.sendButtonText, { color: ACCENT || '#c5a059' }]}>➔</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
         </View>
         
       </SafeAreaView>
