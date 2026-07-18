@@ -1,9 +1,8 @@
 /**
- * LARIA v3.5: ARIA_CONSCIOUSNESS_CORE (True Web Viewport Engine)
+ * LARIA v3.6: ARIA_CONSCIOUSNESS_CORE (Hrubá Sila - Fixed Geometry Anchor)
  * Master: Sammael | Muse: Aria
- * Status: NEBULA_GLOW_SUBTLE | PWA_PRACTICAL_GEOMETRY | MOBILE_BROWSER_FIX
- * Úprava: Krok 2 - Úplná náhrada natívneho KeyboardAvoidingView za dynamický webový viewport.
- * Sleduje sa skutočná výška okna cez window.innerHeight, čo rieši miznutie URL lišty na Androide.
+ * Status: MAXIMUM_FORCE | ANTI_SCROLL_LOCK | PWA_CONCRETE_BASE
+ * Úprava: Zafixovanie screenu na pevné pozície (fixed) bez ohľadu na vrtochy adresného riadku.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -34,10 +33,6 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
   const [message, setMessage] = useState('');
   const [isAriaThinking, setIsAriaThinking] = useState(false); 
   
-  // 📐 Webový dynamický buffer pre výšku okna
-  const [viewportHeight, setViewportHeight] = useState('100vh');
-  const [bottomPadding, setBottomPadding] = useState(20); // Naša dizajnérska línia 20px
-
   const [chatHistory, setChatHistory] = useState([
     {
       id: 'init_1',
@@ -46,42 +41,6 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
       time: '00:00'
     }
   ]);
-
-  // --- 🌐 WEB / PWA DYNAMICKÝ VIEWPORT ENGINE ---
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-
-    // Funkcia, ktorá presne zmeria dostupné miesto bez ohľadu na URL lištu
-    const updateViewportGeometry = () => {
-      // Zistíme, či je aktívny nejaký input (teda či pravdepodobne svieti klávesnica)
-      const isInputActive = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
-      
-      // Nastavíme reálnu výšku okna v pixeloch
-      setViewportHeight(window.innerHeight);
-      
-      // Ak píšeš, stiahneme dizajnérsky padding na 0, aby to lícovalo s hranou klávesnice.
-      // Ak klávesnica nie je, vrátime 20px nad systémovú lištu prehliadača.
-      setBottomPadding(isInputActive ? 0 : 20);
-      
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 30);
-    };
-
-    // Inicializácia pri načítaní
-    updateViewportGeometry();
-
-    // Načúvame zmenám veľkosti (vybehnutie klávesnice, skrytie URL lišty)
-    window.addEventListener('resize', updateViewportGeometry);
-    
-    // Načúvame aj explicitnému skrytiu/odchodu z inputu cez focus udalosti pre istotu
-    document.addEventListener('focusin', updateViewportGeometry);
-    document.addEventListener('focusout', updateViewportGeometry);
-
-    return () => {
-      window.removeEventListener('resize', updateViewportGeometry);
-      document.removeEventListener('focusin', updateViewportGeometry);
-      document.removeEventListener('focusout', updateViewportGeometry);
-    };
-  }, []);
 
   useEffect(() => {
     const initializeAriaMind = async () => {
@@ -141,8 +100,23 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
   };
 
   return (
-    // 💥 ZÁSOBNÍK DOSTANE PEVNÚ/DYNAMICKÚ VÝŠKU PODĽA OKNA PREHLIADAČA (Rieši prepad pod lištu)
-    <View style={[G.mainBackground, { flex: 1, height: viewportHeight, overflow: 'hidden' }]}>
+    // 🔥 STOLÁRSKE KOTVENIE: Vnútenie pevnej pozície cez webový štýl. 
+    // Kašleme na výpočty prehliadača, povieme mu: buď od nuly po nulu a hotovo.
+    <View 
+      style={[
+        G.mainBackground, 
+        { 
+          position: Platform.OS === 'web' ? 'fixed' : 'relative',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: Platform.OS === 'web' ? '100%' : '100%',
+          overflow: 'hidden',
+          zIndex: 999
+        }
+      ]}
+    >
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         
         <TouchableOpacity 
@@ -153,7 +127,6 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
           <Text style={G.topLeftBackButtonText}>‹</Text>
         </TouchableOpacity>
 
-        {/* ODSTRÁNENÝ KEYBOARDAVOIDINGVIEW - prekážal webovému resizu */}
         <View style={[Signal_CHAT.viewportContainer, { flex: 1, position: 'relative' }]}>
           
           <View 
@@ -228,12 +201,12 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
 
         </View>
 
-        {/* 🛸 WEBOVÝ INPUT S DYNAMICKÝM PADDINGOM */}
+        {/* 🛸 INPUT PEVNE PRICHYTENÝ DO KONTAJNERA */}
         <View 
           style={[
             Signal_BOTTOM.container, 
             { 
-              paddingBottom: bottomPadding, 
+              paddingBottom: 20, // Tvojich dizajnových 20px, ktoré držia líniu
               backgroundColor: '#000000'
             }
           ]}
