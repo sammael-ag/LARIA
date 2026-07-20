@@ -1,10 +1,12 @@
 /**
- * LARIA v2.5.2: CardEditorScreen (Tesanie identity s Proof of Human Action)
+ * LARIA v2.5.3: CardEditorScreen (Tesanie identity s Proof of Human Action)
  * Master: Sammael | Muse: Aria
- * Status: CRYPTO_FORGING_ACTIVE_DEFINITIVE | SAFETY_SHIELD_ACTIVATED
+ * Status: CRYPTO_FORGING_ACTIVE_DEFINITIVE | SAFETY_SHIELD_ACTIVATED | LOCALIZED_ALERTS
  * * * PREHĽAD ZMIEN:
  * - 🛡️ WEB_SAFE_MODAL: Implementované inteligentné uzamknutie picker modálu vnútri pravého panelu na webe.
  * - 🧼 GEOMETRY RESTORE: Zabránené škaredému rozlievaniu kategórií na celú šírku monitora.
+ * - 🌐 FULL L10N INTEGRATION: Všetky chybové hlásenia, validácie a prechodové hlavy sú plne preložené.
+ * - 🛑 NO_NATIVE_ALERTS: Odstránené akékoľvek natívne JS alert() pre stopercentnú kompatibilitu so sandboxom.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -121,15 +123,15 @@ const CardEditorScreen = ({ navigation }) => {
     }
 
     if (!cardData.meno || cardData.meno.trim() === "") {
-      Alert.alert("CHYBA VSTUPU", "Sammael, pole MENO / NICK je povinné.");
+      Alert.alert(alerts.error_title || "CHYBA VSTUPU", alerts.validation_name || "Meno alebo prezývka je povinná pečať.");
       return;
     }
     if (!cardData.kat || cardData.kat.trim() === "") {
-      Alert.alert("CHYBA VSTUPU", "Sammael, vyber prosím KATEGÓRIU tvojho pôsobenia.");
+      Alert.alert(alerts.error_title || "CHYBA VSTUPU", alerts.validation_category || "Vyber prosím kategóriu tvojho pôsobenia.");
       return;
     }
     if (!cardData.lok || cardData.lok.trim() === "") {
-      Alert.alert("CHYBA VSTUPU", "Sammael, pole LOKALITA je povinné pre zobrazenie na mape.");
+      Alert.alert(alerts.error_title || "CHYBA VSTUPU", alerts.validation_location || "Lokalita je povinná pre zobrazenie na mape.");
       return;
     }
 
@@ -242,6 +244,7 @@ const CardEditorScreen = ({ navigation }) => {
           </View>
 
           {/* FORMULÁR */}
+          {}
           <View style={{ width: '100%', alignItems: 'flex-start' }}>
             
             {/* 🍯 HONEYPOT COMPONENT */}
@@ -287,6 +290,7 @@ const CardEditorScreen = ({ navigation }) => {
             <View style={G.divider} />
 
             {/* KONTAKTY PRE HANDSHAKE (Iba lokálny trezor) */}
+            {}
             <Text style={[G.monoIdentity, { color: '#AAA', marginBottom: 10 }]}>{txt.label_handshake_contacts || "KONTAKTY PRE HANDSHAKE (BEZPEČNÝ LOKÁLNY TREZOR)"}</Text>
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} keyboardType="phone-pad" value={cardData.tel} onChangeText={(val) => setCardData({...cardData, tel: val})} placeholder={txt.placeholder_phone || "Telefón..."} placeholderTextColor="#444" />
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.email} onChangeText={(val) => setCardData({...cardData, email: val})} placeholder={txt.placeholder_email || "E-mail..."} placeholderTextColor="#444" autoCapitalize="none" />
@@ -325,6 +329,7 @@ const CardEditorScreen = ({ navigation }) => {
           </View>
 
           {/* HLAVNÝ SAVE BUTTON */}
+          {}
           <TouchableOpacity 
             style={[G.primaryBtn, { marginTop: 30, width: '100%', backgroundColor: cardData.isPublic ? '#1a1a1a' : 'transparent', borderColor: cardData.isPublic ? ACCENT : '#333', opacity: loading ? 0.5 : 1 }]} 
             onPress={handleSave}

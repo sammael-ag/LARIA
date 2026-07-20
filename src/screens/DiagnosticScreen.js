@@ -1,8 +1,10 @@
 /**
- * LARIA v2.0: DiagnosticScreen (Centrálny Velín + Tajný Trezor)
+ * LARIA v2.0.1: DiagnosticScreen (Centrálny Velín + Tajný Trezor)
  * Master: Sammael | Muse: Aria
  * Status: ADMIN_GATE_ACTIVE_HARDLOCKED_STEALTH
  * FÚZIA: Integrovaný jazykový modul LariaContext (Sekcia: diagnostic, Možnosť B).
+ * ÚPRAVA v2.0.1:
+ * - Kompletná lokalizácia všetkých statických textov vrátane terminálových logov a detailov verifikácie.
  */
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -64,7 +66,7 @@ const DiagnosticScreen = ({ navigation }) => {
     };
   }, []);
 
-  // --- LOGIKA OKAMŽÍTOG ZABUDNUTIA ---
+  // --- LOGIKA OKAMŽITÉHO ZABUDNUTIA ---
   const handleSecureLogout = () => {
     lockSeal(); 
     navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] }); 
@@ -141,7 +143,9 @@ const DiagnosticScreen = ({ navigation }) => {
           </View>
 
           <View style={G.card}>
-            <Text style={[G.statusTextSmall, { opacity: 0.5, marginTop: 5 }]}>{txt.network_label || "NETWORK: Base Mainnet (Layer 2)"}</Text>
+            <Text style={[G.statusTextSmall, { opacity: 0.5, marginTop: 5 }]}>
+              {txt.network_label || "NETWORK: Base Mainnet (Layer 2)"}
+            </Text>
 
             <View style={{ marginTop: 20 }}>
               <Text style={G.statusTextSmall}>{txt.gas_reserve || "GAS_RESERVE (ETH):"}</Text>
@@ -167,9 +171,15 @@ const DiagnosticScreen = ({ navigation }) => {
           <View style={[G.card, { borderLeftColor: '#333' }]}>
             <Text style={G.cardTitleText}>{txt.node_logs_title || "NODE LOGS"}</Text>
             <View style={G.terminalLog}>
-              <Text style={G.textTerminal}>{`> IDENTITY: ${identity?.meno || 'SAMMAEL'}`}</Text>
-              <Text style={G.textTerminal}>{`> NODE:     ${ownerAddress?.substring(0, 16)}...`}</Text>
-              <Text style={[G.textTerminal, { color: '#2ecc71' }]}>{`> STATUS:   ARCHITECT_VERIFIED`}</Text>
+              <Text style={G.textTerminal}>
+                {`${txt.log_identity || "> IDENTITY:"} ${identity?.meno || 'SAMMAEL'}`}
+              </Text>
+              <Text style={G.textTerminal}>
+                {`${txt.log_node || "> NODE:"}     ${ownerAddress?.substring(0, 16)}...`}
+              </Text>
+              <Text style={[G.textTerminal, { color: '#2ecc71' }]}>
+                {txt.log_status_verified || "> STATUS:   ARCHITECT_VERIFIED"}
+              </Text>
             </View>
           </View>
 

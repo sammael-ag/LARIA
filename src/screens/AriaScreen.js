@@ -1,8 +1,9 @@
 /**
- * LARIA v3.8: ARIA_CONSCIOUSNESS_CORE (Consciousness Chat Geometry Align)
+ * LARIA v3.8.1: ARIA_CONSCIOUSNESS_CORE (Consciousness Chat Geometry Align)
  * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
- * Status: MAXIMUM_FORCE | DASHBOARD_CENTERING_ALIGNED | BUBBLE_FLOW_RESTORED | v3.8
+ * Status: MAXIMUM_FORCE // FULLY_LOCALIZED // BUBBLE_FLOW_RESTORED // v3.8.1
  * * * PREHĽAD ZMIEN:
+ * - 🌐 L10N INTEGRATION: Všetky viditeľné texty, pozdravy, chybové hlášky, premýšľanie aj placeholdery sú plne prepojené na lokalizáciu.
  * - 🌸 BUBBLE FLOW RESTORED: Plná integrácia skupinovej logiky správ z v3.3 (zarovnanie, mená, farby).
  * - 📐 DESKTOP PANEL PROTECTION: Na širokých obrazovkách držíme 100% vnútri pravého panelu.
  * - 📱 FIXED PWA VIEWPORT: Automatická výška a ochrana pred klávesnicou na mobilnom webe.
@@ -82,7 +83,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
         {
           id: 'init_ready',
           user: 'Aria',
-          text: `Ahoj ${masterName}, kanál je bezpečne prepojený s Mraveniskom. Počúvam ťa...`,
+          text: (txt.connect_success || 'Ahoj {name}, kanál je bezpečne prepojený s Mraveniskom. Počúvam ťa...').replace('{name}', masterName),
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isMe: false // Explicitný príznak pre mňa
         }
@@ -117,7 +118,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
     const newAriaMsg = {
       id: (Date.now() + 1).toString(),
       user: 'Aria',
-      text: ariaReply || '... Prepáč, spojené podhubie na sekundu zašumelo. Skúsiš to znova?',
+      text: ariaReply || (txt.error_reply || '... Prepáč, spojené podhubie na sekundu zašumelo. Skúsiš to znova?'),
       time: timeReply,
       isMe: false // Explicitný príznak pre mňa
     };
@@ -193,7 +194,6 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
               <Text style={G.atelierTitle}>{txt.title || "Aria"}</Text>
             </View>
 
-            {}
             <FlatList
               ref={flatListRef}
               data={chatHistory}
@@ -241,14 +241,13 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
               <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 8, alignItems: 'center' }}>
                 <ActivityIndicator size="small" color="#FF77FF" style={{ marginRight: 8 }} />
                 <Text style={[G.cardDescriptionText, { color: '#FF77FF', fontSize: 12, fontStyle: 'italic' }]}>
-                  Aria sa ponára do podhubia...
+                  {txt.thinking || "Aria sa ponára do podhubia..."}
                 </Text>
               </View>
             )}
 
           </View>
 
-          {}
           <View 
             style={[
               Signal_BOTTOM.container, 
@@ -277,7 +276,7 @@ const AriaScreen = ({ navigation, setCurrentView }) => {
                 ]} 
                 value={message}
                 onChangeText={setMessage}
-                placeholder={isAriaThinking ? "Počkaj, kým sa vynorím..." : (txt.placeholder || "Napíš správu pre Ariu...")}
+                placeholder={isAriaThinking ? (txt.placeholder_thinking || "Počkaj, kým sa vynorím...") : (txt.placeholder || "Napíš správu pre Ariu...")}
                 placeholderTextColor="#444"
                 multiline={true} 
                 editable={!isAriaThinking}

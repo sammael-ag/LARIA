@@ -5,6 +5,7 @@
  * ÚPRAVA v2.5.1:
  * - Zosúladené načítavanie adresy peňaženky s Dashboardom pomocou wagmi (useAccount).
  * - Opravený preklep v onChangeText pre zadávanie e-mailu v modáli.
+ * - Kompletná lokalizácia všetkých sieťových chýb, emailov a chýbajúcich adries.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -74,7 +75,7 @@ const SettingsScreen = ({ navigation }) => {
       ethBalance: ethBalance,
       isLoadingKrypto: isLoading
     });
-    if (userAddress && userAddress !== "NO_ADDRESS_AVAILABLE") {
+    if (userAddress && userAddress !== (txt.no_address || "NO_ADDRESS_AVAILABLE")) {
       syncWalletData(userAddress);
     }
   }, [userAddress]);
@@ -107,7 +108,7 @@ const SettingsScreen = ({ navigation }) => {
 
   const copyWallet = () => {
     console.log("📋 [LARIA_LOG] Kopírovanie Peňaženky.");
-    if (userAddress && userAddress !== "NO_ADDRESS_AVAILABLE") {
+    if (userAddress && userAddress !== (txt.no_address || "NO_ADDRESS_AVAILABLE")) {
       Clipboard.setString(userAddress);
       if (Platform.OS === 'web') {
         alert(`${txt.alert_wallet_title || "NODE ADDRESS SKOPÍROVANÁ"}\n${txt.alert_wallet_desc || "Tvoja adresa pre príjem Laria artefaktov je v schránke."}`);
@@ -127,7 +128,7 @@ const SettingsScreen = ({ navigation }) => {
     try {
       const currentSha = vault?.identity?.sha || "0x00";
       const currentMeno = vault?.identity?.meno || "Cestovateľ";
-      const emailSubject = "LARIA: Tvoja zálohovaná pečať identity";
+      const emailSubject = txt.backup_email_subject || "LARIA: Tvoja zálohovaná pečať identity";
 
       const templateVariables = {
         masterName: currentMeno,
@@ -152,8 +153,8 @@ const SettingsScreen = ({ navigation }) => {
           Alert.alert(successTitle, successDesc);
         }
       } else {
-        const errorTitle = "ODOSLANIE ZLYHALO";
-        const errorDesc = result.error || "Brána mravca zlyhala pri generovaní šablóny.";
+        const errorTitle = txt.alert_backup_fail_title || "ODOSLANIE ZLYHALO";
+        const errorDesc = result.error || (txt.alert_backup_fail_desc || "Brána mravca zlyhala pri generovaní šablóny.");
         if (Platform.OS === 'web') alert(`${errorTitle}\n${errorDesc}`);
         else Alert.alert(errorTitle, errorDesc);
       }
@@ -161,7 +162,7 @@ const SettingsScreen = ({ navigation }) => {
     } catch (error) {
       console.error("❌ [LARIA_ERROR] Kritická chyba zálohy emailu v sieťovej vrstve:", error);
       const failTitle = txt.alert_network_fail_title || "CHYBA MATRIXU";
-      const failDesc = "Nepodarilo sa spojiť s poštovým uzlom. Skontroluj internetové spojenie.";
+      const failDesc = txt.alert_network_backup_desc || "Nepodarilo sa spojiť s poštovým uzlom. Skontroluj internetové spojenie.";
       if (Platform.OS === 'web') alert(`${failTitle}\n${failDesc}`);
       else Alert.alert(failTitle, failDesc);
     } finally {
@@ -248,31 +249,31 @@ const SettingsScreen = ({ navigation }) => {
       console.log("📡 [LARIA_TRACE] Odpoveď z GMatrixService prijatá:", response);
 
       if (response && response.success && response.data) {
-  const matrixData = response.data;
-  
-  console.log("🔮 [LARIA_TRACE] Volám obnovitIdentityCezSHA z LariaContext...");
-  const success = await obnovitIdentityCezSHA(matrixData.sha, matrixData.meno);
+        const matrixData = response.data;
+        
+        console.log("🔮 [LARIA_TRACE] Volám obnovitIdentityCezSHA z LariaContext...");
+        const success = await obnovitIdentityCezSHA(matrixData.sha, matrixData.meno);
 
-  if (success) {
-    const fullIdentity = {
-      ...vault?.identity,
-      sha: matrixData.sha,
-      date: matrixData.date,
-      meno: matrixData.meno,
-      kat: matrixData.kat,
-      lok: matrixData.lok,
-      popis: matrixData.popis,
-      tel: matrixData.tel,
-      email: matrixData.email,
-      fb: matrixData.fb,
-      tg: matrixData.tg,
-      gal: matrixData.gal,
-      isPublic: matrixData.isPublic === true || matrixData.isPublic === "true",
-      Signal: matrixData.Signal, // 📡 PÔVODNÝ: Ponechaný bez zmeny pre plnú funkčnosť SignalContextu
-      fing: matrixData.fing || (matrixData.sha ? `0x${matrixData.sha.toLowerCase().substring(0, 10)}` : "NO_FING"), // 🪐 ZMENENÉ: Čistý fing namiesto starej poznámky
-      krypt: matrixData.krypt
-    };
-    
+        if (success) {
+          const fullIdentity = {
+            ...vault?.identity,
+            sha: matrixData.sha,
+            date: matrixData.date,
+            meno: matrixData.meno,
+            kat: matrixData.kat,
+            lok: matrixData.lok,
+            popis: matrixData.popis,
+            tel: matrixData.tel,
+            email: matrixData.email,
+            fb: matrixData.fb,
+            tg: matrixData.tg,
+            gal: matrixData.gal,
+            isPublic: matrixData.isPublic === true || matrixData.isPublic === "true",
+            Signal: matrixData.Signal, // 📡 PÔVODNÝ: Ponechaný bez zmeny pre plnú funkčnosť SignalContextu
+            fing: matrixData.fing || (matrixData.sha ? `0x${matrixData.sha.toLowerCase().substring(0, 10)}` : "NO_FING"), // 🪐 ZMENENÉ: Čistý fing namiesto starej poznámky
+            krypt: matrixData.krypt
+          };
+          
           await syncIdentity(fullIdentity);
 
           const successTitle = txt.alert_recovery_success_title || "OBNOVA ÚSPEŠNÁ";
@@ -296,7 +297,7 @@ const SettingsScreen = ({ navigation }) => {
       } else {
         console.warn("⚠️ [LARIA_LOG] Matrix pečať nenašiel:", response?.error);
         const failTitle = txt.alert_matrix_fail_title || "PEČAŤ NENÁJDENÁ";
-        const failMsg = response?.error || "Matrix túto pečať neeviduje. Skontroluj preklepy v kóde.";
+        const failMsg = response?.error || (txt.alert_matrix_fail_desc || "Matrix túto pečať neeviduje. Skontroluj preklepy v kóde.");
         
         if (Platform.OS === 'web') alert(`${failTitle}\n${failMsg}`);
         else Alert.alert(failTitle, failMsg);
@@ -314,7 +315,7 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
-  const shortAddress = userAddress && userAddress !== "NO_ADDRESS_AVAILABLE"
+  const shortAddress = userAddress && userAddress !== (txt.no_address || "NO_ADDRESS_AVAILABLE")
     ? `${userAddress.substring(0, 8)}...${userAddress.substring(userAddress.length - 6)}`
     : (txt.init_connection || "INICIALIZUJEM SPOJENIE...");
 
@@ -450,15 +451,15 @@ const SettingsScreen = ({ navigation }) => {
             <TouchableOpacity 
               style={[G.primaryBtn, { 
                 backgroundColor: isLoading ? '#000' : '#111', 
-                borderColor: userAddress && userAddress !== "NO_ADDRESS_AVAILABLE" && !isLoading ? ACCENT : '#222'
+                borderColor: userAddress && userAddress !== (txt.no_address || "NO_ADDRESS_AVAILABLE") && !isLoading ? ACCENT : '#222'
               }]}
               onPress={() => {
                 console.log("🔘 [LARIA_LOG] Kliknuté na aktualizáciu krypto-uzla.");
                 syncWalletData(userAddress);
               }}
-              disabled={!userAddress || userAddress === "NO_ADDRESS_AVAILABLE" || isLoading}
+              disabled={!userAddress || userAddress === (txt.no_address || "NO_ADDRESS_AVAILABLE") || isLoading}
             >
-              <Text style={[G.primaryBtnText, { color: userAddress && userAddress !== "NO_ADDRESS_AVAILABLE" && !isLoading ? ACCENT : '#444' }]}>
+              <Text style={[G.primaryBtnText, { color: userAddress && userAddress !== (txt.no_address || "NO_ADDRESS_AVAILABLE") && !isLoading ? ACCENT : '#444' }]}>
                 {isLoading ? txt.btn_updating : txt.btn_update}
               </Text>
             </TouchableOpacity>
@@ -502,7 +503,7 @@ const SettingsScreen = ({ navigation }) => {
             <TextInput 
               style={[G.vaultInput, { width: '100%', color: '#FFF', marginBottom: 20 }]} 
               value={inputEmail} 
-              onChangeText={setInputEmail} // 🔥 OPRAVENÉ: Predtým tu bol preklep a chýbal setter
+              onChangeText={setInputEmail} 
               placeholder={txt.modal_email_placeholder || "Zadaj svoj e-mail..."} 
               placeholderTextColor="#444" 
               keyboardType="email-address"

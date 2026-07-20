@@ -6,6 +6,7 @@
  * - 🌸 BUBBLE FLOW RESTORED: Plná integrácia skupinovej logiky správ (zarovnanie, mená, farby) cez explicitný príznak `isMe`.
  * - 📐 DESKTOP PANEL PROTECTION: Na širokých obrazovkách držíme 100% vnútri pravého panelu.
  * - 📱 FIXED PWA VIEWPORT: Automatická výška a ochrana pred klávesnicou na mobilnom webe cez window.innerHeight.
+ * - 🌐 L10N INTEGRATION: Kompletné prelinkovanie všetkých reťazcov a alertov do lokalizačného súboru locales_sk.json.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -37,7 +38,8 @@ const overAUnifikujFing = (rawFing) => {
 
 const SignalScreen = ({ route, navigation }) => {
   const laria = useLaria(); 
-  const { vault } = laria;
+  const { vault, t } = laria;
+  const txt = t('Signal') || {};
   
   const [note, setNote] = useState('');
   const [chatInput, setChatInput] = useState('');
@@ -80,8 +82,8 @@ const SignalScreen = ({ route, navigation }) => {
     : !prislusnyKontakt?.temporary;
 
   const channelName = (finalStatus === 0 && !finalIsIncoming)
-    ? (target?.meno || targetFing || "Laria Handshake")
-    : (prislusnyKontakt?.meno || target?.meno || targetFing || "Laria Handshake");
+    ? (target?.meno || targetFing || (txt.default_channel || "Laria Handshake"))
+    : (prislusnyKontakt?.meno || target?.meno || targetFing || (txt.default_channel || "Laria Handshake"));
 
   // Dynamická výška pre mobilné prehliadače (URL bar fix)
   const [viewportHeight, setViewportHeight] = useState(Platform.OS === 'web' ? window.innerHeight : '100%');
@@ -134,7 +136,7 @@ const SignalScreen = ({ route, navigation }) => {
       meno: idSource.meno || 'Sammael',
       kat: idSource.kat || 'Majster',
       lok: idSource.lok || 'V sieti',
-      popis: aktualnaPoznamka || idSource.popis || 'Spojenie nadviazané cez handshake.',
+      popis: aktualnaPoznamka || idSource.popis || (txt.default_note_fallback || 'Spojenie nadviazané cez handshake.'),
       tel: idSource.tel || '',
       email: idSource.email || '',
       fb: idSource.fb || '',
@@ -149,12 +151,18 @@ const SignalScreen = ({ route, navigation }) => {
       const mojeData = zostavMojeMonolitneData();
       const res = await confirmLariaContract(targetFing, true, mojeData);
       if (res && res.success) {
-        Alert.alert("MATRIX", "Zmluva úspešne podpísaná (ALLOW).");
+        Alert.alert(
+          txt.alert_matrix_title || "MATRIX", 
+          txt.alert_contract_sealed || "Zmluva úspešne spečatená, kryptografia zosynchronizovaná! 🤝"
+        );
         if (typeof purgeMatrixCell === 'function') {
           await purgeMatrixCell(targetFing, 'H');
         }
       } else {
-        Alert.alert("CHYBA", res.error || "Nepodarilo sa overiť kontrakt.");
+        Alert.alert(
+          txt.alert_error_title || "CHYBA", 
+          res.error || (txt.alert_contract_error || "Nepodarilo sa overiť kontrakt.")
+        );
       }
     } catch (err) {
       console.error("❌ ALLOW operácia zlyhala:", err);
@@ -167,7 +175,10 @@ const SignalScreen = ({ route, navigation }) => {
       if (res && res.success) {
         navigation.goBack();
       } else {
-        Alert.alert("CHYBA", res.error || "Nepodarilo sa odmietnuť kontrakt.");
+        Alert.alert(
+          txt.alert_error_title || "CHYBA", 
+          res.error || (txt.alert_contract_error || "Nepodarilo sa odmietnuť kontrakt.")
+        );
       }
     } catch (err) {
       console.error("❌ ABORT operácia zlyhala:", err);
@@ -175,12 +186,15 @@ const SignalScreen = ({ route, navigation }) => {
   };
 
   const handleInitiateHandshake = async () => {
-    const finalNote = note.trim() || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky v bunke H.";
+    const finalNote = note.trim() || (txt.default_initiate_note || "Žiadosť o bezpečné prepojenie a zdieľanie vizitky v bunke H.");
     const kompletnyBalik = zostavMojeMonolitneData(finalNote);
     const res = await sendLariaPackage(kompletnyBalik.fing, targetFing, kompletnyBalik, finalNote);
     if (res && res.success) {
       setNote(''); 
-      Alert.alert("MATRIX", "Tvoj kompletný profil bol bezpečne odoslaný na schválenie.");
+      Alert.alert(
+        txt.alert_matrix_title || "MATRIX", 
+        txt.alert_profile_sent || "Tvoj kompletný profil bol bezpečne odoslaný na schválenie."
+      );
     }
   };
 
@@ -200,7 +214,7 @@ const SignalScreen = ({ route, navigation }) => {
     }
   };
 
-  let zobrazenaSpravaHandshake = prislusnyKontakt?.popis || "Žiadosť o bezpečné prepojenie.";
+  let zobrazenaSpravaHandshake = prislusnyKontakt?.popis || (txt.default_handshake_msg || "Žiadosť o bezpečné prepojenie.");
   if (aktivnyHandshakeLog?.msg && aktivnyHandshakeLog.msg.startsWith('{')) {
     try {
       const parsnutyMonolit = JSON.parse(aktivnyHandshakeLog.msg);
@@ -278,7 +292,7 @@ const SignalScreen = ({ route, navigation }) => {
             <View style={{ alignItems: 'center', marginBottom: 20, marginTop: 10 }}>
               <Text style={G.atelierTitle}>{channelName}</Text>
               <Text style={[G.statusTextSmall, { color: ACCENT || '#c5a059', marginTop: 5 }]}>
-                {isNetOnline ? "⚡ BRÁNA SECURE // AKTÍVNA" : "🛑 SYSTEM OFFLINE"}
+                {isNetOnline ? (txt.status_active || "⚡ BRÁNA SECURE // AKTÍVNA") : (txt.status_offline || "🛑 SYSTEM OFFLINE")}
               </Text>
             </View>
 
@@ -286,18 +300,24 @@ const SignalScreen = ({ route, navigation }) => {
             {finalStatus === 0 && finalIsIncoming ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
                 <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', padding: 20, borderRadius: 6, width: '100%' }}>
-                  <Text style={[G.statusTextSmall, { color: '#E74C3C', marginBottom: 10, textTransform: 'uppercase', fontWeight: 'bold' }]}>⚠️ Prichádzajúca Pečať (Bunka H):</Text>
+                  <Text style={[G.statusTextSmall, { color: '#E74C3C', marginBottom: 10, textTransform: 'uppercase', fontWeight: 'bold' }]}>
+                    {txt.incoming_seal_label || "⚠️ Prichádzajúca Pečať (Bunka H):"}
+                  </Text>
                   <Text style={[G.cardDescriptionText, { color: '#fff', marginBottom: 25, fontSize: 15, lineHeight: 22, textAlign: 'left' }]}>
                     {zobrazenaSpravaHandshake} 
                   </Text>
                   
                   <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
                     <TouchableOpacity style={[HANDSHAKE_PANEL.button, HANDSHAKE_PANEL.btnReject, { flex: 1, paddingVertical: 14 }]} onPress={handleRejectHandshake}>
-                      <Text style={[HANDSHAKE_PANEL.buttonText, { color: '#E74C3C' }]}>[ ABORT ]</Text>
+                      <Text style={[HANDSHAKE_PANEL.buttonText, { color: '#E74C3C' }]}>
+                        {txt.btn_reject || "[ ABORT ]"}
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={[HANDSHAKE_PANEL.button, { flex: 1, paddingVertical: 14, backgroundColor: 'rgba(197, 160, 89, 0.15)', borderColor: ACCENT || '#c5a059', borderWidth: 1, alignItems: 'center', borderRadius: 4 }]} onPress={handleAcceptHandshake}>
-                      <Text style={[HANDSHAKE_PANEL.buttonText, { color: ACCENT || '#c5a059', fontWeight: 'bold' }]}>[ ALLOW ]</Text>
+                      <Text style={[HANDSHAKE_PANEL.buttonText, { color: ACCENT || '#c5a059', fontWeight: 'bold' }]}>
+                        {txt.btn_accept || "[ ALLOW ]"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -305,7 +325,7 @@ const SignalScreen = ({ route, navigation }) => {
             ) : finalStatus === 0 && !finalIsIncoming ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
                 <Text style={[G.cardDescriptionText, { color: '#888', textAlign: 'center', fontSize: 16, lineHeight: 24 }]}>
-                  ⏳ Kontrakt bol bezpečne vyslaný do Matrixu.{"\n"}Čaká sa na akceptáciu (ALLOW) zo strany partnera...
+                  {txt.pending_contract_msg || "⏳ Kontrakt bol bezpečne vyslaný do Matrixu.\nČaká sa na akceptáciu (ALLOW) zo strany partnera..."}
                 </Text>
               </View>
             ) : finalStatus === 1 ? (
@@ -316,7 +336,7 @@ const SignalScreen = ({ route, navigation }) => {
                 style={{ flex: 1, backgroundColor: 'transparent' }} 
                 ListEmptyComponent={() => (
                   <Text style={[G.cardDescriptionText, { color: '#444', textAlign: 'center', marginTop: 40, fontStyle: 'italic' }]}>
-                    Kanál je čistý. Žiadne bleskové správy v pamäti.
+                    {txt.empty_channel_msg || "Kanál je čistý. Žiadne bleskové správy v pamäti."}
                   </Text>
                 )}
                 renderItem={({ item, index }) => {
@@ -348,7 +368,7 @@ const SignalScreen = ({ route, navigation }) => {
             ) : (
               <View style={{ paddingHorizontal: 20 }}>
                 <Text style={[G.cardDescriptionText, { color: '#aaa', marginBottom: 15, textAlign: 'center' }]}>
-                  Požiadaj kontakt o výmenu vizitky:
+                  {txt.request_exchange_label || "Požiadaj kontakt o výmenu vizitky:"}
                 </Text>
                 <TextInput
                   style={[
@@ -367,7 +387,7 @@ const SignalScreen = ({ route, navigation }) => {
                   ]}
                   value={note}
                   onChangeText={setNote}
-                  placeholder="Napr. Sammael, stolár... Let's connect!"
+                  placeholder={txt.request_placeholder || "Napr. Sammael, stolár... Let's connect!"}
                   placeholderTextColor="#444"
                   multiline={true}
                 />
@@ -377,7 +397,7 @@ const SignalScreen = ({ route, navigation }) => {
                   activeOpacity={0.8}
                 >
                   <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 14 }}>
-                    🤝 ZAKLOPAŤ NA BRÁNU & ZDIEĽAŤ PROFIL
+                    {txt.btn_initiate || "🤝 ZAKLOPAŤ NA BRÁNU & ZDIEĽAŤ PROFIL"}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -415,7 +435,7 @@ const SignalScreen = ({ route, navigation }) => {
                   ]} 
                   value={chatInput}
                   onChangeText={setChatInput}
-                  placeholder="Napíš bleskovú správu..."
+                  placeholder={txt.input_placeholder || "Napíš bleskovú správu..."}
                   placeholderTextColor="#444"
                   multiline={true} 
                   onKeyPress={handleKeyPress}

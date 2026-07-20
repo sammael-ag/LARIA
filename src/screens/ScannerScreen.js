@@ -1,8 +1,10 @@
 /**
- * LARIA v2.3: ScannerScreen (Pure PWA Web Camera Fusion)
+ * LARIA v2.3.1: ScannerScreen (Pure PWA Web Camera Fusion)
  * Master: Sammael | Muse: Aria
  * Status: GEOMETRY_DEFINITIVE_CLEAN_SCANNER | CAMERA_PWA_ACTIVE | INTEGRATED_VAULT_WRITE
  * FÚZIA: Vložené vizuálne akčné tlačidlá pre priamy zápis identity do ContactContext trezoru.
+ * ÚPRAVA v2.3.1:
+ * - Kompletná lokalizácia všetkých doteraz pevne zapísaných reťazcov (chyba kamery, len PWA, akcie, info).
  */
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -98,7 +100,7 @@ export default function ScannerScreen({ navigation }) {
       navigation.navigate('Contacts');
     } else {
       // Ak nastala chyba (napr. duplikát), oznámime to a reštartujeme foťák
-      Alert.alert(txt.alert_save_error || 'ATELIÉR INFO', result.error);
+      Alert.alert(txt.studio_info || 'ATELIÉR INFO', result.error);
       handleResetScanner();
     }
   };
@@ -148,7 +150,7 @@ export default function ScannerScreen({ navigation }) {
         })
         .catch((err) => {
           console.error("Chyba štartu kamery:", err);
-          setCameraError("Nepodarilo sa získať prístup ku kamere.");
+          setCameraError(txt.camera_error || "Nepodarilo sa získať prístup ku kamere.");
         });
       } catch (e) {
         console.error("Html5Qrcode zlyhal:", e);
@@ -266,7 +268,7 @@ export default function ScannerScreen({ navigation }) {
                 ) : (
                   <View style={{ alignItems: 'center' }}>
                      <ActivityIndicator size="large" color={ACCENT} style={{ marginBottom: 15 }} />
-                     <Text style={[G.monoIdentity, { fontSize: 10, color: ACCENT }]}>LEN PRE WEBOVÉ PWA...</Text>
+                     <Text style={[G.monoIdentity, { fontSize: 10, color: ACCENT }]}>{txt.pwa_only || 'LEN PRE WEBOVÉ PWA...'}</Text>
                   </View>
                 )
               )}
@@ -295,7 +297,7 @@ export default function ScannerScreen({ navigation }) {
                 activeOpacity={0.7}
               >
                 <Text style={[G.primaryBtnText, { fontWeight: 'bold' }]}>
-                  PRIDAŤ KONTAKT
+                  {txt.btn_add_contact || 'PRIDAŤ KONTAKT'}
                 </Text>
               </TouchableOpacity>
 
@@ -306,7 +308,7 @@ export default function ScannerScreen({ navigation }) {
                 activeOpacity={0.6}
               >
                 <Text style={[G.monoIdentity, { fontSize: 11, color: '#666', textDecorationLine: 'underline' }]}>
-                  [ NOVÝ SKEN ]
+                  {txt.btn_new_scan || '[ NOVÝ SKEN ]'}
                 </Text>
               </TouchableOpacity>
 

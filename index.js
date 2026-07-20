@@ -1,11 +1,12 @@
 /** 
- * LARIA v3.1.1: Core Master Ignition + Fluid Scroll (index.js) 
+ * LARIA v3.1.2: Core Master Ignition + Fluid Scroll (index.js) 
  * Master: Sammael | Muse: Aria 
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE 
  * * * PREHĽAD ZMIEN A GEOMETRIE:
  * - 🎯 TYPOGRAPHY UNIFICATION: Vnútenie exkluzívneho sans-serif fontu pre bočnú prepínaciu šípečku.
  * - 📱 MOBILE VIEW COMPATIBILITY: Odstránenie škaredých systémových fallbackov a zubatých "kódovacích" znakov na mobiloch.
  * - 🧭 PERSISTENT_CORE: Jadro aplikácie beží nepretržite, stavy sa pri prepínaní neresetujú.
+ * - 🛡️ MODERN TOASTS: Odstránené natívne alert() funkcie, nahradené prémiovým plávajúcim notifikačným systémom.
  */ 
 
 import React, { useState, useEffect, useRef } from 'react'; 
@@ -86,6 +87,7 @@ const MasterWrapper = () => {
   const [soloActiveId, setSoloActiveId] = useState(null); 
 
   const [showTopBtn, setShowTopBtn] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   const scrollRef = useRef(null);
   const activeScrollTargetRef = useRef(null);
 
@@ -198,7 +200,7 @@ const MasterWrapper = () => {
       } 
       setLoading(false); 
     } catch (e) { 
-      console.error("❌ Chyba synchronizácie Matrixu v jadre index:", e); 
+      console.error("❌ Synchronizácia Matrixu zlyhala:", e); 
       setLoading(false); 
     } 
   }; 
@@ -259,6 +261,13 @@ const MasterWrapper = () => {
     } 
   }; 
 
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage('');
+    }, 3000);
+  };
+
   const smartAdd = (item) => { 
     if (!item || !item.fing) return; 
 
@@ -281,7 +290,7 @@ const MasterWrapper = () => {
         window.location.href = `laria://id/${item.fing}`; 
         setTimeout(() => { 
           if (document.hasFocus()) {  
-            alert(txt.pwa_install_alert || "Ak nemáte aplikáciu, stiahnite si Crystal Core."); 
+            showToast(txt.pwa_install_alert || "Ak nemáš aplikáciu, stiahni si Crystal Core."); 
           } 
         }, 1500); 
       } 
@@ -290,11 +299,13 @@ const MasterWrapper = () => {
 
   const copyShareLink = (id) => { 
     const url = `${window.location.origin}${window.location.pathname}#/${currentView}?id=${id}`; 
-    navigator.clipboard.writeText(url).then(() => alert(txt.link_copied_alert || "Odkaz bol skopírovaný!")); 
+    navigator.clipboard.writeText(url).then(() => {
+      showToast(txt.link_copied_alert || "Odkaz bol skopírovaný do schránky!");
+    }); 
   }; 
 
   const aktivujOdkazy = (text) => { 
-    if (!text) return txt.no_description || "Bez popisu"; 
+    if (!text) return txt.no_description || "Bez popisu."; 
     const urlPattern = /(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig; 
     return text.split(urlPattern).map((part, i) => 
       urlPattern.test(part) ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{color: '#c5a059'}}>{part}</a> : part 
@@ -389,6 +400,7 @@ const MasterWrapper = () => {
       </button> 
 
       {/* 1. ĽAVÉ MENU */} 
+      { }
       {(!isMobile || isLeftPanelOpen) && ( 
         <div  
           className={`left-side ${isLeftPanelOpen ? 'open' : 'closed'}`}  
@@ -429,6 +441,7 @@ const MasterWrapper = () => {
       )} 
 
       {/* 2. WEB PANEL */} 
+      { }
       <div  
         key={webRefreshKey} 
         className="web-side"  
@@ -456,12 +469,13 @@ const MasterWrapper = () => {
 
           {currentView === 'vizitkar' && ( 
             <> 
+               { }
                <div className="filter-container" style={{ padding: '0 15px', width: '100%', boxSizing: 'border-box' }}> 
                 <select className="terminal-input" value={category} onChange={(e) => setCategory(e.target.value)}> 
                   <option value="vsetko">{txt.cat_all || "Všetky kategórie"}</option> 
                   <option value="obziva">{txt.cat_food || "Obživa a poživatiny"}</option> 
                   <option value="remesla">{txt.cat_crafts || "Remeslá a materiál"}</option> 
-                  <option value="sluzby">{txt.cat_services || "Odborné cookies"}</option> 
+                  <option value="sluzby">{txt.cat_services || "Odborné služby"}</option> 
                   <option value="vzdelavanie">{txt.cat_education || "Vzdelávanie"}</option> 
                   <option value="knihy">{txt.cat_books || "Knihy"}</option> 
                   <option value="zdravie">{txt.cat_health || "Zdravie"}</option> 
@@ -554,6 +568,7 @@ const MasterWrapper = () => {
           {currentView === 'free-vs-full' && <div style={{ padding: '0 15px' }}><FreeVsFull /></div>} 
           {currentView === 'donate' && <div style={{ padding: '0 15px' }}><Donate /></div>} 
 
+          { }
           {showTopBtn && (
             <button 
               className="back-to-top-btn" 
@@ -578,6 +593,7 @@ const MasterWrapper = () => {
       </div> 
 
       {/* 3. APPKY PANEL (CRYSTAL CORE PERMANENT DISPATCH) */} 
+      { }
       <div  
         className="app-side" 
         style={{ 
@@ -592,6 +608,31 @@ const MasterWrapper = () => {
           <App triggerWebRefresh={triggerWebRefresh} /> 
         </div> 
       </div> 
+
+      {/* 🛡️ PLATŇA PRE PRÉMIOVÉ TOAST NOTIFIKÁCIE */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          bottom: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#0a0a0a',
+          border: '1px solid #c5a059',
+          color: '#c5a059',
+          padding: '12px 24px',
+          borderRadius: '4px',
+          zIndex: 999999,
+          fontFamily: "Courier New, Courier, monospace",
+          fontSize: '12px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.85)',
+          textAlign: 'center',
+          letterSpacing: '1px',
+          whiteSpace: 'nowrap',
+          animation: 'fadeIn 0.2s ease-in-out'
+        }}>
+          {toastMessage}
+        </div>
+      )}
     </div> 
   ); 
 }; 

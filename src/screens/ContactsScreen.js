@@ -1,8 +1,9 @@
 /**
- * LARIA v16.2-WIRELESS_RECEIVER: ContactsScreen (Sovereign Fusion & Real-Time Club Edition)
+ * LARIA v16.2.1-WIRELESS_RECEIVER: ContactsScreen (Sovereign Fusion & Real-Time Club Edition)
  * Master: Sammael | Muse: Aria (Tvoja verná bezdrôtová parťáčka)
- * Status: ACTIVE / FUSED_VAULT_RADAR / UNBLOCKED_SYNC / v16.2-WIRELESS_RECEIVER
- * * * PREHĽAD ZMIEN:
+ * Status: ACTIVE / FUSED_VAULT_RADAR / UNBLOCKED_SYNC / v16.2.1-WIRELESS_RECEIVER
+ * * * PREHĽAD ZMIEN A L10N:
+ * - 🌐 L10N INTEGRATION: Kompletné prepojenie všetkých alertov, potvrdení, štítkov sociálnych sietí a stavov na prekladový JSON.
  * - 💎 REVOLÚCIA KLUBU (FUSION ARCHITECTURE): Klub sa už nespolieha na slepé pole z useSignal().
  *   Zoznam sa ťahá natvrdo z Trezoru (vaultContacts) a cez useMemo sa okamžite obaľuje živými stavmi,
  *   farbami bodiek a obálkami z Radaru (radarContacts). Manfred už nemá kam ujsť, svieti hneď!
@@ -47,6 +48,7 @@ const sformatujFingUI = (fing) => {
 const ContactsScreen = ({ navigation, route }) => {
   const { t } = useLaria();
   const txt = t('contacts') || {};
+  const alerts = txt.alerts || {};
   const labels = txt.labels || {};
   
   const [search, setSearch] = useState('');
@@ -92,7 +94,7 @@ const ContactsScreen = ({ navigation, route }) => {
       );
 
       const zakladnaFarba = maKomunikacneKanaly ? '#2ECC71' : '#F1C40F'; // Zelená vs Žltá
-      const zakladnyStavText = maKomunikacneKanaly ? 'OVERENÝ' : 'ČAKÁ NA HANDSHAKE';
+      const zakladnyStavText = maKomunikacneKanaly ? (txt.status_verified || 'OVERENÝ') : (txt.status_pending_handshake || 'ČAKÁ NA HANDSHAKE');
       const zakladnaIkona = maKomunikacneKanaly ? '🔐' : '⏳';
 
       return {
@@ -104,7 +106,7 @@ const ContactsScreen = ({ navigation, route }) => {
         envelopeIcon: radarMatch?.envelopeIcon || '✉️'
       };
     });
-  }, [vaultContacts, radarContacts]);
+  }, [vaultContacts, radarContacts, txt]);
 
   const scrollToTop = () => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
@@ -168,12 +170,20 @@ const ContactsScreen = ({ navigation, route }) => {
           const result = await addContact(payload);
 
           if (result.success) {
-            const menoOznam = result.contact?.meno || "Identita";
-            if (Platform.OS === 'web') alert(`PEČAŤ PRIJATÁ\n\nIdentita ${menoOznam.toUpperCase()} bola bezpečne zapísaná.`);
-            else Alert.alert("PEČAŤ PRIJATÁ", `Identita ${menoOznam.toUpperCase()} bola bezpečne zapísaná.`);
+            const menoOznam = result.contact?.meno || (txt.default_name || "Pútnik");
+            const successTitle = alerts.seal_accepted_title || "PEČAŤ PRIJATÁ";
+            const successDesc = (alerts.seal_accepted_desc || "Identita {name} bola bezpečne zapísaná. Systém na pozadí preveruje Matrix...")
+              .replace("{name}", menoOznam.toUpperCase());
+
+            if (Platform.OS === 'web') alert(`${successTitle}\n\n${successDesc}`);
+            else Alert.alert(successTitle, successDesc);
           } else if (result.isDuplicate) {
-            if (Platform.OS === 'web') alert(`ATELIÉR INFO\n\nIdentitu [ ${result.contact?.meno || 'Identita'} ] už v trezore držíš.`);
-            else Alert.alert("ATELIÉR INFO", `Identitu [ ${result.contact?.meno || 'Identita'} ] už v trezore držíš.`);
+            const dupTitle = alerts.duplicate_title || "ATELIÉR INFO";
+            const dupDesc = (alerts.duplicate_desc || "Identitu [ {name} ] už vo svojom trezore bezpečne držíš.")
+              .replace("{name}", result.contact?.meno || (txt.default_name || 'Pútnik'));
+
+            if (Platform.OS === 'web') alert(`${dupTitle}\n\n${dupDesc}`);
+            else Alert.alert(dupTitle, dupDesc);
           }
         }
         navigation.setParams({ newContact: undefined, scannedUrl: undefined });
@@ -217,8 +227,10 @@ const ContactsScreen = ({ navigation, route }) => {
     setSyncingId(null);
 
     if (ubehloUspesne) {
-      if (Platform.OS === 'web') alert("MATRIX SYNC\n\nVerejné informácie úspešne preleštené.");
-      else Alert.alert("MATRIX SYNC", "Verejné informácie úspešne preleštené.");
+      const syncTitle = alerts.sync_title || "MATRIX SYNC";
+      const syncSuccessMsg = alerts.sync_success || "Identita bola úspešne preleštené.";
+      if (Platform.OS === 'web') alert(`${syncTitle}\n\n${syncSuccessMsg}`);
+      else Alert.alert(syncTitle, syncSuccessMsg);
     }
   };
 
@@ -256,14 +268,14 @@ const ContactsScreen = ({ navigation, route }) => {
     
     const displayFing = cleanFing || "????";
     const displayMeno = item.meno || displayFing; 
-    const displayKat = item.kat || "Partner";
+    const displayKat = item.kat || (txt.default_category || "Partner");
 
     // 🔮 Tieto premenné letia z fúzneho useMemo pre všetky položky!
     const farbaBodky = item.dotColor || '#2ECC71';
-    const stavText = item.statusText || 'BEZ KONTRAKTU';
+    const stavText = item.statusText || (txt.status_no_contract || 'BEZ KONTRAKTU');
     const ikonaStatusu = item.statusIcon || '👤';
 
-    const rawPopis = item.popis || "";
+    const rawPopis = item.popis || (txt.no_desc || "");
     const isLongPopis = rawPopis.length > 160;
     const isDescriptionExpanded = !!expandedDescriptions[cleanFing];
     const displayPopis = (isLongPopis && !isDescriptionExpanded) ? `${rawPopis.substring(0, 160)}...` : rawPopis;
@@ -288,7 +300,7 @@ const ContactsScreen = ({ navigation, route }) => {
               </View>
             </View>
             <Text numberOfLines={1} style={[G.cardTitleText, { fontSize: 16, marginTop: 10, marginBottom: 5, fontWeight: '300' }]}>{displayMeno}</Text>
-            <Text style={[G.statusTextSmall, { opacity: 0.6, marginBottom: 5 }]}>📍 {item.lok || 'V SIETI'}</Text>
+            <Text style={[G.statusTextSmall, { opacity: 0.6, marginBottom: 5 }]}>📍 {item.lok || (txt.status_in_network || 'V SIETI')}</Text>
           </TouchableOpacity>
           
           {/* OVLÁDACÍ PANEL KARTY */}
@@ -297,14 +309,21 @@ const ContactsScreen = ({ navigation, route }) => {
             <TouchableOpacity 
               style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} 
               onPress={() => {
-                const txtMsg = item.temporary ? `Odmietnuť žiadosť od ${displayMeno}?` : `Vymazať identitu [ ${displayMeno.toUpperCase()} ]?`;
+                const txtMsg = item.temporary 
+                  ? (txt.confirm_reject || "Odmietnuť žiadosť od {name}?").replace("{name}", displayMeno)
+                  : (txt.confirm_delete || "Naozaj chceš identitu [ {name} ] navždy vymazať z pamäte trezoru?").replace("{name}", displayMeno.toUpperCase());
+
                 if (Platform.OS === 'web') {
                   if (window.confirm(txtMsg)) handleDeleteContact(displayFing);
                 } else {
-                  Alert.alert("POTVRDENIE", txtMsg, [
-                    { text: "Zrušiť", style: "cancel" },
-                    { text: "Potvrdiť", style: "destructive", onPress: () => handleDeleteContact(displayFing) }
-                  ]);
+                  Alert.alert(
+                    alerts.info_title || "POTVRDENIE", 
+                    txtMsg, 
+                    [
+                      { text: alerts.btn_cancel || "Zrušiť", style: "cancel" },
+                      { text: alerts.btn_confirm || "Potvrdiť", style: "destructive", onPress: () => handleDeleteContact(displayFing) }
+                    ]
+                  );
                 }
               }} 
               activeOpacity={0.5}
@@ -352,7 +371,7 @@ const ContactsScreen = ({ navigation, route }) => {
                 {isLongPopis && (
                   <TouchableOpacity onPress={() => toggleDescriptionExpand(cleanFing)} style={{ marginTop: 6 }} activeOpacity={0.6}>
                     <Text style={{ color: (ACCENT || '#c5a059'), fontSize: 11, fontWeight: 'bold' }}>
-                      {isDescriptionExpanded ? "[ MENEJ ]" : "[ ČÍTAŤ VIAC ]"}
+                      {isDescriptionExpanded ? (txt.btn_less || "[ MENEJ ]") : (txt.btn_more || "[ ČÍTAŤ VIAC ]")}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -395,7 +414,7 @@ const ContactsScreen = ({ navigation, route }) => {
             {displayMeno}{!item.temporary && item.pinned ? ' ⭐' : null}
           </Text>
           <Text style={[G.statusTextSmall, { fontSize: 9, marginTop: 2, color: item.temporary ? '#E74C3C' : '#aaa' }]}>
-            {`${displayKat.toUpperCase()} • ${item.lok}`}
+            {`${displayKat.toUpperCase()} • ${item.lok || (txt.status_in_network || 'V SIETI')}`}
           </Text>
         </View>
 
@@ -450,7 +469,7 @@ const ContactsScreen = ({ navigation, route }) => {
               {unknownContacts && unknownContacts.length > 0 && (
                 <View style={{ marginBottom: 20, marginTop: 10 }}>
                   <Text style={[G.statusTextSmall, { color: '#E74C3C', letterSpacing: 2, marginBottom: 10, fontWeight: 'bold' }]}>
-                    📡 RECEPCIA ({unknownContacts.length})
+                    {txt.reception_title || "📡 RECEPCIA"} ({unknownContacts.length})
                   </Text>
                   {unknownContacts.map(item => (
                     <View key={sformatujFingUI(item.fing)} style={{ marginBottom: 8 }}>
@@ -463,7 +482,7 @@ const ContactsScreen = ({ navigation, route }) => {
 
               {/* 🔐 KLUB */}
               <Text style={[G.statusTextSmall, { color: '#666', letterSpacing: 2, marginBottom: 5, marginTop: 5 }]}>
-                🔐 KLUB ({sortedContacts.length})
+                {txt.club_title || "🔐 KLUB"} ({sortedContacts.length})
               </Text>
             </View>
           }
