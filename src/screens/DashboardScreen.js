@@ -6,6 +6,7 @@
  * - RADAR-DRIVEN ENVELOPE: Zlatá obálka teraz svieti na základe reálnych dát z `incomingRequests` (SignalContext).
  * - STRICT STATE COMPLIANCE: Rešpektuje číselný stav 0 (PENDING) a status 'UNREAD'.
  * - CORESYSTEM RESTORE: Zachovaný parameter `architectSHA` pre Matrix.
+ * - GEOMETRICKÁ OPRAVA + KRÍŽIK: Architektov modál je vycentrovaný a má intuitívny zatvárací krížik.
  */
 
 import React, { useState } from 'react';
@@ -224,10 +225,30 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
         </View>
       </ScrollView>
 
-      {/* Architektov Modál */}
+      {/* 📥 ARCHITECT MODAL S KRÍŽIKOM V PRAVOM HORNOM ROHU */}
       <Modal visible={showVaultInput} transparent={true} animationType="fade">
-        <View style={G.modalOverlay}>
-          <View style={{ backgroundColor: '#050505', padding: 25, borderRadius: 15, borderWidth: 1, borderColor: '#1a1a1a', width: '85%', alignSelf: 'center', maxWidth: 400 }}>
+        <View style={[G.modalOverlay, { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)' }]}>
+          <View style={{ 
+            backgroundColor: '#050505', 
+            padding: 25, 
+            borderRadius: 15, 
+            borderWidth: 1, 
+            borderColor: '#1a1a1a', 
+            width: '85%', 
+            alignSelf: 'center', 
+            maxWidth: 400,
+            position: 'relative' // 👈 Kľúčové pre kotvenie krížika
+          }}>
+            
+            {/* ❌ INTUITÍVNY BIELY KRÍŽIK NA ZAVRETIE */}
+            <TouchableOpacity 
+              onPress={() => { setShowVaultInput(false); setSecretWord(''); setArchitectSHA(''); }} 
+              style={{ position: 'absolute', top: 12, right: 15, zIndex: 10, padding: 5 }}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>✕</Text>
+            </TouchableOpacity>
+
             <Text style={[G.mono, { color: '#0FF', letterSpacing: 6, marginBottom: 30, fontSize: 12, textAlign: 'center' }]}>
               {modalTxt.handshake || "ARCHITECT_HANDSHAKE"}
             </Text>
@@ -254,7 +275,7 @@ const DashboardScreen = ({ navigation, setCurrentView }) => {
             
             <TouchableOpacity onPress={handleUnlock} style={[G.primaryBtn, { marginTop: 25, borderColor: '#0FF', borderWidth: 1 }]}>
               <Text style={[G.primaryBtnText, { color: '#0FF', letterSpacing: 2 }]}>
-                {modalTxt.btn_init || "[ INICIALIZOVAŤ_PRÍSTUP ]"}
+                {modalTxt.btn_nil || "[ INICIALIZOVAŤ_PRÍSTUP ]"}
               </Text>
             </TouchableOpacity>
             

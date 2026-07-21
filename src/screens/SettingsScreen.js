@@ -6,6 +6,7 @@
  * - Zosúladené načítavanie adresy peňaženky s Dashboardom pomocou wagmi (useAccount).
  * - Opravený preklep v onChangeText pre zadávanie e-mailu v modáli.
  * - Kompletná lokalizácia všetkých sieťových chýb, emailov a chýbajúcich adries.
+ * - GEOMETRICKÁ OPRAVA + KRÍŽIK: Modál pre e-mail je fixne vycentrovaný a má zatvárací krížik.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -269,8 +270,8 @@ const SettingsScreen = ({ navigation }) => {
             tg: matrixData.tg,
             gal: matrixData.gal,
             isPublic: matrixData.isPublic === true || matrixData.isPublic === "true",
-            Signal: matrixData.Signal, // 📡 PÔVODNÝ: Ponechaný bez zmeny pre plnú funkčnosť SignalContextu
-            fing: matrixData.fing || (matrixData.sha ? `0x${matrixData.sha.toLowerCase().substring(0, 10)}` : "NO_FING"), // 🪐 ZMENENÉ: Čistý fing namiesto starej poznámky
+            Signal: matrixData.Signal, 
+            fing: matrixData.fing || (matrixData.sha ? `0x${matrixData.sha.toLowerCase().substring(0, 10)}` : "NO_FING"), 
             krypt: matrixData.krypt
           };
           
@@ -480,9 +481,9 @@ const SettingsScreen = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      {/* 📥 MODÁLNE OKNO PRE CHÝBAJÚCI EMAIL */}
+      {/* 📥 GEOMETRICKY VYCENTROVANÉ MODÁLNE OKNO PRE CHÝBAJÚCI EMAIL S KRÍŽIKOM */}
       <Modal visible={showEmailModal} transparent={true} animationType="fade">
-        <View style={G.modalOverlay}>
+        <View style={[G.modalOverlay, { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)' }]}>
           <View style={{ 
             backgroundColor: '#050505', 
             borderWidth: 1, 
@@ -490,8 +491,20 @@ const SettingsScreen = ({ navigation }) => {
             width: '90%', 
             maxWidth: 450, 
             borderRadius: 12,
-            padding: 20
+            padding: 20,
+            alignSelf: 'center',
+            position: 'relative' // 👈 Kľúčové pre kotvenie krížika
           }}>
+            
+            {/* ❌ INTUITÍVNY BIELY KRÍŽIK NA ZAVRETIE */}
+            <TouchableOpacity 
+              onPress={() => setShowEmailModal(false)} 
+              style={{ position: 'absolute', top: 12, right: 15, zIndex: 10, padding: 5 }}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>✕</Text>
+            </TouchableOpacity>
+
             <Text style={[G.monoIdentity, { color: ACCENT, marginBottom: 10, fontSize: 14 }]}>
               {txt.modal_email_title || "ZADANIE ZÁLOHOVÉHO EMAILU"}
             </Text>
