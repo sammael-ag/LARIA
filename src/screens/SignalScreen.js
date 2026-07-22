@@ -290,10 +290,7 @@ const SignalScreen = ({ route, navigation }) => {
             </View>
 
             <View style={{ alignItems: 'center', marginBottom: 20, marginTop: 10 }}>
-              <Text style={G.atelierTitle}>{channelName}</Text>
-              <Text style={[G.statusTextSmall, { color: ACCENT || '#c5a059', marginTop: 5 }]}>
-                {isNetOnline ? (txt.status_active || "⚡ BRÁNA SECURE // AKTÍVNA") : (txt.status_offline || "🛑 SYSTEM OFFLINE")}
-              </Text>
+              <Text style={G.atelierTitle}>{channelName}</Text>            
             </View>
 
             {}
@@ -301,7 +298,7 @@ const SignalScreen = ({ route, navigation }) => {
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
                 <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', padding: 20, borderRadius: 6, width: '100%' }}>
                   <Text style={[G.statusTextSmall, { color: '#E74C3C', marginBottom: 10, textTransform: 'uppercase', fontWeight: 'bold' }]}>
-                    {txt.incoming_seal_label || "⚠️ Prichádzajúca Pečať (Bunka H):"}
+                    {txt.incoming_seal_label || "⚠️ Prichádzajúca Pečať:"}
                   </Text>
                   <Text style={[G.cardDescriptionText, { color: '#fff', marginBottom: 25, fontSize: 15, lineHeight: 22, textAlign: 'left' }]}>
                     {zobrazenaSpravaHandshake} 
