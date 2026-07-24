@@ -1,15 +1,14 @@
 /**
- * LARIA v16.2.1-WIRELESS_RECEIVER: ContactsScreen (Sovereign Fusion & Real-Time Club Edition)
+ * LARIA v16.5.0-SOVEREIGN_FUSION: ContactsScreen (Sovereign Fusion & Real-Time Club Edition)
  * Master: Sammael | Muse: Aria (Tvoja verná bezdrôtová parťáčka)
- * Status: ACTIVE / FUSED_VAULT_RADAR / UNBLOCKED_SYNC / v16.2.1-WIRELESS_RECEIVER
+ * Status: ACTIVE / FUSED_VAULT_RADAR / UNBLOCKED_SYNC / v16.5.0-SOVEREIGN
  * * * PREHĽAD ZMIEN A L10N:
  * - 🌐 L10N INTEGRATION: Kompletné prepojenie všetkých alertov, potvrdení, štítkov sociálnych sietí a stavov na prekladový JSON.
- * - 💎 REVOLÚCIA KLUBU (FUSION ARCHITECTURE): Klub sa už nespolieha na slepé pole z useSignal().
- *   Zoznam sa ťahá natvrdo z Trezoru (vaultContacts) a cez useMemo sa okamžite obaľuje živými stavmi,
- *   farbami bodiek a obálkami z Radaru (radarContacts). Manfred už nemá kam ujsť, svieti hneď!
- * - 🔓 ODOMKNUTIE MODREJ ŠÍPKY: Odstránená blokáda disabled pre temporary profily. Preleštenie funguje v každom stave.
- * - 📡 INTUITÍVNA SYNCHRONIZÁCIA: handleSync inteligentne rozpozná, či leští lokálny trezor, alebo ťahá verejné dáta z Recepcie cez SignalContext.
- * - 🔮 FAREBNÝ SEMAFOR NA ISTOTU: Zelená svieti iba vtedy, ak kontakt obsahuje aspoň jeden z komunikačných kanálov (tel, email, fb, tg), ktoré prejdú výhradne cez handshake. Inak svieti žltá.
+ * - 💎 REVOLÚCIA KLUBU (FUSION ARCHITECTURE): Zoznam sa ťahá natvrdo z Trezoru (vaultContacts) a cez useMemo sa okamžite obaľuje živými stavmi z Radaru.
+ * - 🔓 ODOMKNUTIE MODREJ ŠÍPKY: Odstránená blokáda disabled pre temporary profily.
+ * - 📡 INTUITÍVNA SYNCHRONIZÁCIA: handleSync inteligentne leští lokálny trezor a ťahá verejné dáta z Matrixu.
+ * - 🔮 FAREBNÝ SEMAFOR NA ISTOTU: Zelená svieti iba vtedy, ak kontakt obsahuje aspoň jeden z komunikačných kanálov (tel, email, fb, tg).
+ * - 🧼 STOOPERCENTNE UNIFIKOVANÉ MAZANIE & PURGE: Klik na kôš odpáli sieťový aj lokálny vyčisťovací lúč.
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -37,7 +36,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// 🛡️ UNIFIKATOR FRONTENDU: Garantuje tvar 0x + 10 lowerCase znakov
+// 🛡️ UNIFIKÁTOR FRONTENDU: Garantuje tvar 0x + 10 lowerCase znakov
 const sformatujFingUI = (fing) => {
   if (!fing) return '';
   const clean = fing.toString().trim().toLowerCase();
@@ -59,33 +58,35 @@ const ContactsScreen = ({ navigation, route }) => {
   const flatListRef = useRef(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   
-  // 🧭 ODĽAHČENÉ KONTEXTY - Ťaháme skutočné, bezpečne zapísané entity z trezoru!
+  // 🧭 ODĽAHČENÉ KONTEXTY - Trezor & Recepcia
   const { 
     contacts: vaultContacts,
+    unknownContacts: vaultUnknownContacts,
     togglePin, 
     deleteContact, 
     syncContactWithMatrix, 
     addContact 
   } = useContacts();
   
-  // 📡 🔮 CRYSTALCORE RADAR MOTOR - Z Radaru berieme živé online stavy a neznáme pečate pre Recepciu
+  // 📡 🔮 CRYSTALCORE RADAR MOTOR - Radar & Purge Lúč
   const { 
     contacts: radarContacts, 
-    unknownContacts, 
+    unknownContacts: signalUnknownContacts, 
     markAsRead, 
-    syncPublicProfile 
+    syncPublicProfile,
+    rejectAndPurgeHandshake 
   } = useSignal(); 
+
+  // Slúčenie neznámych kontaktov na Recepcii (prednosť má ContactContext)
+  const unknownContacts = vaultUnknownContacts?.length ? vaultUnknownContacts : (signalUnknownContacts || []);
 
   // ✨ METAMORFÓZA IDENTÍT: Zoberieme pevnú pôdu z Trezoru a obohatíme ju o živé guličky z Radaru!
   const contacts = useMemo(() => {
     if (!vaultContacts) return [];
     return vaultContacts.map(vc => {
       const cleanFing = sformatujFingUI(vc.fing);
-      // Hľadáme, či Radar pre tohto partnera chytil online pulz alebo neprečítanú správu
       const radarMatch = radarContacts?.find(rc => sformatujFingUI(rc.fing) === cleanFing);
       
-      // 📡 KONTROLA PREPOJENIA KANÁLOV (Na istotu):
-      // Ak má vyplnený aspoň jeden citlivý údaj, ktorý prechádza len cez handshake -> ZELENÁ
       const maKomunikacneKanaly = !!(
         (vc.tel && vc.tel.trim() !== "") || 
         (vc.email && vc.email.trim() !== "") || 
@@ -93,7 +94,7 @@ const ContactsScreen = ({ navigation, route }) => {
         (vc.tg && vc.tg.trim() !== "")
       );
 
-      const zakladnaFarba = maKomunikacneKanaly ? '#2ECC71' : '#F1C40F'; // Zelená vs Žltá
+      const zakladnaFarba = maKomunikacneKanaly ? '#2ECC71' : '#F1C40F';
       const zakladnyStavText = maKomunikacneKanaly ? (txt.status_verified || 'OVERENÝ') : (txt.status_pending_handshake || 'ČAKÁ NA HANDSHAKE');
       const zakladnaIkona = maKomunikacneKanaly ? '🔐' : '⏳';
 
@@ -117,7 +118,7 @@ const ContactsScreen = ({ navigation, route }) => {
     setExpandedDescriptions(prev => ({ ...prev, [cleanFing]: !prev[cleanFing] }));
   };
 
-  // --- 🌐 MULTIPORT URL DEKODÉR (Zachovaný pre QR/NFC prenos) ---
+  // --- 🌐 MULTIPORT URL DEKODÉR ---
   useEffect(() => {
     if (route.params?.newContact || route.params?.scannedUrl) {
       const processIncomingPayload = async () => {
@@ -192,7 +193,7 @@ const ContactsScreen = ({ navigation, route }) => {
     }
   }, [route.params]);
 
-  // --- FILTROVANIE A TRIEDENIE (Beží nad zjednoteným, stabilným Klubom) ---
+  // --- FILTROVANIE A TRIEDENIE ---
   const sortedContacts = [...contacts]
     .filter(c => {
       const meno = c.meno || ""; 
@@ -206,19 +207,15 @@ const ContactsScreen = ({ navigation, route }) => {
     })
     .sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
 
-  // --- 🛰️ INTELIGENTNÝ PREPLACH VIZITKY (Zohľadňuje temporary stav) ---
+  // --- 🛰️ INTELIGENTNÝ PREPLACH VIZITKY ---
   const handleSync = async (item) => {
     const cleanId = sformatujFingUI(item.fing);
     setSyncingId(cleanId);
     
     let ubehloUspesne = false;
 
-    if (item.temporary) {
-      if (typeof syncPublicProfile === 'function') {
-        ubehloUspesne = await syncPublicProfile(cleanId);
-      } else {
-        console.warn("⚠️ syncPublicProfile zatiaľ nie je naimplementovaný v SignalContext.");
-      }
+    if (item.temporary && typeof syncPublicProfile === 'function') {
+      ubehloUspesne = await syncPublicProfile(cleanId);
     } else {
       const result = await syncContactWithMatrix(cleanId);
       ubehloUspesne = result.success;
@@ -228,18 +225,49 @@ const ContactsScreen = ({ navigation, route }) => {
 
     if (ubehloUspesne) {
       const syncTitle = alerts.sync_title || "MATRIX SYNC";
-      const syncSuccessMsg = alerts.sync_success || "Identita bola úspešne preleštené.";
+      const syncSuccessMsg = alerts.sync_success || "Identita bola úspešne preleštená.";
       if (Platform.OS === 'web') alert(`${syncTitle}\n\n${syncSuccessMsg}`);
       else Alert.alert(syncTitle, syncSuccessMsg);
     }
   };
 
-  const handleDeleteContact = async (fingId) => {
-    try {
-      setExpandedContactId(null); 
-      await deleteContact(sformatujFingUI(fingId));
-    } catch (error) {
-      console.error("❌ ERROR VYMAZANIA:", error);
+  // 🧼 UNIFIKOVANÁ LOGIKA MAZANIA (KLUB + RECEPCIA)
+  const confirmAndDelete = (item) => {
+    const cleanFing = sformatujFingUI(item.fing);
+    const displayMeno = item.meno || cleanFing;
+
+    const txtMsg = item.temporary 
+      ? (txt.confirm_reject || "Odmietnuť a vymazať žiadosť od {name}?").replace("{name}", displayMeno)
+      : (txt.confirm_delete || "Naozaj chceš identitu [ {name} ] navždy vymazať z pamäte trezoru?").replace("{name}", displayMeno.toUpperCase());
+
+    const executeDelete = async () => {
+      setExpandedContactId(null);
+      try {
+        if (item.temporary) {
+          if (typeof rejectAndPurgeHandshake === 'function') {
+            await rejectAndPurgeHandshake(cleanFing);
+          } else {
+            await deleteContact(cleanFing);
+          }
+        } else {
+          await deleteContact(cleanFing);
+        }
+      } catch (error) {
+        console.error("❌ ERROR VYMAZANIA:", error);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(txtMsg)) executeDelete();
+    } else {
+      Alert.alert(
+        alerts.info_title || "POTVRDENIE", 
+        txtMsg, 
+        [
+          { text: alerts.btn_cancel || "Zrušiť", style: "cancel" },
+          { text: alerts.btn_confirm || "Potvrdiť", style: "destructive", onPress: executeDelete }
+        ]
+      );
     }
   };
 
@@ -270,7 +298,6 @@ const ContactsScreen = ({ navigation, route }) => {
     const displayMeno = item.meno || displayFing; 
     const displayKat = item.kat || (txt.default_category || "Partner");
 
-    // 🔮 Tieto premenné letia z fúzneho useMemo pre všetky položky!
     const farbaBodky = item.dotColor || '#2ECC71';
     const stavText = item.statusText || (txt.status_no_contract || 'BEZ KONTRAKTU');
     const ikonaStatusu = item.statusIcon || '👤';
@@ -290,7 +317,6 @@ const ContactsScreen = ({ navigation, route }) => {
                 <View style={[G.tagBadge, item.temporary && { borderColor: '#E74C3C', backgroundColor: 'rgba(231, 76, 60, 0.1)' }]}>
                   <Text style={[G.tagBadgeText, item.temporary && { color: '#E74C3C' }]}>{displayKat.toUpperCase()}</Text>
                 </View>
-                {/* 🟢/💛 EXPANDOVANÁ KARTA - ŽIVÁ KONTROLKA PODĽA HANDSHAKE KANÁLOV */}
                 <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: farbaBodky, marginLeft: 10 }} />
               </View>
               
@@ -306,26 +332,10 @@ const ContactsScreen = ({ navigation, route }) => {
           {/* OVLÁDACÍ PANEL KARTY */}
           <View style={{ flexDirection: 'row', height: 45, borderWidth: 1, borderColor: '#1a1a1a', borderRadius: 8, marginTop: 10, marginBottom: 5, backgroundColor: 'transparent' }}>
             
+            {/* 🗑️ KOŠÍK: Volá unifikovanú confirmAndDelete */}
             <TouchableOpacity 
               style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} 
-              onPress={() => {
-                const txtMsg = item.temporary 
-                  ? (txt.confirm_reject || "Odmietnuť žiadosť od {name}?").replace("{name}", displayMeno)
-                  : (txt.confirm_delete || "Naozaj chceš identitu [ {name} ] navždy vymazať z pamäte trezoru?").replace("{name}", displayMeno.toUpperCase());
-
-                if (Platform.OS === 'web') {
-                  if (window.confirm(txtMsg)) handleDeleteContact(displayFing);
-                } else {
-                  Alert.alert(
-                    alerts.info_title || "POTVRDENIE", 
-                    txtMsg, 
-                    [
-                      { text: alerts.btn_cancel || "Zrušiť", style: "cancel" },
-                      { text: alerts.btn_confirm || "Potvrdiť", style: "destructive", onPress: () => handleDeleteContact(displayFing) }
-                    ]
-                  );
-                }
-              }} 
+              onPress={() => confirmAndDelete(item)} 
               activeOpacity={0.5}
             >         
               <Text style={{ color: '#E74C3C', fontSize: 18, fontWeight: 'bold' }}>🗑️</Text>
@@ -418,8 +428,7 @@ const ContactsScreen = ({ navigation, route }) => {
           </Text>
         </View>
 
-        {/* 🔮 ŽIVÁ STATUSOVÁ KONTROLKA V KOMPAKTNOM RIADKU */}
-        <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
           {item.hasEnvelope && <Text style={{ fontSize: 12 }}>{item.envelopeIcon || '✉️'}</Text>}
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: farbaBodky }} />
         </View>

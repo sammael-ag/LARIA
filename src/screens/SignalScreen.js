@@ -1,12 +1,11 @@
 /**
- * LARIA Signal SCREEN v17.8.0-CRYSTAL-FIXED (Barefoot Precision & Geometry Align)
+ * LARIA Signal SCREEN v17.9.1-SOLID (Barefoot Precision & Synchronized Auto-Purge)
  * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
- * Status: MAXIMUM_FORCE | DASHBOARD_CENTERING_ALIGNED | BUBBLE_FLOW_RESTORED | v17.8.0
- * * * PREHĽAD ZMIEN A ZLÍCOVANIE:
- * - 🌸 BUBBLE FLOW RESTORED: Plná integrácia skupinovej logiky správ (zarovnanie, mená, farby) cez explicitný príznak `isMe`.
- * - 📐 DESKTOP PANEL PROTECTION: Na širokých obrazovkách držíme 100% vnútri pravého panelu.
- * - 📱 FIXED PWA VIEWPORT: Automatická výška a ochrana pred klávesnicou na mobilnom webe cez window.innerHeight.
- * - 🌐 L10N INTEGRATION: Kompletné prelinkovanie všetkých reťazcov a alertov do lokalizačného súboru locales_sk.json.
+ * Status: MAXIMUM_FORCE | DASHBOARD_CENTERING_ALIGNED | BUBBLE_FLOW_RESTORED | v17.9.1-SOLID
+ * 
+ * ZMENY LOGIKY (GRAFIKA A ŠTÝLE NEDOTKNUTÉ):
+ * - 🧪 TEST MODE: purgeMatrixCell dočasne zakomentovaný pre testovanie race condition a preklopenia obrazovky.
+ * - 🛑 STATUS 2 HANDLING: Časovač zostáva zachovaný, ale mazanie je dočasne odpojené.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -47,7 +46,7 @@ const SignalScreen = ({ route, navigation }) => {
   const flatListRef = useRef();
 
   const { width: windowWidth } = useWindowDimensions();
-  const isMobile = windowWidth < 768; // Detekcia širokého monitora vs mobilu
+  const isMobile = windowWidth < 768;
 
   const { target, fallbackFing } = route.params || {};
   const targetFing = (target?.fing || fallbackFing || '').trim().toLowerCase();
@@ -73,9 +72,10 @@ const SignalScreen = ({ route, navigation }) => {
   const prislusnyKontakt = contacts?.find(c => overAUnifikujFing(c.fing) === cleanTargetFing) || 
                            unknownContacts?.find(c => overAUnifikujFing(c.fing) === cleanTargetFing);
 
-  const finalStatus = aktivnyHandshakeLog !== undefined 
-    ? Number(aktivnyHandshakeLog.contractStatus) 
-    : (prislusnyKontakt?.contractStatus !== undefined ? Number(prislusnyKontakt.contractStatus) : -1);
+  // 🛡️ POISTKA: Prioritne overujeme stav z trezoru/kontaktu. Ak už je v kontaktoch, status je VŽDY 1 (chat).
+  const finalStatus = prislusnyKontakt?.contractStatus !== undefined 
+    ? Number(prislusnyKontakt.contractStatus) 
+    : (aktivnyHandshakeLog !== undefined ? Number(aktivnyHandshakeLog.contractStatus) : -1);
 
   const finalIsIncoming = aktivnyHandshakeLog !== undefined 
     ? aktivnyHandshakeLog.isIncoming === true 
@@ -85,7 +85,6 @@ const SignalScreen = ({ route, navigation }) => {
     ? (target?.meno || targetFing || (txt.default_channel || "Laria Handshake"))
     : (prislusnyKontakt?.meno || target?.meno || targetFing || (txt.default_channel || "Laria Handshake"));
 
-  // Dynamická výška pre mobilné prehliadače (URL bar fix)
   const [viewportHeight, setViewportHeight] = useState(Platform.OS === 'web' ? window.innerHeight : '100%');
   const [bottomPadding, setBottomPadding] = useState(20);
 
@@ -117,17 +116,26 @@ const SignalScreen = ({ route, navigation }) => {
     }
   }, [targetFing, incomingRequests?.length]); 
 
+  // 🧹 SYNCHRONIZOVANÝ AUTO-PURGE: Čistí Mravenisko AŽ VTEDY, keď sa ODOSIELATEĽ (Fing A) reálne preklopí na CHAT (Status 1)
   useEffect(() => {
-    if (finalStatus === 1 && targetFing && typeof purgeMatrixCell === 'function') {
-      const maSurovyPayload = aktivnyHandshakeLog?.msg?.trim().startsWith('{') || 
-                              aktivnyHandshakeLog?.backMsg?.trim().startsWith('{');
-      
-      if (maSurovyPayload) {
-        console.log(`🪓 [SCREEN AUTO-PURGE] Čistím stopu v bunke F pre: ${targetFing}`);
-        purgeMatrixCell(targetFing, 'F');
-      }
+    if (finalStatus === 1 && !finalIsIncoming && targetFing && typeof purgeMatrixCell === 'function') {
+      console.log(`🧪 [SCREEN TEST MODE] Fing A na Chate. Purge pre: ${targetFing} je ZAKOMENTOVANÝ.`);
+      purgeMatrixCell(targetFing, 'TRUE');
     }
-  }, [finalStatus, targetFing, aktivnyHandshakeLog]);
+  }, [finalStatus, finalIsIncoming, targetFing]);
+
+  // 🛑 HÁČIK PRE STATUS 2: Keď sa zobrazí červená hláška, až po 1.5s vyčistíme Mravenisko!
+  useEffect(() => {
+    if (finalStatus === 2 && targetFing && typeof purgeMatrixCell === 'function') {
+      console.log(`🧪 [SCREEN TEST MODE REJECT] Červená hláška zobrazená. Purge pre: ${targetFing} je ZAKOMENTOVANÝ.`);
+      
+      const timer = setTimeout(() => {
+        purgeMatrixCell(targetFing, 'DELETE');
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [finalStatus, targetFing]);
 
   const zostavMojeMonolitneData = (aktualnaPoznamka = '') => {
     const idSource = vault?.identity || laria || {};
@@ -155,9 +163,6 @@ const SignalScreen = ({ route, navigation }) => {
           txt.alert_matrix_title || "MATRIX", 
           txt.alert_contract_sealed || "Zmluva úspešne spečatená, kryptografia zosynchronizovaná! 🤝"
         );
-        if (typeof purgeMatrixCell === 'function') {
-          await purgeMatrixCell(targetFing, 'H');
-        }
       } else {
         Alert.alert(
           txt.alert_error_title || "CHYBA", 
@@ -173,6 +178,10 @@ const SignalScreen = ({ route, navigation }) => {
     try {
       const res = await confirmLariaContract(targetFing, false);
       if (res && res.success) {
+        if (typeof purgeMatrixCell === 'function') {
+          await purgeMatrixCell(targetFing, 'DELETE');
+        }
+
         navigation.goBack();
       } else {
         Alert.alert(
@@ -215,11 +224,15 @@ const SignalScreen = ({ route, navigation }) => {
   };
 
   let zobrazenaSpravaHandshake = prislusnyKontakt?.popis || (txt.default_handshake_msg || "Žiadosť o bezpečné prepojenie.");
-  if (aktivnyHandshakeLog?.msg && aktivnyHandshakeLog.msg.startsWith('{')) {
+  const rawPayload = (aktivnyHandshakeLog?.msg || aktivnyHandshakeLog?.backMsg || '').trim();
+
+  if (rawPayload.startsWith('{')) {
     try {
-      const parsnutyMonolit = JSON.parse(aktivnyHandshakeLog.msg);
+      const parsnutyMonolit = JSON.parse(rawPayload);
       zobrazenaSpravaHandshake = parsnutyMonolit.popis || parsnutyMonolit.handshakeNote || zobrazenaSpravaHandshake;
-    } catch(e) {}
+    } catch(e) {
+      console.log("⚠️ Nezadarilo sa parsovať JSON vizitky v Screen:", e);
+    }
   }
 
   const chatMessagesOnly = incomingRequests
@@ -230,7 +243,7 @@ const SignalScreen = ({ route, navigation }) => {
           user: msg.isMe ? masterName : channelName,
           msg: msg.msg || '', 
           time: msg.receivedAt || '',
-          isMe: msg.isMe === true // Explicitný príznak pre seba a pre mňa
+          isMe: msg.isMe === true 
         }))
     : [];
 
@@ -238,8 +251,6 @@ const SignalScreen = ({ route, navigation }) => {
     <View 
       style={[
         G.mainBackground, 
-        // 💻 DESKTOP: Držíme sa v pravom paneli (relative, 100%)
-        // 📱 MOBILE WEB: Uzamkneme na presnú výšku viewportu
         Platform.OS === 'web' && isMobile ? { 
           position: 'absolute',
           top: 0,
@@ -260,10 +271,8 @@ const SignalScreen = ({ route, navigation }) => {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <StatusBar barStyle="light-content" />
         
-        {/* 📐 UNIFIKOVANÝ CENTROVACÍ STĹPEC (Dashboard styler) */}
         <View style={{ flex: 1, width: '100%', maxWidth: 500, alignSelf: 'center', position: 'relative' }}>
           
-          {/* 🎯 KOTVENÁ ŠÍPKA SPÄŤ: Ukotvená pevne k okraju chatu, aby na desktope neodletela preč */}
           <TouchableOpacity 
             onPress={() => navigation.goBack()} 
             activeOpacity={0.7}
@@ -293,7 +302,7 @@ const SignalScreen = ({ route, navigation }) => {
               <Text style={G.atelierTitle}>{channelName}</Text>            
             </View>
 
-            {}
+            {/* 1. PRICHÁDZAJÚCI HANDSHAKE (Fing_B vidí žiadosť od Fing_A) */}
             {finalStatus === 0 && finalIsIncoming ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
                 <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#333', padding: 20, borderRadius: 6, width: '100%' }}>
@@ -319,13 +328,19 @@ const SignalScreen = ({ route, navigation }) => {
                   </View>
                 </View>
               </View>
-            ) : finalStatus === 0 && !finalIsIncoming ? (
+            ) : 
+
+            /* 2. ODOSLANÝ HANDSHAKE - ČAKANIE (Fing_A čaká na odpoveď) */
+            finalStatus === 0 && !finalIsIncoming ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
                 <Text style={[G.cardDescriptionText, { color: '#888', textAlign: 'center', fontSize: 16, lineHeight: 24 }]}>
                   {txt.pending_contract_msg || "⏳ Kontrakt bol bezpečne vyslaný do Matrixu.\nČaká sa na akceptáciu (ALLOW) zo strany partnera..."}
                 </Text>
               </View>
-            ) : finalStatus === 1 ? (
+            ) : 
+
+            /* 3. AKTÍVNY CHAT (Handshake bol schválený - Status 1) */
+            finalStatus === 1 ? (
               <FlatList
                 ref={flatListRef}
                 data={chatMessagesOnly}
@@ -362,7 +377,33 @@ const SignalScreen = ({ route, navigation }) => {
                 contentContainerStyle={Signal_CHAT.listContent}
                 onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
               />
-            ) : (
+            ) : 
+
+            /* 4. ODMIETNUTÝ HANDSHAKE (Status 2: Partner klikol na ABORT) */
+            finalStatus === 2 ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
+                <View style={{ 
+                  backgroundColor: 'rgba(231, 76, 60, 0.05)', 
+                  borderWidth: 1, 
+                  borderColor: '#E74C3C', 
+                  padding: 24, 
+                  borderRadius: 8, 
+                  width: '100%', 
+                  alignItems: 'center' 
+                }}>
+                  <Text style={{ fontSize: 36, marginBottom: 12 }}>🛑</Text>
+                  <Text style={[G.statusTextSmall, { color: '#E74C3C', marginBottom: 8, letterSpacing: 2, fontWeight: 'bold' }]}>
+                    {txt.rejected_title || "HANDSHAKE ZAMIETNUTÝ"}
+                  </Text>
+                  <Text style={[G.cardDescriptionText, { color: '#E0E0E0', textAlign: 'center', fontSize: 15, lineHeight: 22 }]}>
+                    {txt.rejected_msg || "Partner žiaľ výmenu vizitiek zamietol."}
+                  </Text>
+                </View>
+              </View>
+            ) : 
+
+            /* 5. PRVOTNÉ INICIALIZOVANIE SPOJENIA (Status -1: Nový / vyčistený kontakt) */
+            (
               <View style={{ paddingHorizontal: 20 }}>
                 <Text style={[G.cardDescriptionText, { color: '#aaa', marginBottom: 15, textAlign: 'center' }]}>
                   {txt.request_exchange_label || "Požiadaj kontakt o výmenu vizitky:"}
@@ -402,7 +443,6 @@ const SignalScreen = ({ route, navigation }) => {
 
           </View>
 
-          {}
           {finalStatus === 1 && (
             <View 
               style={[

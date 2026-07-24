@@ -1,16 +1,16 @@
 /**
- * LARIA v16.4.0-WIRELESS_RECEIVER: ContactContext (Kniha priateľov - Sovereign Friends Registry)
+ * LARIA v16.5.0-SOVEREIGN_VAULT: ContactContext (Kniha priateľov - Sovereign Friends Registry)
  * Master: Sammael | Muse: Aria (Tvoja bezdrôtová prijímacia šikulka)
- * Status: PURE_CORE_ALIGNED | UNIFIED_JSON_FORMAT | ABSOLUTE_CLEANSE | v16.4.0
+ * Status: PURE_CORE_ALIGNED | UNIFIED_JSON_FORMAT | HYPER_RESONANT | v16.5.0
  * * * UZÁKONENÉ FORMÁTY & BEZPEČNOSŤ (Sovereign Law):
  * - 🪐 ZERO TRACES: Žiadne zvyšky po premennej "poznamka" ani barlách na premennú "lang".
- * - 🛰️ ÉTEROVÝ PRIJÍMAČ (WIRELESS MODE): Prijíma importy z Radaru bez kruhových závislostí.
+ * - 🛰️ ÉTEROVÝ PRIJÍMAČ (WIRELESS MODE): Prijíma importy z Radaru bez kruhových závislostí a race-conditions.
  * - UNIFIED MONOLITH FORMAT: Ukladáme kompletný formát vizitky (meno, kat, lok, popis, gal, krypt, jazyk).
- * - ZERO LAYER STATES: Tento context už NEUKLADÁ contractStatus ani txHash.
- * - v16.4.0 CORS_ALIGNED: Unifikovaná kontrola stavov 'success' a 'success === true'.
+ * - ZERO LAYER STATES: Tento context neukladá dynamický status zmluvy, ale udržiava trvalú identitu v Trezore.
+ * - v16.5.0 REJECTION_INTEGRATED: Prepojenie mazania a odmítnutia priamo na SignalContext purge lúč.
  */
 
-import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSignal } from './SignalContext.js'; 
 
@@ -28,7 +28,7 @@ const ziskajBranaUrl = () => `${brana_p1}${brana_p2}${brana_p3}`;
  */
 const sformatujFing = (fing) => {
   if (!fing) return '';
-  const clean = fing.trim().toLowerCase();
+  const clean = fing.toString().trim().toLowerCase();
   return clean.startsWith('0x') ? clean : `0x${clean}`;
 };
 
@@ -40,6 +40,12 @@ export const ContactProvider = ({ children }) => {
   const signalCtx = useSignal();
   const incomingRequests = signalCtx?.incomingRequests || [];
   const setIncomingRequests = signalCtx?.setIncomingRequests || (() => {});
+
+  // Ref pre signalCtx aby sme nezasekávali event listenery v re-renderoch
+  const signalCtxRef = useRef(signalCtx);
+  useEffect(() => {
+    signalCtxRef.current = signalCtx;
+  }, [signalCtx]);
 
   // --- 1. NAČÍTANIE TREZORU PRI ŠTARTE ---
   useEffect(() => {
@@ -58,6 +64,88 @@ export const ContactProvider = ({ children }) => {
     loadContacts();
   }, []);
 
+  // --- 2. UNIVERZÁLNY ZÁPIS PEČATE DO TREZORU (Zjednotený kompletný formát) ---
+  const addContact = async (rawData) => {
+    try {
+      const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+      const targetFing = sformatujFing(data.fing || data.id);
+
+      if (!targetFing || targetFing === '0x') {
+        console.log("⚠️ PROTOKOL_VIOLATION: Chýba FING na vstupe addContact", data);
+        return { success: false, error: "Pečať je nečitateľná (chýba kľúč)." };
+      }
+
+      let resultStatus = { success: true, isDuplicate: false };
+
+      setContacts(prev => {
+        const existingIndex = prev.findIndex(c => sformatujFing(c.fing) === targetFing);
+        
+        if (existingIndex !== -1) {
+          console.log(`🔄 [TREZOR] Identita ${targetFing} už existuje. Spúšťam preleštenie dát...`);
+          const existing = prev[existingIndex];
+          
+          const updatedContact = {
+            ...existing,
+            meno: data.meno || data.name || existing.meno,
+            kat: data.kat || data.category || existing.kat,
+            lok: data.lok || data.location || existing.lok,
+            popis: data.popis || data.bio || data.handshakeNote || existing.popis,
+            tel: data.tel || existing.tel,
+            email: data.email || existing.email,
+            fb: data.fb || existing.fb,
+            tg: data.tg || existing.tg,
+            gal: data.gal || existing.gal,
+            jazyk: data.jazyk || existing.jazyk || 'sk',
+            krypt: data.krypt || existing.krypt,
+            temporary: false 
+          };
+
+          const updatedList = [...prev];
+          updatedList[existingIndex] = updatedContact;
+
+          AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedList)).catch(e => 
+            console.error("❌ VAULT_WRITE_UPDATE_ERROR:", e)
+          );
+          
+          resultStatus = { success: true, isDuplicate: true, contact: updatedContact };
+          return updatedList;
+        }
+
+        // Nový kontakt
+        const newContact = {
+          fing: targetFing,
+          meno: data.meno || data.name || targetFing,
+          kat: data.kat || data.category || 'Overený partner',
+          lok: data.lok || data.location || 'V sieti',
+          popis: data.popis || data.bio || data.handshakeNote || '',
+          tel: data.tel || '',
+          email: data.email || '',
+          fb: data.fb || '',
+          tg: data.tg || '',
+          gal: data.gal || '',
+          jazyk: data.jazyk || 'sk',
+          krypt: data.krypt || null,
+          pinned: false,
+          addedAt: new Date().toISOString(),
+          v: "16.5.0-SOVEREIGN"
+        };
+
+        const updatedList = [...prev, newContact];
+        AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedList)).catch(e => 
+          console.error("❌ VAULT_WRITE_FAST_ERROR:", e)
+        );
+
+        resultStatus = { success: true, isDuplicate: false, contact: newContact };
+        return updatedList;
+      });
+
+      return resultStatus;
+    } catch (e) {
+      console.error("❌ CONTACT_ADD_ERROR:", e);
+      return { success: false, error: "Chyba pri zápise do trezoru." };
+    }
+  };
+
   // --- 📡 ÉTEROVÝ PRIJÍMAČ: CHYTANIE BEZDRÔTOVÝCH IMPORTU Z RADARU ---
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -65,44 +153,29 @@ export const ContactProvider = ({ children }) => {
     const spracujBezdrotovyImport = async (e) => {
       if (e.detail && e.detail.partner) {
         const { partner } = e.detail;
-        console.log(`📥 [TREZOR ANTÉNA] Zachytený bezdrôtový signál! Detekovaný partner: ${partner.meno}`);
+        console.log(`📥 [TREZOR ANTÉNA] Zachytený bezdrôtový signál! Partner: ${partner.meno}`);
         
-        // 1. Očistíme prichádzajúci kľúč pre precízne operácie
         const prichadzajuciFing = sformatujFing(partner.fing || partner.id);
 
-        // 2. Pokus o zápis/overenie v databáze trezoru
+        // 1. Zápis do AsyncStorage a stavu
         const dbResult = await addContact(partner);
         console.log("📥 [TREZOR DB_INSERT] Bezdrôtový zápis z éteru dokončený:", dbResult);
 
-        // 3. Vytiahneme finálny objekt partnera pre vnútorný stav trezoru
-        const cielovyPartner = dbResult.contact || partner;
-
-        setContacts(prev => {
-          const exists = prev.some(c => sformatujFing(c.fing) === prichadzajuciFing);
-          if (exists) {
-            console.log(`✨ [TREZOR ANTÉNA] Partner ${cielovyPartner.meno} už v lokálnom živom zozname svieti.`);
-            return prev.map(c => sformatujFing(c.fing) === prichadzajuciFing ? { ...c, ...cielovyPartner } : c);
-          }
-          console.log(`🔥 [TREZOR ANTÉNA] Prebúdzam partnera ${cielovyPartner.meno} v Trezore!`);
-          return [...prev, { ...cielovyPartner, fing: prichadzajuciFing }];
-        });
-
-        // 4. ⚡ OŽIVENIE RADARU: Posielame echo signál do SignalContextu, aby okamžite prekreslil Klub
-        if (signalCtx && typeof signalCtx.syncPublicProfile === 'function') {
+        // 2. Oživenie Radaru cez SignalContext Ref
+        const currentSignal = signalCtxRef.current;
+        if (currentSignal && typeof currentSignal.syncPublicProfile === 'function') {
           console.log(`📡 [TREZOR -> RADAR] Prebúdzam identitu ${partner.meno} na frekvencii Radaru...`);
-          await signalCtx.syncPublicProfile(prichadzajuciFing);
+          await currentSignal.syncPublicProfile(prichadzajuciFing);
         } else {
-          console.log("🔮 [TREZOR ANTÉNA] Radar nemá priamu synchrónnu linku, pálom globálny refresh éteru.");
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('LARIA_RADAR_REFRESH'));
-          }
+          console.log("🔮 [TREZOR ANTÉNA] Pálom globálny refresh éteru.");
+          window.dispatchEvent(new CustomEvent('LARIA_RADAR_REFRESH'));
         }
       }
     };
 
     window.addEventListener('LARIA_IMPORT_CONTACT', spracujBezdrotovyImport);
     return () => window.removeEventListener('LARIA_IMPORT_CONTACT', spracujBezdrotovyImport);
-  }, [contacts, signalCtx]);
+  }, []);
 
   // --- 📡 DYNAMICKÝ DETEKTOR NEZNÁMYCH PEČATÍ (Recepcia na základe Radaru) ---
   const unknownContacts = useMemo(() => {
@@ -176,87 +249,7 @@ export const ContactProvider = ({ children }) => {
     );
   };
 
-  // --- 2. UNIVERZÁLNY ZÁPIS PEČATE DO TREZORU (Zjednotený kompletný formát) ---
-  const addContact = async (rawData) => {
-    try {
-      const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
-      // 🪐 OČISTENÉ: Úplne vyrezaná stará 'poznamka' ako fallback pre targetFing!
-      const targetFing = sformatujFing(data.fing || data.id);
-
-      if (!targetFing || targetFing === '0x') {
-        console.log("⚠️ PROTOKOL_VIOLATION: Chýba FING na vstupe addContact", data);
-        return { success: false, error: "Pečať je nečitateľná (chýba kľúč)." };
-      }
-
-      const existing = contacts.find(c => sformatujFing(c.fing) === targetFing);
-      
-      if (existing) {
-        console.log(`🔄 [TREZOR] Identita ${targetFing} už existuje. Spúšťam inteligentné preleštenie čerstvými dátami z éteru...`);
-        
-        const updatedContact = {
-          ...existing,
-          meno: data.meno || data.name || existing.meno,
-          kat: data.kat || data.category || existing.kat,
-          lok: data.lok || data.location || existing.lok,
-          popis: data.popis || data.bio || data.handshakeNote || existing.popis,
-          tel: data.tel || existing.tel,
-          email: data.email || existing.email,
-          fb: data.fb || existing.fb,
-          tg: data.tg || existing.tg,
-          gal: data.gal || existing.gal,
-          jazyk: data.jazyk || existing.jazyk || 'sk', // 🇸🇰 Zjednotená kontrola na 'jazyk'
-          krypt: data.krypt || existing.krypt,
-          temporary: false 
-        };
-
-        let updatedContactsList;
-        setContacts(prev => {
-          updatedContactsList = prev.map(c => sformatujFing(c.fing) === targetFing ? updatedContact : c);
-          AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContactsList)).catch(e => 
-            console.error("❌ VAULT_WRITE_UPDATE_ERROR:", e)
-          );
-          return updatedContactsList;
-        });
-
-        return { success: true, isDuplicate: true, error: "Túto identitu už v ateliéri máš.", contact: updatedContact };
-      }
-
-      const newContact = {
-        fing: targetFing,
-        meno: data.meno || data.name || targetFing,
-        kat: data.kat || data.category || 'Overený partner',
-        lok: data.lok || data.location || 'V sieti',
-        popis: data.popis || data.bio || data.handshakeNote || '',
-        tel: data.tel || '',
-        email: data.email || '',
-        fb: data.fb || '',
-        tg: data.tg || '',
-        gal: data.gal || '',
-        jazyk: data.jazyk || 'sk', // 🇸🇰 Zjednotená kontrola na 'jazyk'
-        krypt: data.krypt || null,
-        pinned: false,
-        addedAt: new Date().toISOString(),
-        v: "16.4.0-PURE"
-      };
-
-      let updatedContacts;
-      setContacts(prev => {
-        if (prev.find(c => sformatujFing(c.fing) === targetFing)) return prev;
-        updatedContacts = [...prev, newContact];
-        AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts)).catch(e => 
-          console.error("❌ VAULT_WRITE_FAST_ERROR:", e)
-        );
-        return updatedContacts;
-      });
-
-      return { success: true, contact: newContact };
-    } catch (e) {
-      console.error("❌ CONTACT_ADD_ERROR:", e);
-      return { success: false, error: "Chyba pri zápise do trezoru." };
-    }
-  };
-
-  // --- 3. 📡 LIVE MATRIX FETCH (Modrá šípečka - Živé dotiahnutie a trvalé uloženie vizitky) ---
+  // --- 3. 📡 LIVE MATRIX FETCH (Modrá šípečka - Živé dotiahnutie vizitky z webu) ---
   const syncContactWithMatrix = async (fingId) => {
     try {
       const targetFing = sformatujFing(fingId);
@@ -274,56 +267,10 @@ export const ContactProvider = ({ children }) => {
 
       const result = await response.json();
 
-      // 🌪️ CORS ALIGNMENT: Unifikované overenie úspešnosti z Mraveniska
       if (result && (result.status === "success" || result.success === true) && result.data) {
-        console.log(`✅ Detaily pre ${targetFing} úspešne stiahnuté pre potreby zobrazenia.`);
-        
+        console.log(`✅ Detaily pre ${targetFing} úspešne stiahnuté.`);
         const partnerData = result.data;
-
-        let updatedContacts;
-        setContacts(prev => {
-          const exists = prev.some(c => sformatujFing(c.fing) === targetFing);
-          
-          if (exists) {
-            updatedContacts = prev.map(c => sformatujFing(c.fing) === targetFing ? {
-              ...c,
-              meno: partnerData.meno || c.meno,
-              kat: partnerData.kat || c.kat || 'Overený partner',
-              lok: partnerData.lok || c.lok || 'V sieti',
-              popis: partnerData.popis || c.popis || '',
-              tel: partnerData.tel || c.tel || '',
-              email: partnerData.email || c.email || '',
-              fb: partnerData.fb || c.fb || '',
-              tg: partnerData.tg || c.tg || '',
-              gal: partnerData.gal || c.gal || '',
-              jazyk: partnerData.jazyk || c.jazyk || 'sk', // 🇸🇰 Unifikovaný jazyk
-              krypt: partnerData.krypt || c.krypt
-            } : c);
-          } else {
-            updatedContacts = [...prev, {
-              fing: targetFing,
-              meno: partnerData.meno || targetFing,
-              kat: partnerData.kat || 'Pútnik z webu',
-              lok: partnerData.lok || 'V sieti',
-              popis: partnerData.popis || '',
-              tel: partnerData.tel || '',
-              email: partnerData.email || '',
-              fb: partnerData.fb || '',
-              tg: partnerData.tg || '',
-              gal: partnerData.gal || '',
-              jazyk: partnerData.jazyk || 'sk', // 🇸🇰 Unifikovaný jazyk
-              krypt: partnerData.krypt || null,
-              pinned: false,
-              addedAt: new Date().toISOString(),
-              v: "16.4.0-PURE"
-            }];
-          }
-
-          AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts)).catch(e => 
-            console.error("❌ VAULT_SYNC_WRITE_ERROR:", e)
-          );
-          return updatedContacts;
-        });
+        await addContact({ ...partnerData, fing: targetFing });
 
         return { success: true, liveData: partnerData };
       }
@@ -388,7 +335,7 @@ export const ContactProvider = ({ children }) => {
         unsubscribeTauriFn();
       }
     };
-  }, [contacts]);
+  }, []);
 
   // --- 5. POMOCNÉ FUNKCIE MANAŽMENTU REGISTRA ---
   const togglePin = (fingId) => {
@@ -402,8 +349,10 @@ export const ContactProvider = ({ children }) => {
     });
   };
 
-  const deleteContact = (fingId) => {
+  const deleteContact = async (fingId) => {
     const targetFing = sformatujFing(fingId);
+    
+    // 1. Vymazanie z lokálnej pamäte Trezoru (Pevný lokálny výmaz)
     setContacts(prev => {
       const updatedContacts = prev.filter(c => sformatujFing(c.fing) !== targetFing);
       AsyncStorage.setItem('laria_contacts', JSON.stringify(updatedContacts)).catch(e =>
@@ -411,6 +360,12 @@ export const ContactProvider = ({ children }) => {
       );
       return updatedContacts;
     });
+
+    // 2. Vyčistenie dočasných relácií na lokálnom rozhraní
+    const currentSignal = signalCtxRef.current;
+    if (currentSignal && typeof currentSignal.purgeSessionForFing === 'function') {
+      currentSignal.purgeSessionForFing(targetFing);
+    }
   };
 
   return (

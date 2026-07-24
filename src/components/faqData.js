@@ -37,7 +37,7 @@ export const faqArticles = [
       <p>Pre úspešné a efektívne používanie webovej aplikácie LARIA je prvým krokom vytvorenie vlastnej vizitky. Funguje to súčasne ako tvoja registrácia aj vyplnenie profilu – žiadne zbytočné formuláre, len čistá esencia toho, kto si a čo tvoríš.</p>
 
       <div class="faq-image-container" style="text-align: center; margin: 20px 0;">
-        <img src="./images/tvoja-vizitka-triptych.png" alt="Cesta vytvorenia vizitky v systéme LARIA" style="max-width: 100%; width: 550px; height: auto; border-radius: 4px; cursor: pointer;" />
+        <img src="./panorama1.png" alt="Cesta vytvorenia vizitky v systéme LARIA" style="max-width: 100%; width: 550px; height: auto; border-radius: 4px; cursor: pointer;" />
         <p style="font-size: 12px; color: #888; margin-top: 5px;">* Kliknutím na obrázok sa zobrazenie zväčší</p>
       </div>
 
@@ -78,7 +78,7 @@ export const faqArticles = [
   category: "Návody",
   content: `
     <p>Vyhľadanie a pridanie kontaktu je skutočne jednoduché.</p>
-    <img src="public/images/vyhladaj-kontakt-ilustracia.jpg" alt="Vyhľadanie a pridanie kontaktu" />
+    <img src="public/images/panorama2.png" alt="Vyhľadanie a pridanie kontaktu" />
     <p><strong>Vyhľadanie:</strong> Filtrovať vizitky užívateľov (sekcia Vizitkár) je možné podľa kategórií. Podrobnejšie vyhľadávanie spustíš zadaním lokality alebo mena do vyhľadávacieho poľa – úplne stačí, ak zadáš aspoň 2 počiatočné písmená.</p>
     <p><strong>Pridanie do kontaktov:</strong> Ak ťa oslovil popis alebo portfólio galérie niektorého z užívateľov, môžeš si ho pridať do kontaktov jednoduchým kliknutím na tlačidlo „do Appky“. Automaticky sa uloží do tvojho zoznamu kontaktov v Ateliéri. V budúcnosti ho môžeš požiadať o kontakt, alebo si ho nechať len ako spiaci kontakt. Druhá strana o tom nevie nič, kým nepožiadaš o kontakt (tzv. handshake).</p>
     <p><strong>Zdieľanie vizitky:</strong> V prípade, že chceš túto vizitku poslať priateľovi, stačí v sekcii Vizitkár kliknúť na tlačidlo „link“, čím sa ti do klávesnice skopíruje priamy odkaz na sólo zobrazenie konkrétnej vizitky. Rovnako jednoducho môžeš kdekoľvek zdieľať aj vlastnú vizitku – kliknutím na ňu ju zobrazíš sólo, cez tlačidlo „link“ skopíruješ jej odkaz pre sociálne siete, prípadne môžeš využiť QR kód (kliknutím na „vystaviť pečať“ v sekcii Moja vizitka) alebo odoslanie cez NFC signál.</p>
@@ -101,7 +101,7 @@ export const faqArticles = [
   category: "Návody",
   content: `
     <p>Obnova účtu je veľmi jednoduchá a rýchla akcia.</p>
-    <img src="public/images/obnova-uctu-ilustracia.jpg" alt="Obnova účtu v systéme LARIA" />
+    <img src="public/images/panorama3.png" alt="Obnova účtu v systéme LARIA" />
     <p>Na tento krok potrebuješ svoj zálohovaný <strong>SHA odtlačok</strong>, o ktorom sme písali v návode <a href="#ako-zacat-vytvor-si-vizitku" style="color: '#4un'; text-decoration: underline; font-weight: bold;" onclick="event.preventDefault(); document.getElementById('ako-zacat-vytvor-si-vizitku')?.scrollIntoView({ behavior: 'smooth' });">Vytvor si vizitku</a> v odseku „Čo LARIA vytvorí“.</p>
     <p>Tento kód je potrebné vložiť v sekcii <em>Nastavenia</em> do políčka pre obnovenie účtu. Po vložení sa aktivuje tlačidlo „Obnovit účet“. Po kliknutí je nutné počkať približne 5 sekúnd, kým LARIA preverí identitu.</p>
     <br/>

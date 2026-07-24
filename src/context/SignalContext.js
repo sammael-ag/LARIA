@@ -1,12 +1,11 @@
 /**
- * LARIA SIGNAL CONTEXT v17.6-RESOLVED-PURGE (Sovereign Radar Core - Quantum Resilient)
+ * LARIA SIGNAL CONTEXT v17.9.1-SOLID (Sovereign Radar Core - Quantum Resilient)
  * Master: Sammael | Muse: Aria (Tvoja bezdrôtová šikulka)
- * STATUS: ACTIVE / HYBRID-HYPER-REACTIVE / v17.6-RESOLVED-PURGE
+ * STATUS: ACTIVE / PURE_DATA_INGEST / v17.9.1-SOLID
  * * * PREHĽAD ZMIEN:
- * - 🪓 SAFE DOUBLE-PHASE PURGE: Čistenie riadku v Matrixe sa odpáli až vtedy,
- *   keď je partner bezpečne overený a zapísaný v lokálnom trezore (existujeVLocaltrezore === true).
- * - 🔍 FING-ALIGNMENT: Zjednotenie polarity a striktné orezávanie '0x' pred odoslaním na backend (SignalService).
- * - ✉️ MSG-UNIFICATION: Oprava čítania payloadu výhradne z `contract.msg` (keďže Apps Script posiela zlúčenú polaritu tam).
+ * - 🪓 AUTOPURGE REMOVED FROM PING: Odstránené predčasné samovoľné čistenie matrice pri pingu.
+ * - 🎯 EXPLICIT PURGE CONTROL: Purge sa spúšťa výhradne na príkaz zo SignalScreenu / UI akcie.
+ * - 🔧 STRIKTNÁ UNIFIKÁCIA: Unifikované stavy zmluvy (0 = čakanie, 1 = potvrdené, 2 = zamietnuté).
  */
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
@@ -58,9 +57,6 @@ export const SignalProvider = ({ children }) => {
   const [isSignalConnected, setIsSignalConnected] = useState(true); 
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [isRadarReady, setIsRadarReady] = useState(false);
-
-  // 🛡️ PAMÄŤOVÝ ZÁMOK PRE AUTOPURGE (Zabráni hyperpingu na jedno a to isté ID):
-  const spracovanePurgeFingyRef = useRef(new Set());
 
   const contactCtx = typeof useContacts === 'function' ? useContacts() : null;
   const contacts = contactCtx?.contacts || [];
@@ -152,7 +148,7 @@ export const SignalProvider = ({ children }) => {
   };
 
   // =========================================================================
-  // 📥 UNIVERZÁLNY RADAROVÝ LIEVIK (DÁTOVÝ INGESTION CORE)
+  // 📥 UNIVERZÁLNY RADAROVÝ LIEVIK (ČISTÝ DATA INGESTION CORE)
   // =========================================================================
   const spracujRadarovyBalik = (radarData) => {
     if (!radarData) return;
@@ -180,18 +176,21 @@ export const SignalProvider = ({ children }) => {
         const existujeVLocaltrezore = contactsRef.current.some(c => overAUnifikujFing(c.fing) === cleanContractFing);
 
         console.log(
-          `📡 %c[KONTRAKT RENTGEN INGEST] -> Partner: ${cleanContractFing} \n` +
-          `| Surový Stav: ${surovyStav} (txHash: "${rawHash}") \n` +
-          `| Smer: ${isIncoming ? "PRICHÁDZAJÚCI" : "ODCHÁDZAJÚCI"} \n` +
-          `| Stav v Trezore: ${existujeVLocaltrezore ? "ÁNO" : "NIE"} \n` +
-          `| Obsahuje msg: ${contract.msg ? (contract.msg.trim().startsWith('{') ? "VALID_JSON" : "TEXT") : "PRÁZDNE"}`,
+          `📡 %c[RADAR INGEST] -> Partner: ${cleanContractFing} | Surový Stav: ${surovyStav} | Trezor: ${existujeVLocaltrezore ? "ÁNO" : "NIE"}`,
           'color: #8e44ad; font-weight: bold;'
         );
 
+        // --- A: STAV 2 (ZAMJETNUTÉ) ---
+        if (surovyStav === 2) {
+          triggerNotification(
+            "💔 Handshake zrušený", 
+            `Spojenie s partnerom ${cleanContractFing.substring(0, 6)}... nebolo nadviazané.`
+          );
+        }
+
+        // --- B: STAV 1 (POTVRDENÉ) ---
         if (surovyStav === 1) {
-          if (!existujeVLocaltrezore) {
-            // 🔥 FÁZA 1: Importujeme, ale NEODPAĽUJEME deštrukciu, pokiaľ nemáme dáta u seba!
-            // ⚡ FIX 1: Čítame vizitku výhradne z msg (kam ju ukladá zlúčený Apps Script radar)
+          if (!existujeVLocaltrezore && isIncoming) {
             let surovyPayload = null;
             if (contract.msg && contract.msg.trim().startsWith('{')) {
               surovyPayload = contract.msg;
@@ -230,55 +229,24 @@ export const SignalProvider = ({ children }) => {
                 console.error("❌ [RADAR TRACEROUTE ERROR] Chyba spracovania:", jsonErr);
               }
             }
-          } else {
-            // 🔥 FÁZA 2: Partner je už bezpečne zapísaný v trezore. Teraz môžeme bezpečne odpáliť Autopurge!
-            if (!spracovanePurgeFingyRef.current.has(cleanContractFing)) {
-              console.log(`🪓 [AUTOPURGE] Partner ${cleanContractFing} je bezpečne uložený. Odpaľujem bezpečné čistenie riadku...`);
-              
-              spracovanePurgeFingyRef.current.add(cleanContractFing);
-              purgeMatrixCell(cleanContractFing, "TRUE");
-
-              // Po 10 sekundách zámok uvoľníme pre prípadné ďalšie handshaky
-              setTimeout(() => {
-                spracovanePurgeFingyRef.current.delete(cleanContractFing);
-              }, 10000);
-            }
           }
         }
 
         if (jeValidnyHash) {
-          // ⚡ FIX: Apps Script odovzdáva vizitku do .msg, netreba kontrolovať backMsg
           const prazdnaSprava = !contract.msg || !contract.msg.trim().startsWith('{');
-          
-          if (!existujeVLocaltrezore && prazdnaSprava) {
+          if (!existujeVLocaltrezore && prazdnaSprava && isIncoming) {
             surovyStav = -1;
           }
         }
 
+        // --- C: AKTUALIZÁCIA STATE PRE FRONTEND ---
         setIncomingRequests(prev => {
           if (surovyStav === -1) {
             return prev.filter(req => !(req.id === contractId && req.isHandshake));
           }
 
-          if (existujeVLocaltrezore) {
-            const index = prev.findIndex(req => req.id === contractId && req.isHandshake);
-            if (index !== -1) {
-              if (prev[index].contractStatus !== 1) {
-                const updated = [...prev];
-                updated[index] = {
-                  ...updated[index],
-                  contractStatus: 1,
-                  status: 'READ',
-                  txHash: contract.txHash,
-                  msg: contract.msg || updated[index].msg
-                };
-                return updated;
-              }
-              return prev;
-            }
-          }
-
           const existujuciIndex = prev.findIndex(req => req.id === contractId && req.isHandshake);
+          
           if (existujuciIndex !== -1) {
             const povodnySmer = prev[existujuciIndex].isIncoming;
 
@@ -296,15 +264,12 @@ export const SignalProvider = ({ children }) => {
             }
             return prev;
           }
-          
+
           if (surovyStav === 0 && isIncoming) {
             triggerNotification(`🛰️ Nová žiadosť o Pečať`, `Majster ${cleanContractFing.substring(0, 6)}... ti posiela kontrakt.`);
           }
 
           const finalnyVychodiskovyStav = existujeVLocaltrezore ? 1 : surovyStav;
-          
-          const uzJeVPolu = prev.some(req => req.id === contractId && req.isHandshake);
-          if (uzJeVPolu) return prev;
 
           return [...prev, {
             id: contractId,                  
@@ -347,7 +312,7 @@ export const SignalProvider = ({ children }) => {
   };
 
   // =========================================================================
-  // 🛰️ DYNAMICKÝ REAKTÍVNY PING S PREMAPOVANÝMI PREMENNÝMI PRE BACKEND
+  // 🛰️ DYNAMICKÝ REAKTÍVNY PING
   // =========================================================================
   const executePing = async (clearPartnerFing = null, cleanCellType = null) => {
     if (!isRadarReady) return;
@@ -357,11 +322,6 @@ export const SignalProvider = ({ children }) => {
 
     const backendQueryFing = myCleanFing.replace('0x', '');
     const partnerFingCleaned = clearPartnerFing ? overAUnifikujFing(clearPartnerFing).replace('0x', '') : null;
-
-    console.log(
-      `🛰️ [RADAR POLLING] Pinging Mravenisko pre ID: ${myCleanFing}` +
-      `${cleanCellType ? ` 🔥 [PURGE CHARGE]: Vymazať riadok pre partnera ${clearPartnerFing}` : ''}`
-    );
 
     try {
       const res = await SignalService.checkMyContracts({
@@ -380,15 +340,16 @@ export const SignalProvider = ({ children }) => {
   };
 
   // =========================================================================
-  // 🪓 NÁSTROJ NA ČISTENIE MATRICE (Volá frontend po uložení do trezoru)
+  // 🪓 NÁSTROJ NA ČISTENIE MATRICE 
   // =========================================================================
+  
   const purgeMatrixCell = async (targetFing, cellType = "TRUE") => {
     if (!targetFing) return { success: false, error: "Chýbajú vstupné parametre čistenia." };
     
     const cleanTarget = overAUnifikujFing(targetFing);
     const upperCell = cellType.toUpperCase().trim();
 
-    console.log(`🪓 [SIGNAL CONTEXT] Odpaľujem integrovaný pull-purge z Radaru pre ${cleanTarget}`);
+    console.log(`🪓 [EXPLICIT PURGE] Odpaľujem vyčistenie matrice pre ${cleanTarget}`);
     
     await executePing(cleanTarget, upperCell);
     return { success: true };
@@ -398,7 +359,6 @@ export const SignalProvider = ({ children }) => {
     if (typeof window === 'undefined') return;
 
     const handleMatchmakerPulse = () => {
-      console.log("⚡ [MATCHMAKER PULSE EVENT] Vynucujem okamžitý sken sieci...");
       executePing();
     };
 
@@ -415,15 +375,11 @@ export const SignalProvider = ({ children }) => {
     return () => clearInterval(pollingInterval);
   }, [isRadarReady, vault?.identity?.fing]);
 
-  // =========================================================================
-  // 🎁 ODOSLANIE LARIA BALÍKA (S KOREKTNOU POLARITOU PRE BACKEND)
-  // =========================================================================
   const sendLariaPackage = async (senderFing, targetFing, myIdentity, handshakeNote = "") => {
     const myCleanFing = overAUnifikujFing(senderFing) || (vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : '0x0000000000');
     const targetCleanFing = overAUnifikujFing(targetFing);
     if (!targetCleanFing) return { success: false, error: "Neplatný formát cieľa." };
 
-    // ⚡ FIX 2: Odstránenie 0x pred odoslaním na SignalService API, aby backend priradil správnu polaritu
     const cleanSenderBackend = myCleanFing.replace('0x', '');
     const cleanTargetBackend = targetCleanFing.replace('0x', '');
 
@@ -433,7 +389,6 @@ export const SignalProvider = ({ children }) => {
       if (!mravecRes || !mravecRes.success) return { success: false, error: "Mravenisko odmietlo balík." };
 
       if (mravecRes.radar) {
-        console.log("🎁 [HTTP INGEST] Odpoveď INIT_CONTRACT nesie radar snapshot. Sosám...");
         spracujRadarovyBalik(mravecRes.radar);
       }
 
@@ -477,7 +432,6 @@ export const SignalProvider = ({ children }) => {
       }
 
       if (mravecRes.radar) {
-        console.log("🎁 [HTTP INGEST] Odpoveď CONFIRM_CONTRACT nesie čerstvý radar snapshot. Prekresľujem rozhranie do chatu...");
         spracujRadarovyBalik(mravecRes.radar);
       }
 
@@ -485,6 +439,22 @@ export const SignalProvider = ({ children }) => {
     } catch (err) {
       console.error("🚨 [CONFIRM CONTRACT ERROR] Zlyhanie sieťovej akcie:", err);
       return { success: false, error: err.toString() };
+    }
+  };
+
+  const rejectAndPurgeHandshake = async (targetFing) => {
+    const myCleanFing = vault?.identity?.fing ? overAUnifikujFing(vault.identity.fing) : '0x0000000000';
+    const targetCleanFing = overAUnifikujFing(targetFing);
+    if (!targetCleanFing) return { success: false, error: "Neplatný cieľový fing." };
+
+    setIncomingRequests(prev => prev.filter(req => overAUnifikujFing(req.fing) !== targetCleanFing));
+
+    try {
+      await confirmLariaContract(targetCleanFing, false);
+      await purgeMatrixCell(targetCleanFing, "DELETE");
+      return { success: true };
+    } catch (err) {
+      return { success: true };
     }
   };
 
@@ -610,7 +580,8 @@ export const SignalProvider = ({ children }) => {
       unknownContacts,            
       setIncomingRequests, 
       sendLariaPackage,
-      confirmLariaContract, 
+      confirmLariaContract,
+      rejectAndPurgeHandshake, 
       sendChatMessage,
       resolveHandshakeStatus,
       purgeSessionForFing,
