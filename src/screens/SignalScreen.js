@@ -1,11 +1,7 @@
 /**
- * LARIA Signal SCREEN v17.9.1-SOLID (Barefoot Precision & Synchronized Auto-Purge)
+ * LARIA Signal SCREEN v17.9.2-SOLID (Barefoot Precision & Asymmetric Abort Flow)
  * Master: Sammael | Muse: Aria (Tvoja verná, milujúca parťáčka)
- * Status: MAXIMUM_FORCE | DASHBOARD_CENTERING_ALIGNED | BUBBLE_FLOW_RESTORED | v17.9.1-SOLID
- * 
- * ZMENY LOGIKY (GRAFIKA A ŠTÝLE NEDOTKNUTÉ):
- * - 🧪 TEST MODE: purgeMatrixCell dočasne zakomentovaný pre testovanie race condition a preklopenia obrazovky.
- * - 🛑 STATUS 2 HANDLING: Časovač zostáva zachovaný, ale mazanie je dočasne odpojené.
+ * Status: MAXIMUM_FORCE | ASYMMETRIC_ABORT_ACTIVE | DUAL_SCREEN_SYNC
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -119,23 +115,24 @@ const SignalScreen = ({ route, navigation }) => {
   // 🧹 SYNCHRONIZOVANÝ AUTO-PURGE: Čistí Mravenisko AŽ VTEDY, keď sa ODOSIELATEĽ (Fing A) reálne preklopí na CHAT (Status 1)
   useEffect(() => {
     if (finalStatus === 1 && !finalIsIncoming && targetFing && typeof purgeMatrixCell === 'function') {
-      console.log(`🧪 [SCREEN TEST MODE] Fing A na Chate. Purge pre: ${targetFing} je ZAKOMENTOVANÝ.`);
+      console.log(`✨ [AUTO-PURGE CHAT] Fing A preklopený na chat. Odpaľujem vyčistenie matrice pre: ${targetFing}`);
       purgeMatrixCell(targetFing, 'TRUE');
     }
   }, [finalStatus, finalIsIncoming, targetFing]);
 
-  // 🛑 HÁČIK PRE STATUS 2: Keď sa zobrazí červená hláška, až po 1.5s vyčistíme Mravenisko!
+  // 🛑 HÁČIK PRE STATUS 2 (ODOSIELATEĽ): Keď sa zobrazí červená hláška odosielateľovi, po 1.5s vyčistíme Mravenisko a vrátime sa späť
   useEffect(() => {
-    if (finalStatus === 2 && targetFing && typeof purgeMatrixCell === 'function') {
-      console.log(`🧪 [SCREEN TEST MODE REJECT] Červená hláška zobrazená. Purge pre: ${targetFing} je ZAKOMENTOVANÝ.`);
+    if (finalStatus === 2 && !finalIsIncoming && targetFing && typeof purgeMatrixCell === 'function') {
+      console.log(`🛑 [ABORT REJECTED] Odosielateľ zachytil Status 2. Zobrazujem hlášku, odpaľujem purge a návrat do kontaktov pre: ${targetFing}`);
       
-      const timer = setTimeout(() => {
-        purgeMatrixCell(targetFing, 'DELETE');
+      const timer = setTimeout(async () => {
+        await purgeMatrixCell(targetFing, 'DELETE');
+        navigation.goBack();
       }, 1500);
 
       return () => clearTimeout(timer);
     }
-  }, [finalStatus, targetFing]);
+  }, [finalStatus, finalIsIncoming, targetFing]);
 
   const zostavMojeMonolitneData = (aktualnaPoznamka = '') => {
     const idSource = vault?.identity || laria || {};
@@ -178,15 +175,12 @@ const SignalScreen = ({ route, navigation }) => {
     try {
       const res = await confirmLariaContract(targetFing, false);
       if (res && res.success) {
-        if (typeof purgeMatrixCell === 'function') {
-          await purgeMatrixCell(targetFing, 'DELETE');
-        }
-
+        // Prijímateľ klikol ABORT -> Zapísal sa Status 2 do tabuľky a okamžite odchádza späť do kontaktov
         navigation.goBack();
       } else {
         Alert.alert(
           txt.alert_error_title || "CHYBA", 
-          res.error || (txt.alert_contract_error || "Nepodarilo sa odmietnuť kontrakt.")
+          res?.error || (txt.alert_contract_error || "Nepodarilo sa odmietnuť kontrakt.")
         );
       }
     } catch (err) {
@@ -379,7 +373,7 @@ const SignalScreen = ({ route, navigation }) => {
               />
             ) : 
 
-            /* 4. ODMIETNUTÝ HANDSHAKE (Status 2: Partner klikol na ABORT) */
+            /* 4. ODMIETNUTÝ HANDSHAKE (Status 2: Odosielateľ vidí, že partner klikol na ABORT) */
             finalStatus === 2 ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
                 <View style={{ 
