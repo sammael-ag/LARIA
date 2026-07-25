@@ -766,3 +766,69 @@ select option {
     scrollbar-width: thin;
     scrollbar-color: #3a3a3a #0d0d0d;
 }
+/* --- LARIA FAQ & Lightbox CSS --- */
+
+/* Zalamovanie textu a kontajner */
+.faq-article-content {
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Prispôsobenie obrázkov na 100% šírky */
+.faq-image-container {
+  width: 100%;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.faq-image {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  cursor: pointer;
+  display: block;
+}
+
+/* Lightbox Modal (Stmavené pozadie s fotkou) */
+.laria-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999999;
+  backdrop-filter: blur(5px);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.laria-modal-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.laria-modal-close {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  color: #ffffff;
+  font-size: 40px;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.laria-modal-close:hover {
+  color: #ff4d4d;
+}
