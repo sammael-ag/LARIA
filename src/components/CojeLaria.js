@@ -4,35 +4,44 @@ import './fakturant.css'; // 🔥 Master prelinkovanie, ktoré odteraz všetko z
 
 const CojeLaria = () => {
   
-  // Funkcia, ktorá odroluje na článok a aktualizuje URL pre zdieľanie pomocou skratky ?art=
+  // Funkcia pre odrolovanie na článok a aktualizáciu URL s dvojúrovňovým Hash (/#/co-je-laria/article-id)
   const handleArticleClick = (id) => {
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      
-      // Aktualizujeme URL bez reloadu stránky s použitím kľúča 'art'
-      const currentParams = new URLSearchParams(window.location.search);
-      currentParams.set('art', id);
-      window.history.pushState({}, '', `${window.location.pathname}?${currentParams.toString()}`);
+      // Aktualizujeme URL bez reloadu stránky s zachovaním sekcie co-je-laria
+      window.history.pushState(null, '', `/#/co-je-laria/${id}`);
     }
   };
 
-  // Efekt, ktorý po otvorení odkazu hľadá skratku ?art= a odroluje na správny článok
+  // Efekt, ktorý pri načítaní stránky skontroluje Hash (/#/co-je-laria/article-id) a odroluje na článok
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetArticleId = urlParams.get('art'); // Hľadáme parameter 'art'
-    
-    if (targetArticleId) {
-      // Timeout, aby sa stihol React plne vykresliť v DOMe
-      const timer = setTimeout(() => {
-        const element = document.getElementById(targetArticleId);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const scrollToHashArticle = () => {
+      const hash = window.location.hash; // napr. "#/co-je-laria/obnova-uctu"
+      if (hash) {
+        // Rozdelíme hash podľa '/' -> ["#", "co-je-laria", "obnova-uctu"]
+        const parts = hash.split('/');
+        const targetArticleId = parts[2]; // Vezmeme 2. úroveň (ID článku)
+        
+        if (targetArticleId) {
+          const timer = setTimeout(() => {
+            const element = document.getElementById(targetArticleId);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 300); // 300ms počká na vykreslenie DOM-u
+          
+          return () => clearTimeout(timer);
         }
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
+      }
+    };
+
+    // 1. Skontrolujeme hneď pri namontovaní komponentu
+    scrollToHashArticle();
+
+    // 2. Počúvame zmeny v hash (ak niekto klikne na externý link pri otvorenej appke)
+    window.addEventListener('hashchange', scrollToHashArticle);
+    return () => window.removeEventListener('hashchange', scrollToHashArticle);
   }, []);
 
   return (
@@ -82,10 +91,10 @@ const CojeLaria = () => {
                 </span>
                 <span>{article.date}</span>
                 
-                {/* 🔗 Tlačidlo na skopírovanie odkazu s čistým ?art= parametrík-om */}
+                {/* 🔗 Tlačidlo na skopírovanie odkazu s elegantným /#/co-je-laria/id */}
                 <button 
                   onClick={() => {
-                    const shareUrl = `${window.location.origin}${window.location.pathname}?art=${article.id}`;
+                    const shareUrl = `${window.location.origin}${window.location.pathname}#/co-je-laria/${article.id}`;
                     navigator.clipboard.writeText(shareUrl);
                     alert(`Odkaz na článok "${article.title}" bol skopírovaný!`);
                   }}

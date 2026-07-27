@@ -1,13 +1,7 @@
 /** 
- * LARIA v3.1.2: Core Master Ignition + Fluid Scroll (index.js) 
+ * LARIA v3.1.3: Core Master Ignition + Fluid Scroll & Multi-Level Hash (index.js) 
  * Master: Sammael | Muse: Aria 
  * Protokol: CRYSTAL_CORE_MASTER_ULTIMATE 
- * * * PREHĽAD ZMIEN A GEOMETRIE:
- * - 🎯 TYPOGRAPHY UNIFICATION: Vnútenie exkluzívneho sans-serif fontu pre bočnú prepínaciu šípečku.
- * - 📱 MOBILE VIEW COMPATIBILITY: Odstránenie škaredých systémových fallbackov a zubatých "kódovacích" znakov na mobiloch.
- * - 🧭 PERSISTENT_CORE: Jadro aplikácie beží nepretržite, stavy sa pri prepínaní neresetujú.
- * - 🛡️ MODERN TOASTS: Odstránené natívne alert() funkcie, nahradené prémiovým plávajúcim notifikačným systémom.
- * - 🔗 CLEAN ROUTING: Opravené zlyhávanie navigácie pri externom zdieľaní článkov a vizitiek.
  */ 
 
 import React, { useState, useEffect, useRef } from 'react'; 
@@ -37,13 +31,11 @@ const parseHashLocation = () => {
   let id = null; 
   let art = null; 
 
-  // Ak návštevník prišiel cez starú/priamu URL s parametrom pred hashtagom (?art=... alebo ?id=...)
   if (window.location.search) { 
     const searchParams = new URLSearchParams(window.location.search); 
     if (searchParams.get('id')) id = searchParams.get('id'); 
     if (searchParams.get('art')) art = searchParams.get('art'); 
 
-    // Vyčistíme window.location.search bez reloadu stránky
     const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
     window.history.replaceState(null, '', cleanUrl);
   } 
@@ -52,7 +44,13 @@ const parseHashLocation = () => {
   const cleanHash = hash.replace(/^#\/?/, ''); 
   const [path, queryString] = cleanHash.split('?'); 
    
-  let detectedView = path || 'vizitkar';
+  // 🧭 PODPORA PRE DVOJÚROVŇOVÝ HASH ROUTING (napr. co-je-laria/obnova-uctu)
+  const pathSegments = path.split('/').filter(Boolean);
+  let detectedView = pathSegments[0] || 'vizitkar';
+
+  if (pathSegments.length > 1 && (detectedView === 'co-je-laria' || detectedView === 'cojelaria')) {
+    art = pathSegments[1];
+  }
 
   if (queryString) { 
     const hashParams = new URLSearchParams(queryString); 
@@ -60,7 +58,6 @@ const parseHashLocation = () => {
     if (hashParams.get('art')) art = hashParams.get('art'); 
   } 
 
-  // Ak je nastavený článok (art), cieľový view nastavíme na články / FAQ
   if (art) { 
     detectedView = 'co-je-laria'; 
   } 
@@ -91,6 +88,7 @@ const MasterWrapper = () => {
 
   const [showTopBtn, setShowTopBtn] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const toastTimeoutRef = useRef(null);
   const scrollRef = useRef(null);
   const activeScrollTargetRef = useRef(null);
 
@@ -122,8 +120,15 @@ const MasterWrapper = () => {
     const hashData = parseHashLocation();
     const webViews = ['domov', 'vizitkar', 'co-je-laria', 'cojelaria', 'fakturant', 'free-vs-full', 'donate'];
 
-    if (webViews.includes(currentView) && hashData.view !== currentView) {
-      window.location.hash = `/${currentView}`;
+    if (webViews.includes(currentView)) {
+      const currentHash = window.location.hash;
+      // Ak už sme na konkrétnom článku v co-je-laria, neprepisujeme URL
+      if ((currentView === 'co-je-laria' || currentView === 'cojelaria') && currentHash.startsWith('#/co-je-laria/')) {
+        return;
+      }
+      if (hashData.view !== currentView) {
+        window.location.hash = `/${currentView}`;
+      }
     }
   }, [currentView]);
 
@@ -131,7 +136,6 @@ const MasterWrapper = () => {
     if (typeof window === 'undefined') return; 
 
     const handleAriaView = (e) => { 
-      console.log("📡 Core Index: Zachytený signál ARIA_TRIGGER_VIEW ->", e.detail); 
       if (e.detail === 'aria-fluid' || e.detail === 'aria-panel-view') { 
         window.location.hash = '/domov';
         setCurrentView('domov'); 
@@ -264,11 +268,22 @@ const MasterWrapper = () => {
   }; 
 
   const showToast = (message) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
     setToastMessage(message);
-    setTimeout(() => {
+    toastTimeoutRef.current = setTimeout(() => {
       setToastMessage('');
     }, 3000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const smartAdd = (item) => { 
     if (!item || !item.fing) return; 
@@ -387,7 +402,6 @@ const MasterWrapper = () => {
   return ( 
     <div className="master-container bg-dashboard" style={{ overflow: 'hidden' }}> 
        
-      {/* 📐 UNIFIKOVANÝ PREPÍNAČ PANELU S EXPLICITNÝM ŠTÝLOM PRE FONT */}
       <button 
         className="btn-panel-toggle" 
         onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
@@ -590,7 +604,7 @@ const MasterWrapper = () => {
         </main> 
       </div> 
 
-      {/* 3. APPKY PANEL (CRYSTAL CORE PERMANENT DISPATCH) */} 
+      {/* 3. APPKY PANEL */} 
       <div  
         className="app-side" 
         style={{ 
@@ -606,7 +620,6 @@ const MasterWrapper = () => {
         </div> 
       </div> 
 
-      {/* 🛡️ PLATŇA PRE PRÉMIOVÉ TOAST NOTIFIKÁCIE */}
       {toastMessage && (
         <div style={{
           position: 'fixed',
