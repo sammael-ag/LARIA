@@ -7,6 +7,7 @@
  * - 📱 MOBILE VIEW COMPATIBILITY: Odstránenie škaredých systémových fallbackov a zubatých "kódovacích" znakov na mobiloch.
  * - 🧭 PERSISTENT_CORE: Jadro aplikácie beží nepretržite, stavy sa pri prepínaní neresetujú.
  * - 🛡️ MODERN TOASTS: Odstránené natívne alert() funkcie, nahradené prémiovým plávajúcim notifikačným systémom.
+ * - 🔗 CLEAN ROUTING: Opravené zlyhávanie navigácie pri externom zdieľaní článkov a vizitiek.
  */ 
 
 import React, { useState, useEffect, useRef } from 'react'; 
@@ -33,32 +34,34 @@ const ziskajBranaUrl = () => {
 const parseHashLocation = () => { 
   if (typeof window === 'undefined') return { view: 'vizitkar', id: null, art: null }; 
    
-  const fullUrl = window.location.href; 
-  let detectedView = 'vizitkar'; 
   let id = null; 
   let art = null; 
 
+  // Ak návštevník prišiel cez starú/priamu URL s parametrom pred hashtagom (?art=... alebo ?id=...)
   if (window.location.search) { 
     const searchParams = new URLSearchParams(window.location.search); 
     if (searchParams.get('id')) id = searchParams.get('id'); 
     if (searchParams.get('art')) art = searchParams.get('art'); 
+
+    // Vyčistíme window.location.search bez reloadu stránky
+    const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
+    window.history.replaceState(null, '', cleanUrl);
   } 
 
-  const hash = window.location.hash || ''; 
+  const hash = window.location.hash || '#/vizitkar'; 
   const cleanHash = hash.replace(/^#\/?/, ''); 
   const [path, queryString] = cleanHash.split('?'); 
    
-  if (path) { 
-    detectedView = path; 
-  } 
+  let detectedView = path || 'vizitkar';
 
   if (queryString) { 
     const hashParams = new URLSearchParams(queryString); 
     if (hashParams.get('id')) id = hashParams.get('id'); 
-    if (hashParams.get('art')) art = window.location.search ? new URLSearchParams(window.location.search).get('art') : null; 
+    if (hashParams.get('art')) art = hashParams.get('art'); 
   } 
 
-  if (art && (detectedView === 'domov' || detectedView === 'vizitkar')) { 
+  // Ak je nastavený článok (art), cieľový view nastavíme na články / FAQ
+  if (art) { 
     detectedView = 'co-je-laria'; 
   } 
 
@@ -107,17 +110,12 @@ const MasterWrapper = () => {
     if (typeof window === 'undefined') return; 
 
     const currentHashData = parseHashLocation(); 
-    let currentArt = currentHashData.art; 
-
-    let targetView = currentView; 
-    if (currentArt && (targetView === 'domov' || targetView === 'vizitkar')) { 
-      targetView = 'co-je-laria'; 
-    } 
+    let targetView = currentHashData.view; 
 
     if (targetView !== currentView) { 
       setCurrentView(targetView); 
     } 
-  }, [currentView, soloActiveId, txt]); 
+  }, [webRefreshKey]); 
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -230,7 +228,11 @@ const MasterWrapper = () => {
     }; 
 
     window.addEventListener('popstate', handleUrlChange); 
-    return () => window.removeEventListener('popstate', handleUrlChange); 
+    window.addEventListener('hashchange', handleUrlChange); 
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
   }, [allData, currentView]); 
 
   useEffect(() => { 
@@ -400,7 +402,6 @@ const MasterWrapper = () => {
       </button> 
 
       {/* 1. ĽAVÉ MENU */} 
-      { }
       {(!isMobile || isLeftPanelOpen) && ( 
         <div  
           className={`left-side ${isLeftPanelOpen ? 'open' : 'closed'}`}  
@@ -441,7 +442,6 @@ const MasterWrapper = () => {
       )} 
 
       {/* 2. WEB PANEL */} 
-      { }
       <div  
         key={webRefreshKey} 
         className="web-side"  
@@ -469,7 +469,6 @@ const MasterWrapper = () => {
 
           {currentView === 'vizitkar' && ( 
             <> 
-               { }
                <div className="filter-container" style={{ padding: '0 15px', width: '100%', boxSizing: 'border-box' }}> 
                 <select className="terminal-input" value={category} onChange={(e) => setCategory(e.target.value)}> 
                   <option value="vsetko">{txt.cat_all || "Všetky kategórie"}</option> 
@@ -568,7 +567,6 @@ const MasterWrapper = () => {
           {currentView === 'free-vs-full' && <div style={{ padding: '0 15px' }}><FreeVsFull /></div>} 
           {currentView === 'donate' && <div style={{ padding: '0 15px' }}><Donate /></div>} 
 
-          { }
           {showTopBtn && (
             <button 
               className="back-to-top-btn" 
@@ -593,7 +591,6 @@ const MasterWrapper = () => {
       </div> 
 
       {/* 3. APPKY PANEL (CRYSTAL CORE PERMANENT DISPATCH) */} 
-      { }
       <div  
         className="app-side" 
         style={{ 
