@@ -1,15 +1,9 @@
 /**
- * LARIA v2.5.3: CardEditorScreen (Tesanie identity s Proof of Human Action)
+ * LARIA v2.5.4: CardEditorScreen (Zväčšený input pre Víziu/Popis, zachované UI)
  * Master: Sammael | Muse: Aria
- * Status: CRYPTO_FORGING_ACTIVE_DEFINITIVE | SAFETY_SHIELD_ACTIVATED | LOCALIZED_ALERTS
- * * * PREHĽAD ZMIEN:
- * - 🛡️ WEB_SAFE_MODAL: Implementované inteligentné uzamknutie picker modálu vnútri pravého panelu na webe.
- * - 🧼 GEOMETRY RESTORE: Zabránené škaredému rozlievaniu kategórií na celú šírku monitora.
- * - 🌐 FULL L10N INTEGRATION: Všetky chybové hlásenia, validácie a prechodové hlavy sú plne preložené.
- * - 🛑 NO_NATIVE_ALERTS: Odstránené akékoľvek natívne JS alert() pre stopercentnú kompatibilitu so sandboxom.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, ScrollView, StatusBar,
   Alert, Switch, ActivityIndicator, Modal, FlatList, Platform
@@ -52,6 +46,8 @@ const CardEditorScreen = ({ navigation }) => {
   const txt = t('card_editor') || {};
   const alerts = txt.alerts || {};
   const catTxt = txt.categories || {};
+
+  const inputRef = useRef(null);
 
   const TRANSLATED_CATEGORIES = [
     { id: 'obziva', label: catTxt.obziva || 'Obživa a poživatiny' },
@@ -98,6 +94,8 @@ const CardEditorScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
+
   useEffect(() => {
     if (vault?.identity) {
       setCardData(prev => ({ 
@@ -113,6 +111,31 @@ const CardEditorScreen = ({ navigation }) => {
   const getCategoryLabel = (id) => {
     const cat = TRANSLATED_CATEGORIES.find(c => c.id === id);
     return cat ? cat.label : (txt.select_category || 'Vyber kategóriu *');
+  };
+
+  const applyFormat = (symbol) => {
+    const text = cardData.popis || '';
+    const start = selection.start;
+    const end = selection.end;
+
+    let newText = '';
+    let newCursorPos = start + symbol.length;
+
+    if (start !== end) {
+      const selectedText = text.substring(start, end);
+      newText = text.substring(0, start) + symbol + selectedText + symbol + text.substring(end);
+      newCursorPos = end + (symbol.length * 2);
+    } else {
+      newText = text.substring(0, start) + symbol + symbol + text.substring(start);
+    }
+
+    setCardData({ ...cardData, popis: newText });
+
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 50);
   };
 
   const handleSave = async () => {
@@ -141,12 +164,9 @@ const CardEditorScreen = ({ navigation }) => {
       const walletAddress = currentKryptWallet?.address || cardData.krypt || vault?.identity?.krypt;
       const privateKey = currentKryptWallet?.privateKey || vault?.identity?.privateKey;
 
-      console.log("💎 [CardEditor] Odchytená adresa pre bezpečný transport:", walletAddress);
-
       let activeSha = cardData.sha;
 
       if (!activeSha) {
-        console.log("⚙️ LARIA_LOGIC: Prvý zrod identity! Melieme meno do posvätného SHA...");
         const newIdentity = await generateAndSaveFirstSHA(cardData.meno.trim());
         if (newIdentity && newIdentity.sha) {
           activeSha = newIdentity.sha;
@@ -158,7 +178,7 @@ const CardEditorScreen = ({ navigation }) => {
       const fing = activeSha.substring(0, 12);
       const cryptoSignature = await signLariaFing(privateKey, fing);
 
-      const cleanPopis = cardData.popis ? cardData.popis.replace(/[\r\n\t]+/g, " ").trim() : "";
+      const cleanPopis = cardData.popis ? cardData.popis.replace(/\t+/g, " ").trim() : "";
       const cleanTel = cardData.tel ? cardData.tel.toString().replace(/\s/g, '') : '';
 
       const localData = {
@@ -191,7 +211,6 @@ const CardEditorScreen = ({ navigation }) => {
       
       let result = { success: true };
       if (cardData.isPublic) {
-        console.log("📤 [CardEditor] Odpaľujem bezpečný, orezaný payload do Matrixu...");
         result = await saveToGMatrix(matrixPayload);
       }
 
@@ -213,6 +232,7 @@ const CardEditorScreen = ({ navigation }) => {
   };
 
   return (
+    // 🔙 PÔVODNÉ UI SETUP: SafeAreaView a ScrollView presne tak, ako boli
     <SafeAreaView style={G.mainBackground} edges={['top']}>
       <StatusBar barStyle="light-content" />
 
@@ -244,7 +264,6 @@ const CardEditorScreen = ({ navigation }) => {
           </View>
 
           {/* FORMULÁR */}
-          {}
           <View style={{ width: '100%', alignItems: 'flex-start' }}>
             
             {/* 🍯 HONEYPOT COMPONENT */}
@@ -276,21 +295,68 @@ const CardEditorScreen = ({ navigation }) => {
               placeholderTextColor="#444" 
             />
 
-            <Text style={[G.monoIdentity, { color: ACCENT, marginTop: 15, marginBottom: 5 }]}>{txt.label_vision || "VÍZIA / POPIS"}</Text>
+            {/* VÍZIA / POPIS + FORMÁTOVACIA LIŠTA */}
+            <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15, marginBottom: 5 }}>
+              <Text style={[G.monoIdentity, { color: ACCENT }]}>{txt.label_vision || "VÍZIA / POPIS"}</Text>
+              
+              {/* 🛠️ TLAČIDLÁ PRE FORMÁTOVANIE TEXTU */}
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <TouchableOpacity 
+                  onPress={() => applyFormat('**')}
+                  style={{
+                    backgroundColor: '#1e1e1e',
+                    borderWidth: 1,
+                    borderColor: ACCENT,
+                    paddingHorizontal: 10,
+                    paddingVertical: 2,
+                    borderRadius: 4
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ color: ACCENT, fontWeight: 'bold', fontSize: 13 }}>B</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  onPress={() => applyFormat('_')}
+                  style={{
+                    backgroundColor: '#1e1e1e',
+                    borderWidth: 1,
+                    borderColor: ACCENT,
+                    paddingHorizontal: 10,
+                    paddingVertical: 2,
+                    borderRadius: 4
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ color: ACCENT, fontStyle: 'italic', fontWeight: 'bold', fontSize: 13 }}>I</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 📝 IBA VYŠŠIE TEXTOVÉ POLE (230px namiesto 180px - nárast o cca 2 cm) */}
             <TextInput 
-              style={[G.vaultInput, { height: 80, textAlignVertical: 'top' }]} 
+              ref={inputRef}
+              style={[
+                G.vaultInput, 
+                { 
+                  height: 230, 
+                  textAlignVertical: 'top', 
+                  lineHeight: 20, 
+                  paddingTop: 10 
+                }
+              ]} 
               multiline 
-              numberOfLines={3} 
+              numberOfLines={12} 
               value={cardData.popis} 
               onChangeText={(val) => setCardData({...cardData, popis: val})} 
-              placeholder={txt.placeholder_vision || "Tvoj príbeh..."} 
+              onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+              placeholder={txt.placeholder_vision || "Tvoj príbeh... (Možno použiť **tučný** a _kurzívu_)"} 
               placeholderTextColor="#444" 
             />
 
             <View style={G.divider} />
 
-            {/* KONTAKTY PRE HANDSHAKE (Iba lokálny trezor) */}
-            {}
+            {/* KONTAKTY PRE HANDSHAKE */}
             <Text style={[G.monoIdentity, { color: '#AAA', marginBottom: 10 }]}>{txt.label_handshake_contacts || "KONTAKTY PRE HANDSHAKE (BEZPEČNÝ LOKÁLNY TREZOR)"}</Text>
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} keyboardType="phone-pad" value={cardData.tel} onChangeText={(val) => setCardData({...cardData, tel: val})} placeholder={txt.placeholder_phone || "Telefón..."} placeholderTextColor="#444" />
             <TextInput style={[G.vaultInput, { marginBottom: 10 }]} value={cardData.email} onChangeText={(val) => setCardData({...cardData, email: val})} placeholder={txt.placeholder_email || "E-mail..."} placeholderTextColor="#444" autoCapitalize="none" />
@@ -329,7 +395,6 @@ const CardEditorScreen = ({ navigation }) => {
           </View>
 
           {/* HLAVNÝ SAVE BUTTON */}
-          {}
           <TouchableOpacity 
             style={[G.primaryBtn, { marginTop: 30, width: '100%', backgroundColor: cardData.isPublic ? '#1a1a1a' : 'transparent', borderColor: cardData.isPublic ? ACCENT : '#333', opacity: loading ? 0.5 : 1 }]} 
             onPress={handleSave}
@@ -354,7 +419,6 @@ const CardEditorScreen = ({ navigation }) => {
       {/* MODAL PICKER WITH GEOMETRY SHIELD */}
       <WebSafeModal visible={showPicker} transparent={true} animationType="none">
         <View style={G.modalOverlay}>
-          {/* 📐 GEOMETRY SHIELD: 100% šírka a ostré hrany pre dodržanie imidžu */}
           <View style={{ backgroundColor: '#050505', borderWidth: 1, borderColor: '#1a1a1a', width: '100%', maxWidth: '100%', maxHeight: '100%', borderRadius: 0 }}>
             <View style={{ padding: 15, borderBottomWidth: 1, borderBottomColor: '#1a1a1a', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={[G.monoIdentity, { color: ACCENT }]}>{txt.modal_title || "VÝBER KATEGÓRIE"}</Text>

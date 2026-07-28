@@ -63,12 +63,13 @@ const Fakturant = () => {
       celkom: `Celkom k úhrade: ${suma || "0.00"} ${mena}`
     });
 
-    if (vs) {
-      document.title = `Faktúra ${vs}`;
-    }
+    // 🎯 NASTAVENIE TITULKU PRE PREHLIADAČ A Meno PDF SÚBORU
+    const cleanVs = vs ? vs.trim() : '';
+    document.title = cleanVs ? `Faktúra ${cleanVs}` : 'Faktúra';
+
     setViewMode('nahlad');
     window.scrollTo(0, 0);
-    console.log("🛸 LARIA SYSTEM: Režim náhľadu aktivovaný.");
+    console.log("🛸 LARIA SYSTEM: Režim náhľadu aktivovaný s titulkom:", document.title);
   };
 
   // --- ❌ ZAVRETIE NÁHĽADU ---
@@ -76,6 +77,15 @@ const Fakturant = () => {
     document.title = "LARIA - Profesionálna Faktúra";
     setViewMode('editor');
     window.scrollTo(0, 0);
+  };
+
+  // --- 🖨️ TLAČ A ULOŽENIE DO PDF ---
+  const vytlacPDF = () => {
+    // Poistka, aby bol titolok zaručene pred vytlačením nastavený na "Faktúra + číslo"
+    const cleanVs = vs ? vs.trim() : '';
+    document.title = cleanVs ? `Faktúra ${cleanVs}` : 'Faktúra';
+    
+    window.print();
   };
 
   // --- 📋 KOPÍROVANIE TEXTU ---
@@ -231,7 +241,7 @@ const Fakturant = () => {
           
           {/* Horná ovládacia lišta */}
           <div className="preview-top-bar no-print">
-            <button className="fbtn-print" onClick={() => window.print()}>🖨️ Uložiť PDF</button>
+            <button className="fbtn-print" onClick={vytlacPDF}>🖨️ Uložiť PDF</button>
             <button className="fbtn-copy" onClick={skopirujText}>📋 Kopírovať</button>
             <button className="fbtn-close" onClick={zavriNahlad}>Zavrieť ×</button>
           </div>

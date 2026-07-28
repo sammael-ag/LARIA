@@ -832,3 +832,43 @@ select option {
 .laria-modal-close:hover {
   color: #ff4d4d;
 }
+/* ==========================================
+   📜 LARIA: Card Description Truncate Styles
+   ========================================== */
+
+.card-description-block {
+  position: relative;
+}
+
+.card-desc-truncated {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* 👈 Zobrazí presne 3 riadky (ak chceš 5, zmeň na 5) */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre-line;
+}
+
+.card-desc-expanded {
+  margin: 0;
+  display: block;
+  white-space: pre-line;
+}
+
+.btn-expand-toggle {
+  background: none;
+  border: none;
+  color: #c5a059;
+  cursor: pointer;
+  padding: 4px 0 0 0;
+  font-size: 0.85em;
+  font-weight: bold;
+  font-family: inherit;
+  display: inline-block;
+  transition: opacity 0.2s ease;
+}
+
+.btn-expand-toggle:hover {
+  opacity: 0.8;
+}

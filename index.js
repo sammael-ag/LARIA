@@ -69,6 +69,54 @@ const parseHashLocation = () => {
   return { view: detectedView, id, art }; 
 }; 
 
+/**
+ * 📜 Pomocný komponent pre elegantné skracovanie popisu vizitky
+ */
+const CardDescription = ({ text, aktivujOdkazy }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [needsTruncate, setNeedsTruncate] = useState(false);
+  const textRef = useRef(null);
+
+  useEffect(() => {
+    if (textRef.current) {
+      // Zistíme, či text v div-e presahuje vyhradenú výšku pre 3 riadky
+      const isOverflowing = textRef.current.scrollHeight > textRef.current.clientHeight;
+      setNeedsTruncate(isOverflowing);
+    }
+  }, [text]);
+
+  if (!text) {
+    return (
+      <div className="card-description-block">
+        <p className="card-desc">Bez popisu.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card-description-block">
+      <p 
+        ref={textRef}
+        className={`card-desc ${isExpanded ? 'card-desc-expanded' : 'card-desc-truncated'}`}
+      >
+        {aktivujOdkazy(text)}
+      </p>
+
+      {(needsTruncate || isExpanded) && (
+        <button
+          className="btn-expand-toggle"
+          onClick={(e) => {
+            e.stopPropagation(); // Zabráni kliknutiu na samotnú kartu
+            setIsExpanded(!isExpanded);
+          }}
+        >
+          {isExpanded ? '...menej' : '...viac'}
+        </button>
+      )}
+    </div>
+  );
+};
+
 const MasterWrapper = () => { 
   const { t } = useLaria();  
   const txt = t('index') || {};  
@@ -321,11 +369,44 @@ const MasterWrapper = () => {
     }); 
   }; 
 
+  /**
+   * 🌟 Pomocný prevod Markdown zatiaľ pre Tučné písmo (**text**) a Kurzívu (*text* alebo _text_) + Aktívne Odkazy
+   */
+  const renderFormattedMarkdown = (textNode, keyPrefix = '') => {
+    if (typeof textNode !== 'string') return textNode;
+
+    // Split pre tučné písmo (**text**)
+    const boldParts = textNode.split(/(\*\*.*?\*\*)/g);
+    return boldParts.map((bPart, bIdx) => {
+      if (bPart.startsWith('**') && bPart.endsWith('**') && bPart.length > 4) {
+        const innerBold = bPart.slice(2, -2);
+        return <strong key={`${keyPrefix}-b-${bIdx}`}>{renderFormattedMarkdown(innerBold, `${keyPrefix}-b-${bIdx}`)}</strong>;
+      }
+
+      // Split pre kurzívu (*text* alebo _text_)
+      const italicParts = bPart.split(/(\*.*?\*|_.*?_)/g);
+      return italicParts.map((iPart, iIdx) => {
+        if ((iPart.startsWith('*') && iPart.endsWith('*') && iPart.length > 2) ||
+            (iPart.startsWith('_') && iPart.endsWith('_') && iPart.length > 2)) {
+          const innerItal = iPart.slice(1, -1);
+          return <em key={`${keyPrefix}-i-${bIdx}-${iIdx}`}>{innerItal}</em>;
+        }
+        return iPart;
+      });
+    });
+  };
+
   const aktivujOdkazy = (text) => { 
     if (!text) return txt.no_description || "Bez popisu."; 
     const urlPattern = /(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig; 
     return text.split(urlPattern).map((part, i) => 
-      urlPattern.test(part) ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{color: '#c5a059'}}>{part}</a> : part 
+      urlPattern.test(part) ? (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{color: '#c5a059'}}>
+          {part}
+        </a>
+      ) : (
+        renderFormattedMarkdown(part, `md-${i}`)
+      )
     ); 
   }; 
 
@@ -562,9 +643,9 @@ const MasterWrapper = () => {
                           </div> 
                         </div> 
                       </div> 
-                      <div className="card-description-block"> 
-                        <p className="card-desc" style={{ margin: 0 }}>{aktivujOdkazy(item.popis)}</p> 
-                      </div> 
+                      
+                      {/* 📜 Prelinkované na čistý CSS komponent */}
+                      <CardDescription text={item.popis} aktivujOdkazy={aktivujOdkazy} /> 
                     </div> 
                   )) 
                 ) : ( 
